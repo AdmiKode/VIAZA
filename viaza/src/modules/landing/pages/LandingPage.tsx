@@ -190,9 +190,10 @@ export function LandingPage() {
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', height: 64, background: 'rgba(18,33,46,0.88)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <img src="/brand/logo-white.png" alt="VIAZA" style={{ height: 30, width: 'auto' }}/>
-        <a href={RESOLVED_APP_STORE_URL} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', color: C.dark, borderRadius: 10, padding: '8px 22px', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-          Explorar VIAZA
-        </a>
+        {/* TODO: eliminar este botón cuando lancemos a producción */}
+        <Link to="/splash" style={{ background: 'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', color: C.dark, borderRadius: 10, padding: '8px 22px', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+          Entrar a la app →
+        </Link>
       </nav>
 
       {/* HERO */}
@@ -237,13 +238,14 @@ export function LandingPage() {
 
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.88, duration: 0.6 }}
           style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center', marginBottom: 24 }}>
-          <a href={RESOLVED_APP_STORE_URL} target="_blank" rel="noopener noreferrer"
+          {/* TODO: eliminar este botón cuando lancemos a producción */}
+          <Link to="/splash"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', color: C.dark, borderRadius: 14, padding: '15px 34px', fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 32px rgba(234,153,64,0.45)', transition: 'transform 0.2s, box-shadow 0.2s' }}
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform='translateY(-3px)'; el.style.boxShadow='0 14px 42px rgba(234,153,64,0.6)'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform='translateY(0)'; el.style.boxShadow='0 8px 32px rgba(234,153,64,0.45)'; }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Explorar VIAZA
-          </a>
+            Entrar a la app
+          </Link>
           <StoreButton href={RESOLVED_APP_STORE_URL} icon={<IconApple/>} sublabel={IS_APP_PUBLISHED ? 'Descargar en' : 'Próximamente en'} label="App Store"/>
           <StoreButton href={RESOLVED_PLAY_STORE_URL} icon={<IconAndroid/>} sublabel={IS_APP_PUBLISHED ? 'Descargar en' : 'Próximamente en'} label="Google Play"/>
         </motion.div>

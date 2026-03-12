@@ -65,25 +65,14 @@ export function AppRouter() {
       <Routes>
         {/*
          * Flujo completo:
-         * / → /splash → /intro → /auth/login → /onboarding → /home
+         * / → landing pública → usuario pulsa "Entrar" → /splash → /intro → /auth/login → /onboarding → /home
          *
-         * Usuario nuevo que acaba de hacer login:
-         *   isAuthenticated=true, onboardingCompleted=false → onboarding
-         * Usuario que ya completó onboarding y tiene viaje:
-         *   isAuthenticated=true, onboardingCompleted=true  → home
-         * Usuario sin sesión:
-         *   → splash
+         * La landing es siempre la primera pantalla.
+         * El botón "Entrar a la app" en la landing lleva a /splash.
+         * Cuando terminemos el desarrollo, ese botón se elimina
+         * y los botones de tienda quedan como único CTA.
          */}
-        <Route
-          path="/"
-          element={
-            !isAuthenticated
-              ? <Navigate to="/splash" replace />
-              : onboardingCompleted && hasTrip
-                ? <Navigate to="/home" replace />
-                : <Navigate to="/onboarding/travel-type" replace />
-          }
-        />
+        <Route path="/" element={<LandingPage />} />
 
         {/* ── Intro pre-auth (sin guards) ─────────────────────────── */}
         <Route path="/splash" element={<SplashPage />} />
