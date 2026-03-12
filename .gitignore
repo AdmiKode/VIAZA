@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node local en el workspace
+viaza/.node/
+
+# Variables de entorno
+viaza/.env
+viaza/.env.local
+viaza/.env.*.local
+
+# Build output
+viaza/dist/
+viaza/node_modules/
+
+# Capacitor nativo
+viaza/ios/
+viaza/android/

@@ -1,0 +1,559 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAppStore } from '../../../app/store/useAppStore';
+import type { TransportType } from '../../../types/trip';
+
+/* ─── Haversine: distancia en km entre dos puntos ──────────────── */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Velocidades promedio por medio de transporte (km/h) */
+const SPEED: Record<string, number> = {
+  car:   90,
+  bus:   70,
+  train: 130,
+};
+
+function formatDuration(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
+
+/** Tarjeta de tiempo estimado — solo si tenemos origen + destino + transporte terrestre */
+function EstimatedTimeCard({ type }: { type: TransportType }) {
+  const { t } = useTranslation();
+  const draft = useAppStore((s) => s.onboardingDraft);
+
+  if (!['car', 'bus', 'train'].includes(type)) return null;
+  if (!draft.originLat || !draft.originLon || !draft.lat || !draft.lon) return null;
+
+  const distKm = haversineKm(draft.originLat, draft.originLon, draft.lat, draft.lon);
+  const speed = SPEED[type];
+  const hours = distKm / speed;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex items-center gap-3 rounded-2xl p-4"
+      style={{ background: 'rgba(48,112,130,0.10)', border: '1px solid rgba(48,112,130,0.20)' }}
+    >
+      <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="19" fill="#307082" opacity="0.18" />
+        <circle cx="24" cy="24" r="14" fill="none" stroke="#307082" strokeWidth="3" />
+        <line x1="24" y1="24" x2="24" y2="12" stroke="#307082" strokeWidth="3" strokeLinecap="round" />
+        <line x1="24" y1="24" x2="33" y2="29" stroke="#EA9940" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+      <div>
+        <div style={{ color: '#307082', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Questrial, sans-serif' }}>
+          {t('transport.estimatedTime', 'Tiempo estimado')}
+        </div>
+        <div style={{ color: '#12212E', fontSize: 16, fontWeight: 700, fontFamily: 'Questrial, sans-serif' }}>
+          {formatDuration(hours)}
+          <span style={{ color: 'rgba(18,33,46,0.45)', fontSize: 12, fontWeight: 400, marginLeft: 6 }}>
+            · {Math.round(distKm).toLocaleString()} km
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Iconos duotone por transporte ─────────────────────────────── */
+function IconFlight() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+      {/* fuselaje base naranja */}
+      <path d="M6 24l10-4 22-10 4 4-22 10-2 10-6-2 2-6-8-2z" fill="#EA9940" />
+      {/* ala glass gris */}
+      <path d="M16 20l16-7 3 3-16 7z" fill="rgba(180,192,200,0.55)" />
+      {/* cola glass */}
+      <path d="M6 24l6 2-2 4z" fill="rgba(180,192,200,0.45)" />
+      {/* brillo */}
+      <path d="M18 18l14-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+    </svg>
+  );
+}
+
+function IconCar() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+      {/* carrocería base naranja */}
+      <path d="M6 32h36v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6z" fill="#EA9940" />
+      <path d="M10 32l4-10h20l4 10z" fill="#EA9940" />
+      {/* parabrisas glass */}
+      <path d="M14 32l3-7h14l3 7z" fill="rgba(180,192,200,0.60)" />
+      {/* brillo techo */}
+      <path d="M16 25l2-5h12l2 5" fill="rgba(255,255,255,0.20)" />
+      {/* ruedas */}
+      <circle cx="14" cy="38" r="5" fill="#12212E" />
+      <circle cx="14" cy="38" r="2.5" fill="rgba(255,255,255,0.35)" />
+      <circle cx="34" cy="38" r="5" fill="#12212E" />
+      <circle cx="34" cy="38" r="2.5" fill="rgba(255,255,255,0.35)" />
+    </svg>
+  );
+}
+
+function IconBus() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+      {/* cuerpo bus naranja */}
+      <rect x="4" y="12" width="40" height="26" rx="5" fill="#EA9940" />
+      {/* glass franja ventanas */}
+      <rect x="8" y="16" width="32" height="10" rx="3" fill="rgba(180,192,200,0.55)" />
+      {/* ventanas individuales */}
+      <rect x="10" y="17" width="7" height="8" rx="2" fill="rgba(255,255,255,0.50)" />
+      <rect x="20" y="17" width="7" height="8" rx="2" fill="rgba(255,255,255,0.50)" />
+      <rect x="30" y="17" width="7" height="8" rx="2" fill="rgba(255,255,255,0.50)" />
+      {/* brillo techo */}
+      <rect x="4" y="12" width="40" height="7" rx="5" fill="rgba(255,255,255,0.18)" />
+      {/* ruedas */}
+      <circle cx="13" cy="38" r="5" fill="#12212E" />
+      <circle cx="13" cy="38" r="2.5" fill="rgba(255,255,255,0.35)" />
+      <circle cx="35" cy="38" r="5" fill="#12212E" />
+      <circle cx="35" cy="38" r="2.5" fill="rgba(255,255,255,0.35)" />
+    </svg>
+  );
+}
+
+function IconCruise() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+      {/* casco base naranja */}
+      <path d="M4 30 Q24 38 44 30 L40 42 Q24 46 8 42z" fill="#EA9940" />
+      {/* cubierta glass */}
+      <rect x="8" y="18" width="32" height="14" rx="3" fill="rgba(180,192,200,0.55)" />
+      {/* superestructura */}
+      <rect x="14" y="10" width="20" height="10" rx="3" fill="#EA9940" />
+      {/* chimenea */}
+      <rect x="21" y="4" width="6" height="8" rx="2" fill="#12212E" />
+      {/* brillo */}
+      <rect x="8" y="18" width="32" height="6" rx="3" fill="rgba(255,255,255,0.20)" />
+      {/* olas */}
+      <path d="M2 38 Q12 34 22 38 Q32 42 44 38" stroke="rgba(48,112,130,0.60)" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTrain() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+      {/* cuerpo naranja */}
+      <rect x="8" y="10" width="32" height="28" rx="8" fill="#EA9940" />
+      {/* ventanas glass */}
+      <rect x="12" y="14" width="10" height="10" rx="3" fill="rgba(180,192,200,0.60)" />
+      <rect x="26" y="14" width="10" height="10" rx="3" fill="rgba(180,192,200,0.60)" />
+      {/* brillo superior */}
+      <rect x="8" y="10" width="32" height="10" rx="8" fill="rgba(255,255,255,0.22)" />
+      {/* franja central */}
+      <rect x="8" y="24" width="32" height="5" fill="rgba(18,33,46,0.15)" />
+      {/* ruedas */}
+      <circle cx="14" cy="40" r="5" fill="#12212E" />
+      <circle cx="14" cy="40" r="2.5" fill="rgba(255,255,255,0.35)" />
+      <circle cx="34" cy="40" r="5" fill="#12212E" />
+      <circle cx="34" cy="40" r="2.5" fill="rgba(255,255,255,0.35)" />
+      {/* vía */}
+      <rect x="4" y="43" width="40" height="3" rx="1.5" fill="rgba(18,33,46,0.25)" />
+    </svg>
+  );
+}
+
+/* ─── Config de opciones ─────────────────────────────────────────── */
+const OPTIONS: Array<{
+  value: TransportType;
+  labelKey: string;
+  descKey: string;
+  Icon: () => JSX.Element;
+}> = [
+  { value: 'flight',  labelKey: 'transport.flight',  descKey: 'transport.flight.desc',  Icon: IconFlight  },
+  { value: 'car',     labelKey: 'transport.car',     descKey: 'transport.car.desc',     Icon: IconCar     },
+  { value: 'bus',     labelKey: 'transport.bus',     descKey: 'transport.bus.desc',     Icon: IconBus     },
+  { value: 'cruise',  labelKey: 'transport.cruise',  descKey: 'transport.cruise.desc',  Icon: IconCruise  },
+  { value: 'train',   labelKey: 'transport.train',   descKey: 'transport.train.desc',   Icon: IconTrain   },
+];
+
+/* ─── Input neumórfico pequeño ───────────────────────────────────── */
+function NeuInput({
+  placeholder,
+  value,
+  onChange,
+  label,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  return (
+    <div>
+      <label style={{
+        display: 'block',
+        color: 'rgba(18,33,46,0.50)',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        marginBottom: 6,
+        fontFamily: 'Questrial, sans-serif',
+      }}>
+        {label}
+      </label>
+      <div
+        className="flex items-center rounded-2xl px-4"
+        style={{
+          height: 48,
+          background: '#ECE7DC',
+          boxShadow: 'inset 3px 3px 8px rgba(18,33,46,0.09), inset -2px -2px 6px rgba(255,255,255,0.70)',
+        }}
+      >
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            fontSize: 15,
+            color: '#12212E',
+            fontFamily: 'Questrial, sans-serif',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ─── SubForm según tipo de transporte ──────────────────────────── */
+function TransportSubForm({ type }: { type: TransportType }) {
+  const { t } = useTranslation();
+  const setDraft = useAppStore((s) => s.setOnboardingDraft);
+  const draft = useAppStore((s) => s.onboardingDraft);
+
+  return (
+    <motion.div
+      key={type}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.3 }}
+      className="mt-4 space-y-3 rounded-3xl p-5"
+      style={{
+        background: 'white',
+        boxShadow: '0 4px 20px rgba(18,33,46,0.08)',
+      }}
+    >
+      {type === 'flight' && (
+        <>
+          <NeuInput
+            label={t('transport.originCity', '¿Desde qué ciudad sales?')}
+            placeholder="Ej: Guadalajara, México"
+            value={draft.originCity}
+            onChange={(v) => setDraft({ originCity: v })}
+          />
+          <NeuInput
+            label={t('transport.airline', 'Aerolínea (opcional)')}
+            placeholder="Ej: Aeroméxico"
+            value={draft.airline}
+            onChange={(v) => setDraft({ airline: v })}
+          />
+          <NeuInput
+            label={t('transport.flightNumber', 'Número de vuelo (opcional)')}
+            placeholder="Ej: AM 123"
+            value={draft.flightNumber}
+            onChange={(v) => setDraft({ flightNumber: v })}
+          />
+          <NeuInput
+            label={t('transport.airportCode', 'Código aeropuerto destino (opcional)')}
+            placeholder="Ej: CUN"
+            value={draft.airportCode}
+            onChange={(v) => setDraft({ airportCode: v })}
+          />
+        </>
+      )}
+      {type === 'car' && (
+        <>
+          <NeuInput
+            label={t('transport.originCity', '¿Desde dónde sales?')}
+            placeholder="Ej: Guadalajara, México"
+            value={draft.originCity}
+            onChange={(v) => setDraft({ originCity: v })}
+          />
+          <EstimatedTimeCard type={type} />
+          <div
+            className="flex items-center gap-3 rounded-2xl p-4"
+            style={{ background: 'rgba(48,112,130,0.08)', border: '1px solid rgba(48,112,130,0.15)' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+              <path d="M24 4C16.27 4 10 10.27 10 18c0 10.5 14 26 14 26s14-15.5 14-26c0-7.73-6.27-14-14-14z" fill="#307082" />
+              <circle cx="24" cy="18" r="6" fill="rgba(255,255,255,0.50)" />
+            </svg>
+            <span style={{ color: '#307082', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>
+              {t('transport.car.mapsNote', 'Al crear el viaje generaremos la ruta en Maps/Waze')}
+            </span>
+          </div>
+        </>
+      )}
+      {type === 'bus' && (
+        <>
+          <NeuInput
+            label={t('transport.originCity', '¿Desde dónde sales?')}
+            placeholder="Ej: Guadalajara, México"
+            value={draft.originCity}
+            onChange={(v) => setDraft({ originCity: v })}
+          />
+          <EstimatedTimeCard type={type} />
+          <NeuInput
+            label={t('transport.busTerminal', 'Terminal de autobús (opcional)')}
+            placeholder="Ej: Central de Autobuses Norte"
+            value={draft.busTerminal}
+            onChange={(v) => setDraft({ busTerminal: v })}
+          />
+        </>
+      )}
+      {type === 'train' && (
+        <>
+          <NeuInput
+            label={t('transport.originCity', '¿Desde dónde sales?')}
+            placeholder="Ej: Ciudad de México"
+            value={draft.originCity}
+            onChange={(v) => setDraft({ originCity: v })}
+          />
+          <EstimatedTimeCard type={type} />
+          <NeuInput
+            label={t('transport.trainStation', 'Estación de salida (opcional)')}
+            placeholder="Ej: Estación Central"
+            value={draft.trainStation}
+            onChange={(v) => setDraft({ trainStation: v })}
+          />
+        </>
+      )}
+      {type === 'cruise' && (
+        <NeuInput
+          label={t('transport.cruisePort', 'Puerto de salida')}
+          placeholder="Ej: Puerto de Veracruz"
+          value={draft.cruisePort}
+          onChange={(v) => setDraft({ cruisePort: v })}
+        />
+      )}
+    </motion.div>
+  );
+}
+
+/* ─── Página principal ───────────────────────────────────────────── */
+export function TransportPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const selected = useAppStore((s) => s.onboardingDraft.transportType);
+  const setDraft = useAppStore((s) => s.setOnboardingDraft);
+
+  function handleSelect(val: TransportType) {
+    setDraft({ transportType: val });
+  }
+
+  function handleContinue() {
+    navigate('/onboarding/smart-detection');
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="flex min-h-full flex-col px-5 pt-8 pb-10"
+      style={{ background: '#ECE7DC' }}
+    >
+      {/* Header */}
+      <div className="mb-6">
+        <div
+          className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1"
+          style={{ background: 'rgba(234,153,64,0.12)' }}
+        >
+          <span style={{ color: '#EA9940', fontSize: 12, fontWeight: 700, fontFamily: 'Questrial, sans-serif' }}>
+            {t('onboarding.step', { current: 4, total: 8 })}
+          </span>
+        </div>
+        <h1 style={{
+          color: '#12212E',
+          fontSize: 26,
+          fontWeight: 700,
+          lineHeight: 1.15,
+          fontFamily: 'Questrial, sans-serif',
+        }}>
+          {t('transport.title', '¿Cómo llegas?')}
+        </h1>
+        <p style={{
+          color: 'rgba(18,33,46,0.55)',
+          fontSize: 14,
+          marginTop: 6,
+          fontFamily: 'Questrial, sans-serif',
+        }}>
+          {t('transport.prompt', 'Define tu medio de transporte para personalizar tu viaje')}
+        </p>
+      </div>
+
+      {/* Grid de opciones */}
+      <div className="grid grid-cols-2 gap-3">
+        {OPTIONS.map(({ value, labelKey, descKey, Icon }, i) => {
+          const isActive = selected === value;
+          return (
+            <motion.button
+              key={value}
+              type="button"
+              onClick={() => handleSelect(value)}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              className="flex flex-col items-center gap-3 rounded-3xl p-4 text-left transition-all active:scale-[0.96]"
+              style={{
+                background: isActive ? '#12212E' : 'white',
+                boxShadow: isActive
+                  ? '0 8px 24px rgba(18,33,46,0.25)'
+                  : '0 4px 16px rgba(18,33,46,0.08)',
+                border: isActive ? '2px solid #EA9940' : '2px solid transparent',
+                position: 'relative',
+              }}
+            >
+              {/* Check badge */}
+              {isActive && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    background: '#EA9940',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 48 48" fill="none">
+                    <path d="M10 24l10 10 18-18" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                </motion.div>
+              )}
+
+              {/* Contenedor ícono */}
+              <div
+                className="flex items-center justify-center rounded-2xl"
+                style={{
+                  width: 64,
+                  height: 64,
+                  background: isActive ? 'rgba(234,153,64,0.15)' : 'rgba(18,33,46,0.05)',
+                }}
+              >
+                <Icon />
+              </div>
+
+              <div className="w-full">
+                <div style={{
+                  color: isActive ? 'white' : '#12212E',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  fontFamily: 'Questrial, sans-serif',
+                }}>
+                  {t(labelKey)}
+                </div>
+                <div style={{
+                  color: isActive ? 'rgba(255,255,255,0.60)' : 'rgba(18,33,46,0.45)',
+                  fontSize: 11,
+                  marginTop: 2,
+                  fontFamily: 'Questrial, sans-serif',
+                }}>
+                  {t(descKey)}
+                </div>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* SubForm contextual */}
+      <AnimatePresence mode="wait">
+        {selected && <TransportSubForm key={selected} type={selected} />}
+      </AnimatePresence>
+
+      {/* Botones */}
+      <div className="mt-auto pt-8 flex gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          style={{
+            flex: 1,
+            height: 54,
+            borderRadius: 16,
+            border: '1.5px solid rgba(18,33,46,0.15)',
+            background: 'transparent',
+            color: '#12212E',
+            fontSize: 15,
+            fontWeight: 700,
+            fontFamily: 'Questrial, sans-serif',
+            cursor: 'pointer',
+          }}
+        >
+          {t('common.back')}
+        </button>
+        <button
+          type="button"
+          onClick={handleContinue}
+          style={{
+            flex: 2,
+            height: 54,
+            borderRadius: 16,
+            background: selected ? '#EA9940' : 'rgba(18,33,46,0.12)',
+            color: selected ? 'white' : 'rgba(18,33,46,0.30)',
+            fontSize: 15,
+            fontWeight: 700,
+            fontFamily: 'Questrial, sans-serif',
+            border: 'none',
+            cursor: selected ? 'pointer' : 'default',
+            boxShadow: selected ? '0 6px 20px rgba(234,153,64,0.35)' : 'none',
+            transition: 'all 0.25s ease',
+          }}
+        >
+          {selected ? t('common.continue') : t('transport.selectFirst', 'Elige un transporte')}
+        </button>
+      </div>
+
+      {/* Skip */}
+      <button
+        type="button"
+        onClick={() => navigate('/onboarding/smart-detection')}
+        style={{
+          marginTop: 12,
+          background: 'transparent',
+          border: 'none',
+          color: 'rgba(18,33,46,0.38)',
+          fontSize: 13,
+          fontFamily: 'Questrial, sans-serif',
+          cursor: 'pointer',
+          textAlign: 'center',
+          width: '100%',
+        }}
+      >
+        {t('common.skip', 'Omitir por ahora')}
+      </button>
+    </motion.div>
+  );
+}

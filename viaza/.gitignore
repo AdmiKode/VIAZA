@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+
+ios
+android
+
+# Variables de entorno — NUNCA subir al repo
+.env
+.env.local
+.env.*.local
+

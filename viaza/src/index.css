@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
+
+:root {
+  /* ── Paleta base ── */
+  --viaza-primary: #12212e;
+  --viaza-secondary: #307082;
+  --viaza-soft: #6ca3a2;
+  --viaza-background: #ece7dc;
+  --viaza-accent: #ea9940;
+
+  /* ── RGB para composición con alpha ── */
+  --viaza-primary-rgb: 18 33 46;
+  --viaza-secondary-rgb: 48 112 130;
+  --viaza-soft-rgb: 108 163 162;
+  --viaza-background-rgb: 236 231 220;
+  --viaza-accent-rgb: 234 153 64;
+
+  /* ── Elevation shadows ── */
+  --shadow-1: 0 1px 3px rgb(18 33 46 / 0.07), 0 1px 2px rgb(18 33 46 / 0.04);
+  --shadow-2: 0 4px 12px rgb(18 33 46 / 0.09), 0 2px 4px rgb(18 33 46 / 0.05);
+  --shadow-3: 0 12px 32px rgb(18 33 46 / 0.13), 0 4px 8px rgb(18 33 46 / 0.07);
+
+  /* ── Radios ── */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  /* ── Transiciones ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 200ms;
+  --duration-base: 300ms;
+  --duration-slow: 500ms;
+}
+
+html,
+body {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: 'Questrial', ui-sans-serif, system-ui, sans-serif;
+  background: var(--viaza-background);
+  color: var(--viaza-primary);
+  overscroll-behavior: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ── Surface utilities ── */
+.surface-1 {
+  background: rgb(var(--viaza-background-rgb) / 0.7);
+  box-shadow: var(--shadow-1);
+}
+
+.surface-2 {
+  background: rgb(255 255 255 / 0.60);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.surface-glass {
+  background: rgb(255 255 255 / 0.45);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 0.35);
+}
+
+/* ── Card base ── */
+.card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  transition: box-shadow var(--duration-fast) var(--ease-out-expo),
+              transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.card:active {
+  transform: scale(0.985);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Scrollbar oculto pero funcional ── */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── Safe area bottom ── */
+.pb-safe {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+/* ── Tap highlight off en mobile ── */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
