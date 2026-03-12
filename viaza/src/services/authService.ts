@@ -6,6 +6,10 @@
 
 import { supabase } from './supabaseClient';
 
+/** URL base de la app — usa VITE_APP_URL en producción, origin en dev */
+const APP_URL = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
+  ?? window.location.origin;
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -86,7 +90,7 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: APP_URL,
       queryParams: { prompt: 'select_account' },
     },
   });
@@ -98,7 +102,7 @@ export async function signInWithApple(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: APP_URL,
     },
   });
   if (error) throw new Error(error.message);
@@ -112,7 +116,7 @@ export async function resetPassword(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(
     email.trim().toLowerCase(),
     {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${APP_URL}/auth/reset-password`,
     }
   );
   if (error) throw new Error(error.message);

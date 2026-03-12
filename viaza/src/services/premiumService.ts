@@ -13,6 +13,9 @@ import { Capacitor } from '@capacitor/core';
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/9AQ5lV8vs6cQ8Z2fZa';
 const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID as string;
 const RC_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY as string;
+/** URL de retorno tras pago Stripe — apunta al dominio de producción */
+const APP_URL = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
+  ?? window.location.origin;
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -68,9 +71,13 @@ export interface PurchaseResult {
 export async function purchasePremium(userEmail?: string): Promise<PurchaseResult> {
   if (!isNative) {
     // Web → Stripe Payment Link
-    const url = userEmail
-      ? `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(userEmail)}&client_reference_id=${STRIPE_PRICE_ID}`
-      : STRIPE_PAYMENT_LINK;
+    const params = new URLSearchParams();
+    if (userEmail) params.set('prefilled_email', userEmail);
+    params.set('client_reference_id', STRIPE_PRICE_ID);
+    // Stripe usa success_url / cancel_url para redirigir tras el pago
+    params.set('success_url', `${APP_URL}/?premium=success`);
+    params.set('cancel_url', `${APP_URL}/premium`);
+    const url = `${STRIPE_PAYMENT_LINK}?${params.toString()}`;
     window.open(url, '_blank');
     // No podemos saber el resultado inmediato en web (redirect flow)
     // El webhook de Stripe actualiza Supabase y el store se sincroniza
