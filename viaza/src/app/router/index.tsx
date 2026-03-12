@@ -9,6 +9,8 @@ import { SettingsPage } from '../../modules/settings/pages/SettingsPage';
 import { ProfilePage } from '../../modules/profile/pages/ProfilePage';
 import { LoginPage } from '../../modules/auth/pages/LoginPage';
 import { RegisterPage } from '../../modules/auth/pages/RegisterPage';
+import { ForgotPasswordPage } from '../../modules/auth/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '../../modules/auth/pages/ResetPasswordPage';
 import { ToolsHubPage } from '../../modules/tools/pages/ToolsHubPage';
 import { TipsHubPage } from '../../modules/tips/pages/TipsHubPage';
 import { TranslatorPage } from '../../modules/translator/pages/TranslatorPage';
@@ -95,6 +97,8 @@ export function AppRouter() {
             path="register"
             element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
           />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         {/* ── Onboarding (requiere auth) ───────────────────────────── */}

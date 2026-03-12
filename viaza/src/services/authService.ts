@@ -104,6 +104,29 @@ export async function signInWithApple(): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Enviar email de recuperación de contraseña.
+ * Supabase envía un link que redirige a /auth/reset-password
+ */
+export async function resetPassword(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim().toLowerCase(),
+    {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    }
+  );
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Establecer nueva contraseña (usuario ya verificado vía link de reset).
+ * Supabase habrá establecido la sesión al llegar al redirect.
+ */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
+}
+
 /** Escuchar cambios de sesión (útil en AppProviders) */
 export function onAuthStateChange(
   callback: (user: AuthUser | null) => void

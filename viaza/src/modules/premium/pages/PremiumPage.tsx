@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { purchasePremium, restorePurchases } from '../../../services/premiumService';
+import { Capacitor } from '@capacitor/core';
 
 /* ─── Beneficios del plan premium ─── */
 const BENEFITS = [
@@ -134,24 +136,43 @@ const BENEFITS = [
 ];
 
 /* URL de Stripe Checkout — se abre en browser nativo */
-const STRIPE_CHECKOUT_URL =
-  'https://buy.stripe.com/viaza_premium'; // ← reemplazar con tu Payment Link real de Stripe
+const isNative = Capacitor.isNativePlatform();
 
 export function PremiumPage() {
   const { t } = useTranslation();
   const isPremium = useAppStore((s) => s.isPremium);
+  const setIsPremium = useAppStore((s) => s.setIsPremium);
   const user = useAppStore((s) => s.user);
   const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [loadingRestore, setLoadingRestore] = useState(false);
+  const [restoreMsg, setRestoreMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  function handleCheckout() {
+  async function handleCheckout() {
     setLoadingCheckout(true);
-    // Abre Stripe Payment Link con prefill de email si está disponible
-    const url = user?.email
-      ? `${STRIPE_CHECKOUT_URL}?prefilled_email=${encodeURIComponent(user.email)}`
-      : STRIPE_CHECKOUT_URL;
-    window.open(url, '_blank');
-    // Reset loading tras 3s (ya está en tab externo)
-    setTimeout(() => setLoadingCheckout(false), 3000);
+    try {
+      const result = await purchasePremium(user?.email);
+      if (result.success && isNative) {
+        setIsPremium(true);
+      }
+    } finally {
+      setTimeout(() => setLoadingCheckout(false), 3000);
+    }
+  }
+
+  async function handleRestore() {
+    setLoadingRestore(true);
+    setRestoreMsg(null);
+    try {
+      const result = await restorePurchases();
+      if (result.success) {
+        setIsPremium(true);
+        setRestoreMsg({ ok: true, text: '¡Compras restauradas! Ya tienes Premium.' });
+      } else {
+        setRestoreMsg({ ok: false, text: result.error ?? 'No se encontraron compras' });
+      }
+    } finally {
+      setLoadingRestore(false);
+    }
   }
 
   return (
@@ -215,26 +236,62 @@ export function PremiumPage() {
             </div>
           )}
 
-          {/* CTA Stripe */}
+          {/* CTA Stripe / RevenueCat */}
           {!isPremium && (
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              type="button"
-              onClick={handleCheckout}
-              disabled={loadingCheckout}
-              className="mt-6 w-full rounded-2xl py-4 text-center font-bold transition"
-              style={{
-                background: '#EA9940',
-                color: 'white',
-                fontSize: 17,
-                boxShadow: '0 8px 28px rgba(234,153,64,0.45)',
-                border: 'none',
-                cursor: loadingCheckout ? 'default' : 'pointer',
-                opacity: loadingCheckout ? 0.7 : 1,
-              }}
-            >
-              {loadingCheckout ? 'Abriendo pago...' : '✦ Activar Premium ahora'}
-            </motion.button>
+            <>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                type="button"
+                onClick={handleCheckout}
+                disabled={loadingCheckout}
+                className="mt-6 w-full rounded-2xl py-4 text-center font-bold transition flex items-center justify-center gap-2"
+                style={{
+                  background: '#EA9940',
+                  color: 'white',
+                  fontSize: 17,
+                  fontFamily: 'Questrial, sans-serif',
+                  boxShadow: '0 8px 28px rgba(234,153,64,0.45)',
+                  border: 'none',
+                  cursor: loadingCheckout ? 'default' : 'pointer',
+                  opacity: loadingCheckout ? 0.7 : 1,
+                }}
+              >
+                {loadingCheckout ? (
+                  <>
+                    <svg className="animate-spin" width="18" height="18" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" stroke="rgba(255,255,255,0.30)" strokeWidth="4"/><path d="M24 6a18 18 0 0 1 18 18" stroke="white" strokeWidth="4" strokeLinecap="round"/></svg>
+                    {isNative ? 'Abriendo tienda…' : 'Abriendo pago…'}
+                  </>
+                ) : '✦ Activar Premium ahora'}
+              </motion.button>
+
+              {/* Restaurar compras — solo visible en nativo */}
+              {isNative && (
+                <div className="mt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={handleRestore}
+                    disabled={loadingRestore}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: 13, fontFamily: 'Questrial, sans-serif', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    {loadingRestore ? 'Restaurando…' : 'Restaurar compras anteriores'}
+                  </button>
+                </div>
+              )}
+
+              {/* Mensaje restauración */}
+              {restoreMsg && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 rounded-2xl px-4 py-3 text-center"
+                  style={{ background: restoreMsg.ok ? 'rgba(108,163,162,0.20)' : 'rgba(192,57,43,0.15)' }}
+                >
+                  <span style={{ color: restoreMsg.ok ? '#6CA3A2' : 'rgba(255,200,200,0.90)', fontSize: 13, fontFamily: 'Questrial, sans-serif', fontWeight: 600 }}>
+                    {restoreMsg.text}
+                  </span>
+                </motion.div>
+              )}
+            </>
           )}
 
           {isPremium && (

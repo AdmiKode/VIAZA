@@ -368,13 +368,15 @@ export function LoginPage() {
           <div className="mt-5 text-center">
             <button
               type="button"
+              onClick={() => navigate('/auth/forgot-password')}
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'rgba(18,33,46,0.45)',
+                color: '#307082',
                 fontSize: 13,
                 fontFamily: 'Questrial, sans-serif',
                 cursor: 'pointer',
+                fontWeight: 600,
               }}
             >
               {t('auth.login.forgotPassword', '¿Olvidaste tu contraseña?')}
