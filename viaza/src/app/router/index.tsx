@@ -86,6 +86,9 @@ export function AppRouter() {
         <Route path="/splash" element={<SplashPage />} />
         <Route path="/intro" element={<IntroPage />} />
 
+        {/* Alias para el link del email de Supabase → /reset-password?token=... */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
         {/* ── Auth ────────────────────────────────────────────────── */}
         <Route path="/auth">
           <Route index element={<Navigate to="/auth/login" replace />} />

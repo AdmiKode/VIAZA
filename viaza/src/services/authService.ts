@@ -116,7 +116,7 @@ export async function resetPassword(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(
     email.trim().toLowerCase(),
     {
-      redirectTo: `${APP_URL}/auth/reset-password`,
+      redirectTo: `${APP_URL}/reset-password`,
     }
   );
   if (error) throw new Error(error.message);
