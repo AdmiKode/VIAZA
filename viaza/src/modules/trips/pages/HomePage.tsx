@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { WeatherForecastModal } from '../../weather/components/WeatherForecastModal';
+import { fetchForecast, fetchCurrentConditions } from '../../../engines/weatherEngine';
 
 /* ─── Gradientes hero por tipo de viaje ─── */
 const HERO_GRADIENT: Record<string, string> = {
@@ -111,6 +112,30 @@ export function HomePage() {
   const trip = useAppStore((s) => s.trips.find((x) => x.id === s.currentTripId) ?? null);
   const packingItems = useAppStore((s) => s.packingItems.filter((x) => x.tripId === s.currentTripId));
   const [showForecast, setShowForecast] = useState(false);
+  const updateTrip = useAppStore((s) => s.updateTrip);
+
+  /* Refresco automático del clima si el dato tiene más de 6 horas */
+  useEffect(() => {
+    if (!trip?.id || !trip.lat || !trip.lon) return;
+    const lastFetch = trip.weatherForecast?.fetchedAt;
+    const SIX_HOURS = 1000 * 60 * 60 * 6;
+    if (lastFetch && Date.now() - new Date(lastFetch).getTime() < SIX_HOURS) return;
+    // Refrescar en background sin bloquear la UI
+    Promise.all([
+      fetchForecast(trip.lat, trip.lon, trip.startDate ?? '', trip.endDate ?? ''),
+      fetchCurrentConditions(trip.lat, trip.lon),
+    ]).then(([forecast, current]) => {
+      if (!forecast) return;
+      updateTrip(trip.id, {
+        weatherForecast: {
+          ...forecast,
+          avgTemp: current?.temp ?? forecast.avgTemp,
+          description: current?.description ?? forecast.description,
+          fetchedAt: new Date().toISOString(),
+        },
+      });
+    }).catch(() => { /* silencioso — el dato viejo sigue mostrándose */ });
+  }, [trip?.id, trip?.lat, trip?.lon]);
 
   const packedCount = packingItems.filter((x) => x.checked).length;
   const totalCount = packingItems.length;

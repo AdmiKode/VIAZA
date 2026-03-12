@@ -39,6 +39,9 @@ import { TripHistoryPage } from '../../modules/trips/pages/TripHistoryPage';
 import { BusinessTripPage } from '../../modules/trips/pages/BusinessTripPage';
 import { TripActivitiesPage } from '../../modules/activities/pages/TripActivitiesPage';
 import { WeatherForecastModal } from '../../modules/weather/components/WeatherForecastModal';
+import { TripRoutePage } from '../../modules/trips/pages/TripRoutePage';
+import { BoardingPassScannerPage } from '../../modules/airline/pages/BoardingPassScannerPage';
+import { LuggageAssistantRoute } from '../../modules/packing/pages/LuggageAssistantRoute';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -137,6 +140,9 @@ export function AppRouter() {
           <Route path="/history" element={<TripHistoryPage />} />
           <Route path="/business" element={<BusinessTripPage />} />
           <Route path="/activities" element={<TripActivitiesPage />} />
+          <Route path="/route" element={<TripRoutePage />} />
+          <Route path="/boarding-pass-scanner" element={<BoardingPassScannerPage />} />
+          <Route path="/luggage-assistant" element={<LuggageAssistantRoute />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

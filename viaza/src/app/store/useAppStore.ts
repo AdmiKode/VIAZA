@@ -68,6 +68,7 @@ type AppState = {
   createTripFromDraft: () => string;
   setCurrentTrip: (tripId: string | null) => void;
   updateTripStatus: (tripId: string, status: Trip['tripStatus']) => void;
+  updateTrip: (tripId: string, patch: Partial<Omit<Trip, 'id' | 'createdAt'>>) => void;
   togglePackingItem: (itemId: string) => void;
   addCustomPackingItem: (tripId: string, label: string, quantity?: number, travelerId?: string) => void;
 
@@ -379,8 +380,13 @@ export const useAppStore = create<AppState>()(
         return tripId;
       },
 
-      setCurrentTrip: (tripId) => set({ currentTripId: tripId }),
-
+       setCurrentTrip: (tripId) => set({ currentTripId: tripId }),
+      updateTrip: (tripId, patch) =>
+        set((state) => ({
+          trips: state.trips.map((t) =>
+            t.id === tripId ? { ...t, ...patch, updatedAt: nowIso() } : t
+          )
+        })),
       updateTripStatus: (tripId, status) =>
         set((state) => ({
           trips: state.trips.map((t) =>

@@ -16,6 +16,8 @@ export interface WeatherForecast {
   /** Derived weather category used for packing rules */
   weatherType: 'hot' | 'warm' | 'mild' | 'cold' | 'snowy' | 'rainy';
   description: string;
+  /** ISO timestamp del último fetch para saber si refrescar */
+  fetchedAt?: string;
 }
 
 export interface Trip {
