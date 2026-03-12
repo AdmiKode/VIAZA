@@ -5,6 +5,10 @@ import type { PackingItem } from '../../types/packing';
 import type { Traveler, PackingEvidence, LuggagePhoto } from '../../types/traveler';
 import { generatePackingItemsForTrip } from '../../modules/packing/utils/packingGenerator';
 import { weatherTypeToClimate } from '../../engines/weatherEngine';
+import { signOut } from '../../services/authService';
+import type { AuthUser } from '../../services/authService';
+import { saveTrip } from '../../services/tripsService';
+import { savePackingItems, togglePackingItemRemote } from '../../services/packingService';
 
 type OnboardingDraft = {
   destination: string;
@@ -54,15 +58,14 @@ type AppState = {
   /** Fotos de maleta completa para asistente de acomodo */
   luggagePhotos: LuggagePhoto[];
   user: { name: string; email: string } | null;
-  registeredUsers: Array<{ name: string; email: string; password: string }>;
   isAuthenticated: boolean;
   onboardingCompleted: boolean;
   onboardingDraft: OnboardingDraft;
 
   setLanguage: (lang: string) => void;
-  register: (params: { name: string; email: string; password: string }) => void;
-  login: (params: { email: string; password: string }) => void;
-  logout: () => void;
+  /** Usado por LoginPage y RegisterPage después de autenticar con Supabase */
+  setSupabaseUser: (user: AuthUser) => void;
+  logout: () => Promise<void>;
   setOnboardingDraft: (patch: Partial<OnboardingDraft>) => void;
   resetOnboardingDraft: () => void;
   createTripFromDraft: () => string;
@@ -226,55 +229,27 @@ export const useAppStore = create<AppState>()(
       packingEvidence: [],
       luggagePhotos: [],
       user: null,
-      registeredUsers: [
-        { name: 'Patricia', email: 'pattogaribayg@gmail.com', password: 'viaza2026' }
-      ],
       isAuthenticated: false,
       onboardingCompleted: false,
       onboardingDraft: emptyDraft,
 
       setLanguage: (lang) => set({ currentLanguage: lang }),
 
-      register: ({ name, email, password }) => {
-        const normalizedEmail = email.trim().toLowerCase();
-        const normalizedName = name.trim();
-        if (!normalizedName || !normalizedEmail || !password) {
-          throw new Error('Invalid registration params');
-        }
-        const exists = get().registeredUsers.some((u) => u.email === normalizedEmail);
-        if (exists) {
-          throw new Error('User already exists');
-        }
-        set((state) => ({
-          registeredUsers: [
-            { name: normalizedName, email: normalizedEmail, password },
-            ...state.registeredUsers
-          ],
-          user: { name: normalizedName, email: normalizedEmail },
-          isAuthenticated: true
-        }));
-      },
+      setSupabaseUser: (authUser: AuthUser) =>
+        set({
+          user: { name: authUser.name, email: authUser.email },
+          isAuthenticated: true,
+        }),
 
-      login: ({ email, password }) => {
-        const normalizedEmail = email.trim().toLowerCase();
-        if (normalizedEmail === 'pattogaribayg@gmail.com' && password === 'viaza2026') {
-          set({ user: { name: 'Patricia', email: normalizedEmail }, isAuthenticated: true });
-          return;
-        }
-        const match = get().registeredUsers.find((u) => u.email === normalizedEmail);
-        if (!match || match.password !== password) {
-          throw new Error('Invalid credentials');
-        }
-        set({ user: { name: match.name, email: match.email }, isAuthenticated: true });
-      },
-
-      logout: () =>
+      logout: async () => {
+        try { await signOut(); } catch { /* ignora errores de red */ }
         set({
           user: null,
           isAuthenticated: false,
           currentTripId: null,
           onboardingCompleted: false,
-        }),
+        });
+      },
 
       setOnboardingDraft: (patch) =>
         set((state) => ({
@@ -377,6 +352,14 @@ export const useAppStore = create<AppState>()(
           packingItems: [...generatePackingItemsForTrip(trip), ...state.packingItems]
         }));
 
+        // Sincronizar en background con Supabase
+        const userId = get().user?.email; // usamos email como ID local hasta conectar UUID de Supabase
+        const packingGenerated = generatePackingItemsForTrip(trip);
+        if (userId) {
+          void saveTrip(trip, userId);
+          void savePackingItems(packingGenerated);
+        }
+
         return tripId;
       },
 
@@ -394,12 +377,17 @@ export const useAppStore = create<AppState>()(
           )
         })),
 
-      togglePackingItem: (itemId) =>
+      togglePackingItem: (itemId) => {
+        const item = get().packingItems.find((x) => x.id === itemId);
+        const newChecked = item ? !item.checked : true;
         set((state) => ({
           packingItems: state.packingItems.map((x) =>
             x.id === itemId ? { ...x, checked: !x.checked } : x
           )
-        })),
+        }));
+        // Sincronizar en background
+        void togglePackingItemRemote(itemId, newChecked);
+      },
 
       addCustomPackingItem: (tripId, label, quantity = 1, travelerId) =>
         set((state) => ({
@@ -524,7 +512,6 @@ export const useAppStore = create<AppState>()(
         packingEvidence: state.packingEvidence,
         luggagePhotos: state.luggagePhotos,
         user: state.user,
-        registeredUsers: state.registeredUsers,
         isAuthenticated: state.isAuthenticated,
         onboardingCompleted: state.onboardingCompleted,
         onboardingDraft: state.onboardingDraft

@@ -5096,3 +5096,543 @@ Groq	VITE_GROQ_API_KEY ✅	(no usado en ningún archivo)	❌ No está conectado 
 ⚠️ TIENES LA KEY PERO NUNCA SE USA EN PRODUCCIÓN
 API	Variable	Motivo
 Supabase	VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY ✅	El auth usa un store local falso (registeredUsers[] en Zustand). Supabase está configurado pero ningún archivo lo importa.
+
+
+
+MANIFIESTO VIAZA — ACTUALIZACIÓN COMPLETA
+
+Versión: 12 de marzo de 2026 — Documento para desarrollo
+
+
+
+
+REGLAS ABSOLUTAS (NO NEGOCIABLES — NUNCA TOCAR)
+
+CERO EMOJIS en la UI ni en el contenido de la app. CERO COLORES fuera de la paleta oficial. TIPOGRAFÍA: Questrial en toda la app, 100% sin excepción. TODO TEXTO vía i18n, nada hardcodeado en componentes. LÓGICA FUERA DE COMPONENTES, engines y utils separados. TIPADO FUERTE, TypeScript estricto en todo el proyecto. MOBILE-FIRST, diseñado para pantalla de celular. BUILD LIMPIO, verificar npm run build antes de cerrar sesión.
+
+
+
+
+PALETA OFICIAL (INMUTABLE)
+
+Token
+Hex
+Uso
+Primary
+#12212E
+Fondos oscuros, textos principales, botones CTA
+Secondary
+#307082
+Acentos, chips, íconos secundarios
+Soft Teal
+#6CA3A2
+Acentos suaves, bordes, íconos terciarios
+Background
+#ECE7DC
+Fondo general (arena/crema)
+Accent
+#EA9940
+CTA, highlights, badges, capa base de iconos duotone
+Error
+#C0392B
+Solo para estados de error — no usar en UI decorativa
+
+
+
+
+
+
+
+SISTEMA DE ICONOS DUOTONE — ESPECIFICACIÓN COMPLETA
+
+Este es el sistema visual central de VIAZA. Todos los iconos de la app siguen este estilo sin excepción.
+
+Estructura de cada icono: Dos capas SVG superpuestas con un offset diagonal. La capa base es la forma principal en color #EA9940 (accent) con opacidad 100%. La capa superior es la misma forma o una forma complementaria en color #6CA3A2 o blanco con opacidad entre 55% y 70%, desplazada entre 4 y 8 píxeles hacia arriba-derecha o abajo-izquierda. El resultado es un icono con profundidad visual, sensación de volumen y personalidad sin recurrir a 3D real.
+
+Regla de color por contexto: Cuando el icono aparece sobre fondo oscuro (#12212E), la capa base es #EA9940 y la capa superior es rgba(255,255,255,0.55). Cuando aparece sobre fondo claro (#ECE7DC), la capa base es #307082 y la capa superior es rgba(18,33,46,0.25). Cuando aparece dentro de una tarjeta de herramienta (quick tools), la capa base usa el color del módulo y la capa superior es siempre blanco semitransparente.
+
+Tamaños estándar: 48×48px para tarjetas de dashboard, 32×32px para quick tools, 24×24px para listas y menús, 18×18px para chips y badges.
+
+Iconos requeridos por módulo:
+
+Módulo
+Icono
+Descripción del SVG
+Maleta / Packing
+Maleta cerrada
+Cuerpo rectangular redondeado + asa en capa superior
+Clima
+Nube + sol
+Sol naranja base + nube gris encima con offset
+Actividades
+Rayo / Zap
+Triángulo naranja + rayo gris superpuesto
+Transporte avión
+Avión
+Silueta naranja + ala gris encima
+Transporte auto
+Auto
+Cuerpo naranja + ventanas grises encima
+Ruta / Mapa
+Map Pin
+Pin naranja + sombra elipse gris debajo
+Moneda
+Moneda
+Círculo naranja + símbolo gris encima
+Traductor
+Burbujas de chat
+Burbuja naranja + burbuja gris con offset
+Split Bill
+División
+Rectángulo naranja + línea divisoria gris
+Adaptadores
+Enchufe
+Cuerpo naranja + pines grises encima
+Tips locales
+Bombilla
+Bulbo naranja + destellos grises
+Survival
+Fuego / Llama
+Llama naranja + punta gris encima
+Recordatorio
+Campana
+Campana naranja + badajo gris
+Perfil / Usuario
+Silueta
+Cuerpo naranja + cabeza gris con offset
+Checklist
+Check en caja
+Caja naranja + checkmark gris
+Foto evidencia
+Cámara
+Cuerpo naranja + lente gris
+Historial
+Reloj con flecha
+Círculo naranja + manecillas grises
+Nuevo viaje
+Plus en círculo
+Círculo naranja + cruz gris
+Reglas aerolínea
+Avión en caja
+Caja naranja + avión gris encima
+Documentos
+Hoja doblada
+Hoja naranja + esquina doblada gris
+
+
+
+
+
+
+
+SISTEMA DE TARJETAS DEL DASHBOARD
+
+Las tarjetas del dashboard son el elemento visual más importante de la app. Siguen el estilo de las imágenes de referencia: cuadradas, esquinas muy redondeadas (radius 24px), fondo blanco/surface con sombra suave, sin bordes duros.
+
+Tarjeta estándar (1×1): 160×160px aprox. Icono duotone arriba a la izquierda (48×48px). Título en Questrial 600 debajo. Subtítulo o dato clave en Questrial 400 más pequeño. Sin bordes. Sombra: 0 4px 12px rgba(18,33,46,0.09).
+
+Tarjeta ancha (2×1): Misma altura, doble ancho. Usada para progreso de maleta, clima hero, y resumen de viaje activo.
+
+Tarjeta hero (full width): Ancho completo, altura 180px. Imagen de fondo del destino con overlay oscuro rgba(18,33,46,0.55). Texto blanco encima. Chips de datos (clima, moneda, idioma) en la parte inferior de la tarjeta.
+
+Grid del dashboard: 2 columnas con gap de 12px. Las tarjetas hero y anchas ocupan las 2 columnas. Las tarjetas estándar se alternan en pares.
+
+
+
+
+FLUJO COMPLETO DEL USUARIO — VERSIÓN DEFINITIVA
+
+Etapa 0 — Splash e Intro
+
+La app abre con una pantalla splash de fondo #12212E durante 900ms. El logo VIAZA aparece en el centro con una animación sutil: el punto del logo cae como un map pin. Inmediatamente después aparecen 3 slides de intro con swipe horizontal, cada uno con una ilustración SVG grande (320×320px), un título en Questrial 700 y un subtítulo en Questrial 400. El botón "Start my trip" en el tercer slide lleva al login.
+
+Etapa 1 — Auth
+
+Login y registro con diseño neumórfico. Card elevada, inputs con sombra inset, logo-blue.png sobre fondo claro. El auth en MVP usa Zustand persist. En Fase 2 se conecta a Supabase.
+
+Etapa 2 — Onboarding inteligente (menos de 45 segundos)
+
+El onboarding no es un formulario. Es un motor de decisión visual. Cada pantalla tiene una sola pregunta, respuesta visual con tarjetas grandes, y avanza automáticamente al seleccionar.
+
+Paso 1 — Tipo de viaje. Grid 2×4 de tarjetas grandes con iconos duotone. Los 8 tipos: Beach, City, Mountain, Camping, Snow/Ski, Roadtrip, Work, Adventure. Al tocar una tarjeta se activa el tema visual del tipo de viaje y se guarda travelType.
+
+Paso 2 — Destino. Input de búsqueda con autocomplete Nominatim. Al escribir "Cancun" aparece una lista: "Cancún, Quintana Roo, México", "Cancún Airport (CUN)", "Cancún Hotel Zone". El usuario toca el resultado y el sistema guarda automáticamente: destination, lat, lon, country, countryCode, currencyCode, languageCode, plugType. Este paso es el disparador de toda la inteligencia del viaje.
+
+Paso 3 — Fechas. Selector de fecha de salida y regreso. El sistema calcula durationDays automáticamente y muestra "X días" en tiempo real. Al confirmar fechas, el sistema dispara en segundo plano la llamada a Open-Meteo para obtener el pronóstico completo del viaje.
+
+Paso 4 — Transporte. 5 opciones con iconos duotone: Avión, Auto, Autobús, Crucero, Tren. Si elige Avión: sub-formulario con número de vuelo, aerolínea, aeropuerto. Si elige Auto: campo de ciudad de origen para calcular ruta y tiempo estimado con Haversine. Si elige Crucero: puerto de salida.
+
+Paso 5 — Smart Detection (automático). Pantalla de carga elegante que muestra qué está detectando: clima esperado, moneda, idioma, tipo de enchufe. Los datos vienen de Open-Meteo + OpenWeatherMap en paralelo. Al terminar muestra un resumen tipo "card de inteligencia": temperatura promedio, descripción del clima, moneda del destino, idioma local, tipo de adaptador necesario.
+
+Paso 6 — Actividades. Cards seleccionables generadas según travelType y destination. El usuario puede seleccionar múltiples. Cada actividad tiene icono duotone y subtítulo descriptivo. Estas selecciones alimentan directamente el motor de packing y el dashboard de actividades.
+
+Paso 7 — Viajeros. Stepper de adultos (1-8) y niños (0-6). Selector de grupo: Solo, Pareja, Amigos, Familia, Familia con bebé. Este paso es crítico porque determina cuántas maletas se generan y qué módulos especiales se activan (módulo bebé).
+
+Paso 8 — Preferencias. Tres toggles: "Llevo laptop" (agrega accesorios tech), "Viajo ligero" (fuerza packingStyle=light), "¿Lavarás ropa?" con 3 opciones (No / Lavandería / Lavadora).
+
+Paso 9 — Resumen. Hero card con todos los datos del viaje. Botón grande "Crear mi viaje". Al tocar: se crea el Trip, se genera la packing list automáticamente, se redirige al Home/Dashboard.
+
+Etapa 3 — Dashboard del viaje (el cockpit)
+
+Esta es la pantalla principal de la app. No es un menú. Es el panel de control del viaje activo. Se construye con el grid de tarjetas cuadradas del sistema visual.
+
+Estructura del dashboard (de arriba hacia abajo):
+
+El header tiene el logo VIAZA a la izquierda y el ícono de perfil/settings a la derecha, sobre fondo #12212E. Debajo, la tarjeta hero del viaje activo ocupa el ancho completo: imagen de fondo del destino (foto real via Google Static Maps o imagen local por tipo de viaje), overlay oscuro, nombre del destino en Questrial 700 blanco, fechas y duración, chips de clima/moneda/idioma en la parte inferior de la tarjeta, botón "Ver viaje" en accent naranja.
+
+Debajo de la hero card aparece el grid 2×2 de tarjetas de módulos activos. El orden y contenido de las tarjetas cambia según el tipo de viaje:
+
+Tarjeta
+Icono
+Contenido
+Clima
+Nube+sol duotone
+Temperatura del día, descripción, tap abre modal cristal con 14 días
+Maleta
+Maleta duotone
+"X de Y ítems listos", barra de progreso, tap abre packing
+Actividades
+Rayo duotone
+"X actividades seleccionadas", tap abre módulo actividades
+Ruta
+Map pin duotone
+Tiempo estimado de viaje si es por tierra, o "Vuelo AM401" si es avión
+
+
+
+
+Debajo del grid principal aparece la sección "Before you go" con 3 accesos en lista: Reglas de aerolínea, Qué puedo llevar en el avión, Recordatorio de salida. Cada ítem tiene su icono duotone a la izquierda y una flecha a la derecha.
+
+Finalmente, la sección "Tips para tu destino" muestra un scroll horizontal de tarjetas de tips locales filtradas por el destino del viaje activo.
+
+Etapa 4 — Módulo de Clima Completo
+
+El clima no es un dato decorativo. Es el motor que alimenta la maleta.
+
+Al tocar la tarjeta de clima del dashboard se abre un modal cristal (glass modal con backdrop blur) que muestra el pronóstico completo día por día durante toda la duración del viaje. Si el viaje es de 14 días, aparecen los 14 días. Cada día muestra tres franjas horarias: mañana, tarde y noche, con temperatura e ícono del estado del cielo.
+
+El sistema calcula automáticamente patrones del viaje completo: cuántos días de lluvia, cuántas noches frías, cuántos días de calor fuerte, nivel de humedad promedio, índice UV máximo. Estos patrones se traducen directamente en alertas de maleta: "Tu viaje tendrá 3 tardes con lluvia — incluimos impermeable ligero en tu lista."
+
+Etapa 5 — Módulo de Actividades con Contexto Real
+
+Cada actividad seleccionada en el onboarding aparece en el dashboard con información de contexto real, no solo el nombre.
+
+La tarjeta de cada actividad muestra: nombre de la actividad, descripción breve (2-3 líneas), costo aproximado en la moneda del destino, duración recomendada, nivel de demanda física (bajo/medio/alto), recomendación de compra anticipada (sí/no), tip práctico de VIAZA, y lista de ítems de maleta que requiere esa actividad.
+
+Ejemplo — Xcaret (Cancún, beach trip):
+
+
+Xcaret — Parque ecoarqueológico con actividades acuáticas y culturales.
+Costo promedio: $2,800 MXN por persona.
+Duración ideal: 1 día completo (8-10 horas).
+Compra anticipada: Recomendada. Compra en línea en xcaret.com para evitar fila.
+Fila en taquilla: 20-30 minutos en temporada alta.
+Qué llevar: traje de baño, sandalias, bloqueador eco-friendly, cambio de ropa, efectivo para extras.
+Impacto en maleta: agrega traje de baño extra, bloqueador eco, sandalias de agua.
+
+Cuando el usuario marca una actividad como "confirmada", los ítems de esa actividad se agregan automáticamente a la packing list si no estaban ya.
+
+El sistema también anticipa situaciones: si el usuario tiene seleccionado "Xcaret" pero no ha comprado boletos, aparece una alerta en el dashboard: "Aún no has comprado boletos para Xcaret. Temporada alta: compra con anticipación."
+
+Etapa 6 — Módulo de Ruta y Transporte
+
+Si el usuario viaja en auto, el módulo de ruta muestra: ciudad de origen, destino, distancia en km, tiempo estimado de manejo, costo aproximado de gasolina (calculado con precio promedio del país destino), número estimado de casetas. Botones para abrir Google Maps, Waze o Apple Maps directamente.
+
+Si viaja en avión, el módulo muestra el estado del vuelo en tiempo real via AviationStack: número de vuelo, aerolínea, terminal de salida, gate, hora programada, hora estimada, delay si aplica. También muestra la hora recomendada de salida de casa hacia el aeropuerto (calculada con el departureCalculator).
+
+Etapa 7 — La Maleta Inteligente (el corazón de VIAZA)
+
+La maleta no es una lista. Es un sistema de preparación por categorías, verificación visual y asistencia de acomodo.
+
+Vista principal de la maleta. La pantalla "Mi maleta" se organiza por categorías dinámicas según el viaje. Las categorías base siempre presentes son: Documentos, Ropa superior (playeras/tops/chamarras), Ropa inferior (pantalones/shorts/faldas), Ropa interior, Calzado, Higiene personal, Tecnología, Medicamentos, Extras del viaje. Las categorías variables aparecen según el contexto: si es playa agrega "Playa & agua", si es montaña agrega "Montaña & frío", si es trabajo agrega "Trabajo & presentaciones".
+
+Cada ítem de la maleta tiene los siguientes campos:
+
+Campo
+Descripción
+Nombre
+Label del ítem (vía i18n)
+Cantidad sugerida
+Calculada por el motor de packing
+Razón de la sugerencia
+Por qué se incluye (clima, actividad, duración)
+Estado
+sugerido / marcado listo / con evidencia / alerta
+Foto de evidencia
+Opcional — captura de cámara
+Prioridad
+alta / media / baja
+
+
+
+
+Sistema de estados de un ítem:
+
+Un ítem puede estar en cuatro estados. "Sugerido" es el estado inicial, cuando el motor lo generó pero el usuario no ha interactuado. "Marcado listo" significa que el usuario lo marcó como preparado con un tap. "Con evidencia" significa que además tomó una foto. "Alerta" significa que hay una razón contextual para que ese ítem sea crítico (lluvia pronosticada, actividad que lo requiere, etc.) y aún no está marcado.
+
+Foto de evidencia por ítem. Cada ítem tiene un botón de cámara. Al tocar, se abre la cámara del dispositivo (Capacitor Camera). La foto queda asociada al ítem y cambia su estado a "con evidencia". La foto NO es obligatoria para marcar el ítem como listo ni para cerrar el evento de maleta completa. Es una herramienta de seguridad visual, no un bloqueo.
+
+Alertas inteligentes de maleta. El sistema detecta inconsistencias y las muestra como alertas en la parte superior de la pantalla de maleta:
+
+•
+"Te faltan 2 ítems importantes para los días lluviosos del pronóstico."
+
+•
+"Tienes 3 pares de zapatos para un viaje de 4 días. ¿Quieres revisar si vas sobreempacando?"
+
+•
+"No has marcado el bloqueador solar. Tu viaje tiene índice UV alto."
+
+•
+"Los documentos no están en acceso rápido. Muévelos al bolso personal."
+
+Maleta por integrante. Si el viaje es en familia (grupo family, family_baby, o couple), la pantalla de maleta muestra tabs o cards por integrante. Cada integrante tiene su propio perfil, checklist, maleta y evidencia fotográfica. Los tabs se llaman con el nombre del integrante o con el rol (Mamá, Papá, Niño, Bebé).
+
+Para viajes con bebé (family_baby), el sistema activa módulos especiales de maleta: pañales (calculados por días), toallitas húmedas, bloqueador bebé, ropa extra bebé (x2 por día), moisés portátil, fórmula o snacks, porta bebé, medicamentos bebé.
+
+Cierre del evento "Maleta completa". Cuando el usuario ha marcado suficientes ítems (umbral configurable, default 80%), aparece una pantalla de cierre con el estado final: porcentaje listo, ítems pendientes, alertas activas. Si todo está bien: "Tu maleta está lista. Has confirmado el 92% de los artículos sugeridos." Si hay alertas: "Hay 2 alertas de revisión antes de cerrar tu maleta."
+
+Etapa 8 — Asistente de Acomodo de Maleta
+
+Esta es la función premium diferenciadora de VIAZA.
+
+Paso 1 — Tamaño de maleta. Antes del análisis, VIAZA pregunta: ¿Qué tipo de maleta usarás? Las opciones son: Mochila pequeña, Carry-on/Cabina, Maleta mediana, Maleta grande, Backpacking, Equipaje mixto. También puede indicar el tamaño aproximado: chica, mediana, grande.
+
+Paso 2 — Recomendación de acomodo por zonas. Basado en los ítems de la maleta y el tamaño elegido, VIAZA genera un plan de acomodo por zonas:
+
+•
+Lado izquierdo: ropa ligera enrollada, playeras, shorts, ropa interior.
+
+•
+Lado derecho: calzado (en bolsas), neceser, accesorios compactos.
+
+•
+Centro: objetos estructurales, sacos doblados, pouch de tecnología, objetos que no deben aplastarse.
+
+•
+Acceso rápido / tapa / bolsillo superior: documentos, medicamentos, cargador, cepillo dental, power bank, audífonos.
+
+La recomendación es específica para el viaje: si es playa, el traje de baño va en acceso rápido; si es trabajo, los documentos de junta van en el centro protegidos.
+
+Paso 3 — Foto final de maleta completa. Cuando el usuario ya acomodó todo, puede tomar una foto de la maleta abierta completa. En MVP esta foto es solo evidencia visual y memoria. En Fase 2 se agrega análisis básico de distribución. En Fase 3 se agrega visión computacional con IA para detectar objetos y sugerir optimizaciones.
+
+Ejemplo de recomendación de acomodo para carry-on:
+
+
+Para tu carry-on de 5 días en Cancún:
+Lado izquierdo: 5 playeras enrolladas + 2 shorts + ropa interior.
+Lado derecho: sandalias en bolsa + neceser + traje de baño.
+Centro: vestido/saco ligero doblado + pouch de cables.
+Bolsillo superior: pasaporte, cargador, medicamentos, audífonos.
+Nota: el bloqueador solar (>100ml) debe ir en maleta documentada o comprar en destino.
+
+Etapa 9 — Viaje de Trabajo (modo especial)
+
+El viaje de trabajo cambia el comportamiento del sistema completo.
+
+Al seleccionar travelType = work, el sistema pregunta el subtipo: ida y vuelta el mismo día, con pernocta, con juntas/eventos, con laptop y documentos, viaje ejecutivo ligero.
+
+Si es ida y vuelta sin equipaje, la app no fuerza la generación de maleta completa. En su lugar activa un checklist rápido de essentials: laptop, cargador, documentos, identificación, audífonos, agua/snack. El dashboard muestra las tarjetas relevantes para trabajo: Ruta al aeropuerto/destino, Clima del día, Documentos necesarios, Agenda/juntas (campo libre para notar reuniones), Reglas de aerolínea si aplica.
+
+Si es con pernocta, se genera una maleta ligera de trabajo: ropa formal, laptop, cargadores, documentos de junta, artículos de higiene mínimos. El sistema no sugiere traje de baño ni bloqueador solar a menos que el usuario lo active manualmente.
+
+Etapa 10 — Durante el viaje
+
+Cuando la fecha de inicio del viaje llega, tripStatus cambia a active. El dashboard se transforma: aparece el clima actual del día (no el pronóstico, sino el dato en tiempo real de OpenWeatherMap), las actividades del día si el usuario las organizó por fecha, y las herramientas de uso inmediato (Traductor, Moneda, Split Bill, Tips locales).
+
+Las herramientas durante el viaje son:
+
+Traductor. Input de texto libre, selector de idioma origen/destino, botón traducir. Resultado grande y claro. Acceso a frases rápidas por categoría (aeropuerto, hotel, restaurante, emergencia, transporte). En MVP usa la API de OpenAI con la key disponible. La key VITE_OPENAI_API_KEY debe conectarse al translateService.ts — esto es pendiente crítico.
+
+Conversor de moneda. Monto, moneda origen, moneda destino, resultado grande, botón swap. API real de ExchangeRate con cache de 1 hora. 15 monedas disponibles.
+
+Split Bill. Modo simple (total + personas + propina = por persona) y modo avanzado (cada persona ingresa su consumo individual). Resultado grande y claro.
+
+Tips locales. Filtrados por el destino del viaje activo. Categorías: seguridad, transporte, cultura, dinero, comida. Cards horizontales deslizables.
+
+Etapa 11 — Historial del viaje
+
+Cuando la fecha de regreso del viaje llega, tripStatus cambia a completed. Aparece una pantalla de cierre: "¿Cómo estuvo tu viaje?" con opciones para guardar memorias, exportar la packing list, o duplicar el viaje para el próximo.
+
+El viaje queda guardado en el historial con todos sus datos: destino, fechas, clima vivido, actividades realizadas, maletas usadas, fotos de evidencia, y un campo de observaciones/aprendizajes libre.
+
+En el historial el usuario puede ver todos sus viajes pasados con una card por viaje. La app usa el historial para hacer sugerencias inteligentes en el siguiente viaje: "Tu viaje anterior a Cancún fue de 5 días. Empacaste de más en calzado. La próxima vez puedes reducir 1 par."
+
+La pantalla principal siempre muestra el botón "+ Crear nuevo viaje" de forma prominente, tanto cuando hay un viaje activo como cuando no hay ninguno.
+
+
+
+
+ARQUITECTURA TÉCNICA — ESTADO ACTUAL Y PENDIENTES
+
+Stack confirmado y funcionando
+
+React 18 + Vite 5 + TypeScript 5.6 (strict), Tailwind CSS 3.4, Framer Motion 11, React Router v6, Zustand 4 con persist, i18next con react-i18next, Capacitor 6. Build limpio sin errores de TypeScript.
+
+APIs conectadas con key
+
+API
+Variable
+Estado
+Open-Meteo
+Sin key
+Funcionando — pronóstico del viaje
+Nominatim/OSM
+Sin key
+Funcionando — autocomplete destino
+OpenWeatherMap
+VITE_OPENWEATHERMAP_KEY
+Conectada — condiciones actuales
+ExchangeRate-API
+VITE_EXCHANGE_RATE_KEY
+Conectada — tasas reales con cache
+AviationStack
+VITE_AVIATIONSTACK_KEY
+Conectada — tracker de vuelo
+Google Maps
+VITE_GOOGLE_MAPS_KEY
+Conectada — deeplinks + mapa estático
+
+
+
+
+APIs con key disponible pero SIN conectar al código
+
+API
+Variable
+Dónde debe conectarse
+OpenAI
+VITE_OPENAI_API_KEY
+translateService.ts — traducción real
+Anthropic
+VITE_ANTHROPIC_API_KEY
+Reservada para Fase 3 (IA de maleta)
+Groq
+VITE_GROQ_API_KEY
+Reservada para Fase 3 (IA de maleta)
+Supabase
+VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
+Auth real — Fase 2
+
+
+
+
+Pendientes críticos para cerrar MVP
+
+Los siguientes ítems deben resolverse en la próxima sesión de desarrollo, en este orden de prioridad:
+
+Prioridad 1 — Translator real. Conectar translateService.ts a la API de OpenAI. La key existe. El servicio actual devuelve mock. Esto rompe una función core del MVP.
+
+Prioridad 2 — Pronóstico diario completo. El weatherEngine.ts ya llama a Open-Meteo. Falta crear el componente WeatherForecastModal que muestre los datos día por día (mañana/tarde/noche) en un modal cristal. Los datos ya están en trip.weatherForecast pero solo se muestra el promedio.
+
+Prioridad 3 — Maleta por integrante. El motor de packing ya genera ítems multiplicados por numberOfAdults + numberOfKids. Falta la UI de tabs por integrante en PackingChecklistPage y la lógica de asignación de ítems por persona.
+
+Prioridad 4 — Foto de evidencia por ítem. Agregar botón de cámara en cada ítem de la packing list. Usar Capacitor Camera (ya instalado). Guardar la foto en el store asociada al itemId.
+
+Prioridad 5 — Notificaciones nativas. Conectar DepartureReminderPage a @capacitor/local-notifications (ya instalado). El botón "Crear recordatorio" debe llamar a LocalNotifications.schedule().
+
+Prioridad 6 — Dashboard de actividades con contexto. Crear la pantalla de actividades del viaje con las cards de contexto real (costo, duración, tip, link de compra anticipada) para los destinos del dataset.
+
+Prioridad 7 — CountryPickerPage. Agregar pantalla entre TravelType y Destination para filtrar destinos por país. Mejora la UX del autocomplete.
+
+Prioridad 8 — Asistente de acomodo. Crear la pantalla PackingArrangementPage con la lógica de zonas por tamaño de maleta y la opción de foto final.
+
+Prioridad 9 — Historial de viajes. Crear TripHistoryPage con la lista de viajes completados y la pantalla de cierre de viaje.
+
+Prioridad 10 — Strings hardcodeados. Migrar a i18n: "Terminal salida", "Gate", "Terminal llegada" en AirlineRulesPage.tsx y "Smart Travel Companion" en HomePage.tsx.
+
+
+
+
+SISTEMA VISUAL COMPLETO — ESPECIFICACIONES PARA DESARROLLO
+
+Tipografía
+
+Questrial es la única fuente permitida. Pesos: 700 para títulos de pantalla y números grandes, 600 para títulos de sección y labels de tarjetas, 400 para cuerpo de texto y descripciones. Tamaños: 28-32px para títulos hero, 20-24px para títulos de pantalla, 16-18px para títulos de sección, 14px para cuerpo, 12px para labels y chips, 10px para metadata.
+
+Botones
+
+Botón CTA primario: pill grande (border-radius 9999px), fondo #12212E, texto blanco Questrial 600, altura 52px, ancho mínimo 200px. Sombra: 0 4px 12px rgba(18,33,46,0.25). Al presionar: scale(0.97) + sombra reducida.
+
+Botón secundario: pill grande, fondo rgba(18,33,46,0.06), texto #12212E Questrial 600, sin borde. Al presionar: fondo rgba(18,33,46,0.10).
+
+Botón accent: pill grande, fondo #EA9940, texto #12212E Questrial 700. Solo para acciones de máxima prioridad.
+
+Botón ghost: sin fondo, sin borde, texto #307082 Questrial 500. Para acciones secundarias en contexto.
+
+Inputs
+
+Fondo rgba(18,33,46,0.04), border-radius 16px, sin borde visible en estado normal, borde #307082 al focus, altura 48px, padding horizontal 16px. Placeholder en rgba(18,33,46,0.40). Texto en #12212E Questrial 400.
+
+Modal cristal
+
+Fondo rgba(255,255,255,0.45), backdrop-filter blur(20px), border 1px solid rgba(255,255,255,0.35), border-radius 24px, sombra 0 12px 32px rgba(18,33,46,0.13). Se abre desde abajo con animación spring (Framer Motion).
+
+Menú lateral (filtros y categorías)
+
+Panel blanco/crema con border-radius 24px en las esquinas exteriores. Título de sección en Questrial 700 16px. Items de lista con radio button grande (24px) a la izquierda y flecha > a la derecha. Botón CTA al fondo: pill grande fondo #12212E texto blanco. Separadores de sección con línea rgba(18,33,46,0.08).
+
+Chips y badges
+
+Border-radius 9999px, padding 6px 12px, Questrial 600 12px. Chip de estado activo: fondo #EA9940, texto #12212E. Chip de dato: fondo rgba(18,33,46,0.08), texto #12212E. Chip de alerta: fondo rgba(192,57,43,0.10), texto #C0392B.
+
+Bottom navigation
+
+Pill flotante centrado en la parte inferior, fondo #12212E, border-radius 9999px, sombra 0 8px 24px rgba(18,33,46,0.20). 5 tabs: Home, Packing, Tools, Tips, Settings. Tab activo: bubble naranja #EA9940 detrás del icono. Iconos: duotone 24×24px. Labels: Questrial 400 10px debajo del icono.
+
+
+
+
+MÓDULOS — ESTADO Y ESPECIFICACIÓN COMPLETA
+
+Módulos implementados (funcionando en commit 798a946)
+
+Onboarding completo (14 pantallas), creación de viaje, motor de packing avanzado bidimensional, packing checklist con accordions y FAB, laundry planner integrado, reglas de aerolínea con AviationStack, allowed items search, adapter guide, currency converter con API real, split bill simple + avanzado, local tips, survival tips, departure reminder (cálculo), settings con selector de idioma, premium placeholder.
+
+Módulos con implementación parcial
+
+Translator: UI completa, servicio es mock. Conectar a OpenAI.
+DepartureReminder: Cálculo correcto, notificación nativa es stub. Conectar a Capacitor Local Notifications.
+HomePage: Muestra datos del viaje activo pero no calcula días restantes en tiempo real. Agregar countdown.
+TripDetailsPage: Existe pero es básica. Necesita diseño premium completo.
+
+Módulos nuevos a implementar
+
+WeatherForecastModal: Modal cristal con pronóstico día por día (mañana/tarde/noche) por toda la duración del viaje. Datos de Open-Meteo ya disponibles en el store.
+
+ActivityDashboardPage: Pantalla de actividades del viaje con cards de contexto real. Dataset de actividades por destino con costo, duración, tip, link de compra.
+
+PackingArrangementPage: Asistente de acomodo de maleta. Selector de tamaño, recomendación por zonas, foto final.
+
+PackingEvidencePage / ítem con foto: Botón de cámara en cada ítem del checklist. Capacitor Camera.
+
+TripHistoryPage: Lista de viajes completados. Card por viaje. Pantalla de cierre de viaje activo.
+
+CountryPickerPage: Entre TravelType y Destination. Filtro de destinos por país.
+
+MultiTravelerPackingView: Tabs por integrante en PackingChecklistPage. Vista de maleta individual.
+
+WorkTripMode: Modo especial para viajes de trabajo. Checklist rápido sin maleta completa.
+
+
+
+
+ROADMAP DE FASES
+
+Fase 1 — MVP completo (sesión actual)
+
+Conectar translator a OpenAI, pronóstico diario en modal cristal, maleta por integrante con tabs, foto de evidencia por ítem, notificaciones nativas, dashboard de actividades con contexto, historial básico de viajes, strings hardcodeados a i18n, CountryPickerPage.
+
+Fase 2 — Experiencia completa
+
+Auth real con Supabase, modo offline (Capacitor Preferences + datos cacheados), compartir viaje y lista, múltiples viajes simultáneos, asistente de acomodo de maleta con foto, alertas inteligentes de maleta, análisis básico de distribución de maleta por foto, tips geolocalizados en tiempo real, modo premium con paywall real ($4.99 USD).
+
+Fase 3 — Inteligencia
+
+Análisis visual de maleta con IA (OpenAI Vision o Anthropic), optimización de acomodo automática, historial inteligente con aprendizaje entre viajes, recomendaciones de actividades con datos reales de APIs de turismo, sincronización en nube, integración con reservas (Airbnb, Booking, etc.), Scan My Bag.
+
+
+
+
+Documento redactado el 12 de marzo de 2026. Este documento reemplaza y amplía todas las versiones anteriores del manifiesto en lo que respecta a funcionalidad, sistema visual y pendientes de desarrollo.
+

@@ -5,16 +5,18 @@ import { AppButton } from '../../../components/ui/AppButton';
 import { AppCard } from '../../../components/ui/AppCard';
 import { AppInput } from '../../../components/ui/AppInput';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { signUp } from '../../../services/authService';
 
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const register = useAppStore((s) => s.register);
+  const setSupabaseUser = useAppStore((s) => s.setSupabaseUser);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   return (
     <div className="min-h-dvh px-4 pt-10">
@@ -59,16 +61,20 @@ export function RegisterPage() {
         <div className="mt-6 space-y-3">
           <AppButton
             className="w-full"
-            onClick={() => {
+            onClick={async () => {
               setError(null);
+              setLoading(true);
               try {
-                register({ name, email, password });
+                const user = await signUp({ name, email, password });
+                setSupabaseUser(user);
                 navigate('/', { replace: true });
               } catch {
                 setError(t('auth.register.error'));
+              } finally {
+                setLoading(false);
               }
             }}
-            disabled={!name.trim() || !email.trim() || !password}
+            disabled={!name.trim() || !email.trim() || !password || loading}
             type="button"
           >
             {t('auth.register.cta')}

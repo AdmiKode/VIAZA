@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { signIn } from '../../../services/authService';
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -27,7 +28,7 @@ function EyeIcon({ open }: { open: boolean }) {
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const login = useAppStore((s) => s.login);
+  const setSupabaseUser = useAppStore((s) => s.setSupabaseUser);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +41,8 @@ export function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await Promise.resolve(login({ email, password }));
+      const user = await signIn({ email, password });
+      setSupabaseUser(user);
       navigate('/', { replace: true });
     } catch {
       setError(t('auth.login.error'));
