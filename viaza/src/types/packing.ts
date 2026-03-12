@@ -11,6 +11,7 @@ export type PackingSource = 'default' | 'travel_type' | 'climate' | 'laundry' | 
 export interface PackingItem {
   id: string;
   tripId: string;
+  travelerId?: string;  // undefined = ítem compartido del viaje
   category: PackingCategory;
   label: string;
   labelKey?: string;

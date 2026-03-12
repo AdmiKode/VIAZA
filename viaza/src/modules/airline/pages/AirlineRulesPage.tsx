@@ -63,6 +63,7 @@ function StatusBadge({ status }: { status: FlightInfo['status'] }) {
 
 /* ─── Tarjeta de vuelo ───────────────────────────────────────────── */
 function FlightCard({ info }: { info: FlightInfo }) {
+  const { t } = useTranslation();
   const hasDelay = (info.departure.delayMinutes ?? 0) > 0;
   return (
     <motion.div
@@ -146,19 +147,19 @@ function FlightCard({ info }: { info: FlightInfo }) {
         <div className="flex gap-4 mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           {info.departure.terminal && (
             <div>
-              <div style={{ color: 'rgba(236,231,220,0.40)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Questrial, sans-serif' }}>Terminal salida</div>
+              <div style={{ color: 'rgba(236,231,220,0.40)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Questrial, sans-serif' }}>{t('airline.terminal.departure')}</div>
               <div style={{ color: '#ECE7DC', fontSize: 15, fontWeight: 700, fontFamily: 'Questrial, sans-serif', marginTop: 2 }}>{info.departure.terminal}</div>
             </div>
           )}
           {info.departure.gate && (
             <div>
-              <div style={{ color: 'rgba(236,231,220,0.40)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Questrial, sans-serif' }}>Gate</div>
+              <div style={{ color: 'rgba(236,231,220,0.40)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Questrial, sans-serif' }}>{t('airline.gate')}</div>
               <div style={{ color: '#ECE7DC', fontSize: 15, fontWeight: 700, fontFamily: 'Questrial, sans-serif', marginTop: 2 }}>{info.departure.gate}</div>
             </div>
           )}
           {info.arrival.terminal && (
             <div>
-              <div style={{ color: 'rgba(236,231,220,0.40)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Questrial, sans-serif' }}>Terminal llegada</div>
+              <div style={{ color: 'rgba(236,231,220,0.40)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Questrial, sans-serif' }}>{t('airline.terminal.arrival')}</div>
               <div style={{ color: '#ECE7DC', fontSize: 15, fontWeight: 700, fontFamily: 'Questrial, sans-serif', marginTop: 2 }}>{info.arrival.terminal}</div>
             </div>
           )}

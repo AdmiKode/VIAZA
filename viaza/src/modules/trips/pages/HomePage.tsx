@@ -1,7 +1,9 @@
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { WeatherForecastModal } from '../../weather/components/WeatherForecastModal';
 
 /* ─── Gradientes hero por tipo de viaje ─── */
 const HERO_GRADIENT: Record<string, string> = {
@@ -38,7 +40,7 @@ function WeatherIcon({ type }: { type: string }) {
   if (type === 'cold') return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <circle cx="24" cy="28" r="12" fill="white" fillOpacity="0.9"/>
-      <circle cx="16" cy="22" rx="8" ry="8" fill="white" fillOpacity="0.5"/>
+      <circle cx="16" cy="22" r="8" fill="white" fillOpacity="0.5"/>
       <path d="M8 14c4-6 10-8 16-6" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" fill="none"/>
     </svg>
   );
@@ -49,7 +51,6 @@ function WeatherIcon({ type }: { type: string }) {
       <path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.5 9.5l4 4M34.5 34.5l4 4M9.5 38.5l4-4M34.5 13.5l4-4" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.7"/>
     </svg>
   );
-  // mild / default
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <circle cx="28" cy="20" r="10" fill="white" fillOpacity="0.95"/>
@@ -109,10 +110,21 @@ export function HomePage() {
   const navigate = useNavigate();
   const trip = useAppStore((s) => s.trips.find((x) => x.id === s.currentTripId) ?? null);
   const packingItems = useAppStore((s) => s.packingItems.filter((x) => x.tripId === s.currentTripId));
+  const [showForecast, setShowForecast] = useState(false);
 
   const packedCount = packingItems.filter((x) => x.checked).length;
   const totalCount = packingItems.length;
   const progressPct = totalCount === 0 ? 0 : Math.round((packedCount / totalCount) * 100);
+
+  /* Días restantes calculados en tiempo real */
+  const daysLeft = useMemo(() => {
+    if (!trip?.startDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(trip.startDate + 'T00:00:00');
+    const diff = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  }, [trip?.startDate]);
 
   const heroGradient = trip?.travelType
     ? (HERO_GRADIENT[trip.travelType] ?? HERO_GRADIENT.default)
@@ -168,9 +180,28 @@ export function HomePage() {
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="relative mt-8"
           >
-            {/* Label */}
-            <div style={{ color: 'rgba(255,255,255,0.60)', fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
-              {t('home.activeTrip.label')}
+            {/* Label + días restantes */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ color: 'rgba(255,255,255,0.60)', fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+                {t('home.activeTrip.label')}
+              </div>
+              {daysLeft !== null && (
+                <div style={{
+                  background: daysLeft <= 3 ? '#EA9940' : 'rgba(255,255,255,0.18)',
+                  borderRadius: 99,
+                  padding: '3px 10px',
+                  color: 'white',
+                  fontFamily: 'Questrial, sans-serif',
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}>
+                  {daysLeft > 0
+                    ? `${daysLeft} días`
+                    : daysLeft === 0
+                      ? t('home.activeTrip.today', 'Hoy')
+                      : t('home.activeTrip.inProgress', 'En curso')}
+                </div>
+              )}
             </div>
 
             {/* Destino grande */}
@@ -181,7 +212,7 @@ export function HomePage() {
             {/* Fechas + duración */}
             {trip.startDate && trip.endDate && (
               <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 14, marginTop: 6 }}>
-                {trip.startDate} — {trip.endDate} · {trip.durationDays} días
+                {trip.startDate} — {trip.endDate} · {trip.durationDays} {t('onboarding.dates.days')}
               </div>
             )}
 
@@ -192,7 +223,7 @@ export function HomePage() {
                 style={{ background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(12px)' }}
               >
                 <WeatherIcon type={trip.weatherForecast.weatherType} />
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ color: 'white', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>
                     {trip.weatherForecast.avgTemp}°C
                   </div>
@@ -200,12 +231,32 @@ export function HomePage() {
                     {trip.weatherForecast.description}
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 1 }}>
-                    {trip.weatherForecast.minTemp}° / {trip.weatherForecast.maxTemp}° · {trip.weatherForecast.rainProbability}% lluvia
+                    {trip.weatherForecast.minTemp}° / {trip.weatherForecast.maxTemp}° · {trip.weatherForecast.rainProbability}% {t('weather.forecast.rain', { pct: '' }).replace(' ', '')}
                   </div>
+                  {trip.lat && trip.lon && trip.startDate && trip.endDate && (
+                    <button
+                      type="button"
+                      onClick={() => setShowForecast(true)}
+                      style={{
+                        marginTop: 8,
+                        background: 'rgba(255,255,255,0.22)',
+                        border: 'none',
+                        borderRadius: 99,
+                        padding: '4px 14px',
+                        color: 'white',
+                        fontFamily: 'Questrial, sans-serif',
+                        fontWeight: 600,
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {t('weather.forecast.title')} →
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
-              /* Sin pronóstico — chips básicos */
               <div className="mt-4 flex flex-wrap gap-2">
                 {trip.climate && (
                   <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: 'rgba(255,255,255,0.18)' }}>
@@ -251,9 +302,11 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             className="relative mt-10"
           >
-            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>Smart Travel Companion</div>
+            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>{t('home.tagline')}</div>
             <div style={{ color: 'white', fontSize: 30, fontWeight: 700, marginTop: 6, lineHeight: 1.2 }}>
-              Planifica tu<br/>próximo viaje
+              {t('home.noTrip.title', 'Planifica tu\npróximo viaje').split('\n').map((line, i) => (
+                <span key={i}>{line}{i === 0 && <br/>}</span>
+              ))}
             </div>
             <button
               type="button"
@@ -384,6 +437,19 @@ export function HomePage() {
         </div>
 
       </div>
+
+      {/* Modal pronóstico completo */}
+      {trip && trip.lat && trip.lon && trip.startDate && trip.endDate && (
+        <WeatherForecastModal
+          open={showForecast}
+          onClose={() => setShowForecast(false)}
+          lat={trip.lat}
+          lon={trip.lon}
+          startDate={trip.startDate}
+          endDate={trip.endDate}
+          destination={trip.destination}
+        />
+      )}
     </div>
   );
 }

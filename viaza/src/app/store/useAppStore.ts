@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Trip, TravelType, ClimateType, TravelerGroup, LaundryMode, PackingStyle, WeatherForecast, TransportType } from '../../types/trip';
 import type { PackingItem } from '../../types/packing';
+import type { Traveler, PackingEvidence, LuggagePhoto } from '../../types/traveler';
 import { generatePackingItemsForTrip } from '../../modules/packing/utils/packingGenerator';
 import { weatherTypeToClimate } from '../../engines/weatherEngine';
 
@@ -12,13 +13,11 @@ type OnboardingDraft = {
   durationDays: number;
   lat: number;
   lon: number;
-  // inferidos automáticamente
   inferredClimate: ClimateType | null;
   inferredCurrency: string;
   inferredLanguage: string;
   inferredCountryCode: string;
   weatherForecast: WeatherForecast | null;
-  // elegidos por el usuario
   travelType: TravelType | null;
   travelerGroup: TravelerGroup | null;
   activities: string[];
@@ -26,7 +25,6 @@ type OnboardingDraft = {
   packingStyle: PackingStyle;
   hasLaptop: boolean;
   travelLight: boolean;
-  // NUEVO — transporte
   transportType: TransportType | null;
   originCity: string;
   originLat: number;
@@ -37,9 +35,11 @@ type OnboardingDraft = {
   busTerminal: string;
   trainStation: string;
   cruisePort: string;
-  // NUEVO — número de viajeros
   numberOfAdults: number;
   numberOfKids: number;
+  numberOfBabies: number;
+  /** Nombres de los integrantes (opcional en onboarding, editable después) */
+  travelerNames: string[];
 };
 
 type AppState = {
@@ -47,10 +47,16 @@ type AppState = {
   currentTripId: string | null;
   trips: Trip[];
   packingItems: PackingItem[];
+  /** Integrantes del viaje por trip */
+  travelers: Traveler[];
+  /** Fotos de evidencia por ítem de maleta */
+  packingEvidence: PackingEvidence[];
+  /** Fotos de maleta completa para asistente de acomodo */
+  luggagePhotos: LuggagePhoto[];
   user: { name: string; email: string } | null;
   registeredUsers: Array<{ name: string; email: string; password: string }>;
   isAuthenticated: boolean;
-  onboardingCompleted: boolean;   // ← NUEVO: true solo tras completar el onboarding
+  onboardingCompleted: boolean;
   onboardingDraft: OnboardingDraft;
 
   setLanguage: (lang: string) => void;
@@ -61,8 +67,24 @@ type AppState = {
   resetOnboardingDraft: () => void;
   createTripFromDraft: () => string;
   setCurrentTrip: (tripId: string | null) => void;
+  updateTripStatus: (tripId: string, status: Trip['tripStatus']) => void;
   togglePackingItem: (itemId: string) => void;
-  addCustomPackingItem: (tripId: string, label: string, quantity?: number) => void;
+  addCustomPackingItem: (tripId: string, label: string, quantity?: number, travelerId?: string) => void;
+
+  /** Integrantes */
+  addTraveler: (traveler: Omit<Traveler, 'id'>) => string;
+  updateTraveler: (id: string, patch: Partial<Omit<Traveler, 'id'>>) => void;
+  removeTraveler: (id: string) => void;
+  initTravelersFromTrip: (tripId: string) => void;
+
+  /** Fotos de evidencia */
+  addPackingEvidence: (evidence: Omit<PackingEvidence, never>) => void;
+  removePackingEvidence: (itemId: string, travelerId: string) => void;
+
+  /** Fotos de maleta completa */
+  addLuggagePhoto: (photo: Omit<LuggagePhoto, 'id'>) => string;
+  updateLuggagePhoto: (id: string, patch: Partial<Omit<LuggagePhoto, 'id'>>) => void;
+  removeLuggagePhoto: (id: string) => void;
 };
 
 const emptyDraft: OnboardingDraft = {
@@ -96,13 +118,15 @@ const emptyDraft: OnboardingDraft = {
   cruisePort: '',
   numberOfAdults: 1,
   numberOfKids: 0,
+  numberOfBabies: 0,
+  travelerNames: [],
 };
 
 function nowIso() {
   return new Date().toISOString();
 }
 
-function id() {
+function uid() {
   return crypto.randomUUID();
 }
 
@@ -114,7 +138,6 @@ function inferDestinationMeta(destination: string): {
 } {
   const d = destination.trim().toLowerCase();
 
-  // ── Europa ──────────────────────────────────────────────────────
   if (d.includes('paris') || d.includes('lyon') || d.includes('nice') || d.includes('marseille'))
     return { countryCode: 'FR', currencyCode: 'EUR', languageCode: 'fr', climate: 'mild' };
   if (d.includes('rome') || d.includes('roma') || d.includes('milan') || d.includes('milano') || d.includes('florence') || d.includes('naples') || d.includes('venice'))
@@ -141,9 +164,7 @@ function inferDestinationMeta(destination: string): {
     return { countryCode: 'GR', currencyCode: 'EUR', languageCode: 'el', climate: 'hot' };
   if (d.includes('stockholm') || d.includes('oslo') || d.includes('copenhagen') || d.includes('helsinki'))
     return { countryCode: 'SE', currencyCode: 'SEK', languageCode: 'sv', climate: 'cold' };
-
-  // ── América del Norte ─────────────────────────────────────────────
-  if (d.includes('new york') || d.includes('los angeles') || d.includes('chicago') || d.includes('miami') || d.includes('san francisco') || d.includes('boston') || d.includes('seattle') || d.includes('las vegas') || d.includes('washington'))
+  if (d.includes('new york') || d.includes('los angeles') || d.includes('chicago') || d.includes('san francisco') || d.includes('boston') || d.includes('seattle') || d.includes('las vegas') || d.includes('washington'))
     return { countryCode: 'US', currencyCode: 'USD', languageCode: 'en', climate: 'mild' };
   if (d.includes('miami') || d.includes('orlando'))
     return { countryCode: 'US', currencyCode: 'USD', languageCode: 'en', climate: 'hot' };
@@ -153,8 +174,6 @@ function inferDestinationMeta(destination: string): {
     return { countryCode: 'MX', currencyCode: 'MXN', languageCode: 'es', climate: 'mild' };
   if (d.includes('cancun') || d.includes('cancún') || d.includes('tulum') || d.includes('playa del carmen') || d.includes('cabo') || d.includes('puerto vallarta'))
     return { countryCode: 'MX', currencyCode: 'MXN', languageCode: 'es', climate: 'hot' };
-
-  // ── América del Sur ───────────────────────────────────────────────
   if (d.includes('buenos aires') || d.includes('mendoza') || d.includes('patagonia'))
     return { countryCode: 'AR', currencyCode: 'ARS', languageCode: 'es', climate: 'mild' };
   if (d.includes('rio') || d.includes('são paulo') || d.includes('sao paulo') || d.includes('florianopolis') || d.includes('brasilia'))
@@ -165,8 +184,6 @@ function inferDestinationMeta(destination: string): {
     return { countryCode: 'PE', currencyCode: 'PEN', languageCode: 'es', climate: 'mild' };
   if (d.includes('santiago') || d.includes('valparaiso'))
     return { countryCode: 'CL', currencyCode: 'CLP', languageCode: 'es', climate: 'mild' };
-
-  // ── Asia ──────────────────────────────────────────────────────────
   if (d.includes('tokyo') || d.includes('osaka') || d.includes('kyoto') || d.includes('hiroshima'))
     return { countryCode: 'JP', currencyCode: 'JPY', languageCode: 'ja', climate: 'mild' };
   if (d.includes('beijing') || d.includes('shanghai') || d.includes('hong kong') || d.includes('shenzhen'))
@@ -185,8 +202,6 @@ function inferDestinationMeta(destination: string): {
     return { countryCode: 'IN', currencyCode: 'INR', languageCode: 'hi', climate: 'hot' };
   if (d.includes('seoul') || d.includes('busan') || d.includes('jeju'))
     return { countryCode: 'KR', currencyCode: 'KRW', languageCode: 'ko', climate: 'mild' };
-
-  // ── África / Oceanía ──────────────────────────────────────────────
   if (d.includes('marrakech') || d.includes('casablanca') || d.includes('rabat'))
     return { countryCode: 'MA', currencyCode: 'MAD', languageCode: 'ar', climate: 'hot' };
   if (d.includes('cape town') || d.includes('johannesburg') || d.includes('safari'))
@@ -196,7 +211,6 @@ function inferDestinationMeta(destination: string): {
   if (d.includes('auckland') || d.includes('queenstown') || d.includes('wellington'))
     return { countryCode: 'NZ', currencyCode: 'NZD', languageCode: 'en', climate: 'mild' };
 
-  // ── Default ───────────────────────────────────────────────────────
   return { countryCode: 'US', currencyCode: 'USD', languageCode: 'en', climate: 'mild' };
 }
 
@@ -207,9 +221,11 @@ export const useAppStore = create<AppState>()(
       currentTripId: null,
       trips: [],
       packingItems: [],
+      travelers: [],
+      packingEvidence: [],
+      luggagePhotos: [],
       user: null,
       registeredUsers: [
-        // Dev seed — remove before production
         { name: 'Patricia', email: 'pattogaribayg@gmail.com', password: 'viaza2026' }
       ],
       isAuthenticated: false,
@@ -221,19 +237,16 @@ export const useAppStore = create<AppState>()(
       register: ({ name, email, password }) => {
         const normalizedEmail = email.trim().toLowerCase();
         const normalizedName = name.trim();
-        const normalizedPassword = password;
-        if (!normalizedName || !normalizedEmail || !normalizedPassword) {
+        if (!normalizedName || !normalizedEmail || !password) {
           throw new Error('Invalid registration params');
         }
-
         const exists = get().registeredUsers.some((u) => u.email === normalizedEmail);
         if (exists) {
           throw new Error('User already exists');
         }
-
         set((state) => ({
           registeredUsers: [
-            { name: normalizedName, email: normalizedEmail, password: normalizedPassword },
+            { name: normalizedName, email: normalizedEmail, password },
             ...state.registeredUsers
           ],
           user: { name: normalizedName, email: normalizedEmail },
@@ -243,7 +256,6 @@ export const useAppStore = create<AppState>()(
 
       login: ({ email, password }) => {
         const normalizedEmail = email.trim().toLowerCase();
-        // Dev bypass — always allow this account
         if (normalizedEmail === 'pattogaribayg@gmail.com' && password === 'viaza2026') {
           set({ user: { name: 'Patricia', email: normalizedEmail }, isAuthenticated: true });
           return;
@@ -252,10 +264,7 @@ export const useAppStore = create<AppState>()(
         if (!match || match.password !== password) {
           throw new Error('Invalid credentials');
         }
-        set({
-          user: { name: match.name, email: match.email },
-          isAuthenticated: true
-        });
+        set({ user: { name: match.name, email: match.email }, isAuthenticated: true });
       },
 
       logout: () =>
@@ -273,27 +282,25 @@ export const useAppStore = create<AppState>()(
 
       resetOnboardingDraft: () => set({ onboardingDraft: emptyDraft }),
 
-      createTripFromDraft: (destinationOverride?: string) => {
+      createTripFromDraft: () => {
         const draft = get().onboardingDraft;
-        const destination = (destinationOverride || draft.destination).trim();
+        const destination = draft.destination.trim();
         if (!draft.travelType || !draft.travelerGroup || !destination) {
           throw new Error('Onboarding draft incomplete');
         }
 
         const meta = inferDestinationMeta(destination);
-        // Clima: usar el del forecast real si está disponible, si no el inferido del store
         const climate: ClimateType = draft.weatherForecast
           ? weatherTypeToClimate(draft.weatherForecast.weatherType)
           : draft.inferredClimate ?? meta.climate;
 
-        // packingStyle: travelLight fuerza 'light'
         const packingStyle = draft.travelLight ? 'light' : draft.packingStyle;
+        const tripId = uid();
 
-        const tripId = id();
         const trip: Trip = {
           id: tripId,
           title: destination,
-          destination: destination,
+          destination,
           countryCode: draft.inferredCountryCode || meta.countryCode,
           lat: draft.lat || undefined,
           lon: draft.lon || undefined,
@@ -310,7 +317,6 @@ export const useAppStore = create<AppState>()(
           tripStatus: 'planning',
           currencyCode: draft.inferredCurrency || meta.currencyCode,
           languageCode: draft.inferredLanguage || meta.languageCode,
-          // Transporte
           transportType: draft.transportType ?? undefined,
           originCity: draft.originCity || undefined,
           originLat: draft.originLat || undefined,
@@ -321,17 +327,52 @@ export const useAppStore = create<AppState>()(
           busTerminal: draft.busTerminal || undefined,
           trainStation: draft.trainStation || undefined,
           cruisePort: draft.cruisePort || undefined,
-          // Número de viajeros
           numberOfAdults: draft.numberOfAdults ?? 1,
           numberOfKids: draft.numberOfKids ?? 0,
           createdAt: nowIso(),
           updatedAt: nowIso()
         };
 
+        // Generar integrantes automáticamente desde el draft
+        const newTravelers: Traveler[] = [];
+        const totalAdults = draft.numberOfAdults ?? 1;
+        const totalKids = draft.numberOfKids ?? 0;
+        const totalBabies = draft.numberOfBabies ?? 0;
+        const names = draft.travelerNames ?? [];
+
+        for (let i = 0; i < totalAdults; i++) {
+          newTravelers.push({
+            id: uid(),
+            tripId,
+            name: names[i] ?? (i === 0 ? (get().user?.name ?? 'Viajero 1') : `Adulto ${i + 1}`),
+            role: 'adult',
+            order: i,
+          });
+        }
+        for (let i = 0; i < totalKids; i++) {
+          newTravelers.push({
+            id: uid(),
+            tripId,
+            name: names[totalAdults + i] ?? `Niño ${i + 1}`,
+            role: 'kid',
+            order: totalAdults + i,
+          });
+        }
+        for (let i = 0; i < totalBabies; i++) {
+          newTravelers.push({
+            id: uid(),
+            tripId,
+            name: names[totalAdults + totalKids + i] ?? `Bebé ${i + 1}`,
+            role: 'baby',
+            order: totalAdults + totalKids + i,
+          });
+        }
+
         set((state) => ({
           trips: [trip, ...state.trips],
           currentTripId: tripId,
           onboardingCompleted: true,
+          travelers: [...newTravelers, ...state.travelers],
           packingItems: [...generatePackingItemsForTrip(trip), ...state.packingItems]
         }));
 
@@ -340,27 +381,131 @@ export const useAppStore = create<AppState>()(
 
       setCurrentTrip: (tripId) => set({ currentTripId: tripId }),
 
-      togglePackingItem: (itemId) =>
+      updateTripStatus: (tripId, status) =>
         set((state) => ({
-          packingItems: state.packingItems.map((x) => (x.id === itemId ? { ...x, checked: !x.checked } : x))
+          trips: state.trips.map((t) =>
+            t.id === tripId ? { ...t, tripStatus: status, updatedAt: nowIso() } : t
+          )
         })),
 
-      addCustomPackingItem: (tripId, label, quantity = 1) =>
+      togglePackingItem: (itemId) =>
+        set((state) => ({
+          packingItems: state.packingItems.map((x) =>
+            x.id === itemId ? { ...x, checked: !x.checked } : x
+          )
+        })),
+
+      addCustomPackingItem: (tripId, label, quantity = 1, travelerId) =>
         set((state) => ({
           packingItems: [
             {
-              id: id(),
+              id: uid(),
               tripId,
-              category: 'extras',
+              travelerId,
+              category: 'extras' as const,
               label: label.trim(),
               quantity: Math.max(1, Math.floor(quantity)),
               checked: false,
               required: false,
-              source: 'user_custom'
+              source: 'user_custom' as const,
             },
             ...state.packingItems
           ]
-        }))
+        })),
+
+      // ── Integrantes ─────────────────────────────────────────────────
+      addTraveler: (traveler) => {
+        const id = uid();
+        set((state) => ({
+          travelers: [...state.travelers, { ...traveler, id }]
+        }));
+        return id;
+      },
+
+      updateTraveler: (id, patch) =>
+        set((state) => ({
+          travelers: state.travelers.map((t) =>
+            t.id === id ? { ...t, ...patch } : t
+          )
+        })),
+
+      removeTraveler: (id) =>
+        set((state) => ({
+          travelers: state.travelers.filter((t) => t.id !== id)
+        })),
+
+      initTravelersFromTrip: (tripId) => {
+        const trip = get().trips.find((t) => t.id === tripId);
+        if (!trip) return;
+        const existing = get().travelers.filter((t) => t.tripId === tripId);
+        if (existing.length > 0) return; // ya inicializados
+
+        const newTravelers: Traveler[] = [];
+        const totalAdults = trip.numberOfAdults ?? 1;
+        const totalKids = trip.numberOfKids ?? 0;
+
+        for (let i = 0; i < totalAdults; i++) {
+          newTravelers.push({
+            id: uid(),
+            tripId,
+            name: i === 0 ? (get().user?.name ?? 'Viajero 1') : `Adulto ${i + 1}`,
+            role: 'adult',
+            order: i,
+          });
+        }
+        for (let i = 0; i < totalKids; i++) {
+          newTravelers.push({
+            id: uid(),
+            tripId,
+            name: `Niño ${i + 1}`,
+            role: 'kid',
+            order: totalAdults + i,
+          });
+        }
+
+        set((state) => ({
+          travelers: [...state.travelers, ...newTravelers]
+        }));
+      },
+
+      // ── Fotos de evidencia ───────────────────────────────────────────
+      addPackingEvidence: (evidence) =>
+        set((state) => ({
+          packingEvidence: [
+            ...state.packingEvidence.filter(
+              (e) => !(e.itemId === evidence.itemId && e.travelerId === evidence.travelerId)
+            ),
+            evidence
+          ]
+        })),
+
+      removePackingEvidence: (itemId, travelerId) =>
+        set((state) => ({
+          packingEvidence: state.packingEvidence.filter(
+            (e) => !(e.itemId === itemId && e.travelerId === travelerId)
+          )
+        })),
+
+      // ── Fotos de maleta completa ─────────────────────────────────────
+      addLuggagePhoto: (photo) => {
+        const id = uid();
+        set((state) => ({
+          luggagePhotos: [...state.luggagePhotos, { ...photo, id }]
+        }));
+        return id;
+      },
+
+      updateLuggagePhoto: (id, patch) =>
+        set((state) => ({
+          luggagePhotos: state.luggagePhotos.map((p) =>
+            p.id === id ? { ...p, ...patch } : p
+          )
+        })),
+
+      removeLuggagePhoto: (id) =>
+        set((state) => ({
+          luggagePhotos: state.luggagePhotos.filter((p) => p.id !== id)
+        })),
     }),
     {
       name: 'viaza-app-state',
@@ -369,6 +514,9 @@ export const useAppStore = create<AppState>()(
         currentTripId: state.currentTripId,
         trips: state.trips,
         packingItems: state.packingItems,
+        travelers: state.travelers,
+        packingEvidence: state.packingEvidence,
+        luggagePhotos: state.luggagePhotos,
         user: state.user,
         registeredUsers: state.registeredUsers,
         isAuthenticated: state.isAuthenticated,

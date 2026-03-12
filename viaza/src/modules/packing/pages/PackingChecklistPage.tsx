@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { packingCategories } from '../utils/packingCategories';
 import type { PackingCategory } from '../../../types/packing';
+import { PackingEvidenceModal } from '../components/PackingEvidenceModal';
+import { LuggageAssistantPage } from './LuggageAssistantPage';
 
 /* ─── Íconos duotone por categoría ──────────────────────────────── */
 const CAT_ICONS: Record<PackingCategory, JSX.Element> = {
@@ -78,13 +80,36 @@ export function PackingChecklistPage() {
   const { t } = useTranslation();
   const currentTripId = useAppStore((s) => s.currentTripId);
   const packingItems = useAppStore((s) => s.packingItems);
+  const packingEvidence = useAppStore((s) => s.packingEvidence);
   const trips = useAppStore((s) => s.trips);
+  const travelers = useAppStore((s) => s.travelers);
+  const initTravelersFromTrip = useAppStore((s) => s.initTravelersFromTrip);
   const togglePackingItem = useAppStore((s) => s.togglePackingItem);
   const addCustomPackingItem = useAppStore((s) => s.addCustomPackingItem);
 
   const currentTrip = trips.find((tr) => tr.id === currentTripId);
 
-  // Categorías cerradas por defecto (completadas se cierran automáticamente)
+  // Inicializar integrantes si no existen
+  useEffect(() => {
+    if (currentTripId) initTravelersFromTrip(currentTripId);
+  }, [currentTripId, initTravelersFromTrip]);
+
+  const tripTravelers = useMemo(
+    () => travelers.filter((tr) => tr.tripId === currentTripId).sort((a, b) => a.order - b.order),
+    [travelers, currentTripId]
+  );
+
+  const [activeTravelerId, setActiveTravelerId] = useState<string | null>(null);
+  const activeTraveler = activeTravelerId
+    ? tripTravelers.find((tr) => tr.id === activeTravelerId)
+    : tripTravelers[0];
+  const currentTravelerId = activeTraveler?.id ?? null;
+
+  // Modal de evidencia
+  const [evidenceModal, setEvidenceModal] = useState<{ itemId: string; itemLabel: string } | null>(null);
+  // Asistente de acomodo
+  const [showLuggageAssistant, setShowLuggageAssistant] = useState(false);
+
   const [collapsed, setCollapsed] = useState<Record<PackingCategory, boolean>>({
     documents:   false,
     clothes:     false,
@@ -102,12 +127,32 @@ export function PackingChecklistPage() {
     [currentTripId, packingItems]
   );
 
-  const checkedCount = itemsForTrip.filter((x) => x.checked).length;
-  const totalCount = itemsForTrip.length;
+  // Si hay múltiples integrantes, filtrar por el activo
+  const itemsForTraveler = useMemo(() => {
+    if (tripTravelers.length <= 1) return itemsForTrip;
+    return itemsForTrip.filter(
+      (x) => !x.travelerId || x.travelerId === currentTravelerId
+    );
+  }, [itemsForTrip, tripTravelers, currentTravelerId]);
+
+  const checkedCount = itemsForTraveler.filter((x) => x.checked).length;
+  const totalCount = itemsForTraveler.length;
   const progressPct = totalCount === 0 ? 0 : Math.round((checkedCount / totalCount) * 100);
 
   function toggleCollapse(cat: PackingCategory) {
     setCollapsed((s) => ({ ...s, [cat]: !s[cat] }));
+  }
+
+  // Asistente de acomodo a pantalla completa
+  if (showLuggageAssistant && currentTripId && currentTravelerId) {
+    return (
+      <LuggageAssistantPage
+        tripId={currentTripId}
+        travelerId={currentTravelerId}
+        travelerName={activeTraveler?.name ?? ''}
+        onClose={() => setShowLuggageAssistant(false)}
+      />
+    );
   }
 
   return (
@@ -126,7 +171,7 @@ export function PackingChecklistPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 style={{ color: '#12212E', fontSize: 22, fontWeight: 700 }}>
-              {currentTrip ? currentTrip.destination : t('packing.title', 'Mi maleta')}
+              {currentTrip ? currentTrip.destination : t('packing.title')}
             </h1>
             {currentTrip && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
@@ -158,7 +203,7 @@ export function PackingChecklistPage() {
               </div>
             )}
             <p style={{ color: 'rgba(18,33,46,0.50)', fontSize: 13, marginTop: 4 }}>
-              {checkedCount} / {totalCount} {t('packing.itemsReady', 'artículos listos')}
+              {checkedCount} / {totalCount} {t('packing.itemsReady')}
             </p>
           </div>
           {/* Progreso circular */}
@@ -199,10 +244,115 @@ export function PackingChecklistPage() {
         </div>
       </div>
 
+      {/* ── Tabs de integrantes ── */}
+      {tripTravelers.length > 1 && (
+        <div style={{ overflowX: 'auto', paddingBottom: 4, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 8, padding: '0 20px', width: 'max-content' }}>
+            {tripTravelers.map((traveler) => {
+              const isActive = (activeTravelerId ?? tripTravelers[0]?.id) === traveler.id;
+              const travelerItems = itemsForTrip.filter(
+                (x) => !x.travelerId || x.travelerId === traveler.id
+              );
+              const travelerChecked = travelerItems.filter((x) => x.checked).length;
+              const travelerTotal = travelerItems.length;
+              return (
+                <button
+                  key={traveler.id}
+                  type="button"
+                  onClick={() => setActiveTravelerId(traveler.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 16px',
+                    borderRadius: 99,
+                    background: isActive ? '#12212E' : 'white',
+                    border: isActive ? 'none' : '1.5px solid rgba(18,33,46,0.10)',
+                    boxShadow: isActive ? '0 4px 12px rgba(18,33,46,0.20)' : '0 2px 8px rgba(18,33,46,0.06)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    fontFamily: 'Questrial, sans-serif',
+                  }}
+                >
+                  {/* Ícono de rol */}
+                  <div style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: isActive ? 'rgba(255,255,255,0.20)' : 'rgba(234,153,64,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 48 48" fill="none">
+                      {traveler.role === 'baby' ? (
+                        <path d="M24 8a8 8 0 1 1 0 16 8 8 0 0 1 0-16zM10 40c0-8 6-14 14-14s14 6 14 14" stroke={isActive ? 'white' : '#EA9940'} strokeWidth="4" strokeLinecap="round" fill="none"/>
+                      ) : traveler.role === 'kid' ? (
+                        <path d="M24 10a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM12 40c0-7 5-12 12-12s12 5 12 12" stroke={isActive ? 'white' : '#EA9940'} strokeWidth="4" strokeLinecap="round" fill="none"/>
+                      ) : (
+                        <path d="M24 8a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM8 42c0-9 7-16 16-16s16 7 16 16" stroke={isActive ? 'white' : '#EA9940'} strokeWidth="4" strokeLinecap="round" fill="none"/>
+                      )}
+                    </svg>
+                  </div>
+                  <span style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: isActive ? 'white' : '#12212E',
+                  }}>
+                    {traveler.name}
+                  </span>
+                  <span style={{
+                    fontSize: 11,
+                    color: isActive ? 'rgba(255,255,255,0.60)' : 'rgba(18,33,46,0.45)',
+                  }}>
+                    {travelerChecked}/{travelerTotal}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Botón asistente de acomodo */}
+      {currentTripId && currentTravelerId && (
+        <div style={{ padding: '12px 20px 0' }}>
+          <button
+            type="button"
+            onClick={() => setShowLuggageAssistant(true)}
+            style={{
+              width: '100%',
+              height: 46,
+              borderRadius: 14,
+              background: 'white',
+              border: '1.5px solid rgba(18,33,46,0.10)',
+              boxShadow: '0 2px 8px rgba(18,33,46,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              cursor: 'pointer',
+              fontFamily: 'Questrial, sans-serif',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+              <rect x="8" y="12" width="32" height="30" rx="5" fill="#EA9940" />
+              <rect x="8" y="12" width="32" height="14" rx="5" fill="rgba(180,192,200,0.55)" />
+              <path d="M18 12v-4a6 6 0 0 1 12 0v4" stroke="#12212E" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+              <circle cx="34" cy="36" r="8" fill="#307082" />
+              <path d="M30 36l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#12212E' }}>
+              {t('luggage.assistant.cta')}
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* ── Categorías ── */}
       <div className="px-4 mt-4 space-y-3">
         {packingCategories.map((cat) => {
-          const items = itemsForTrip.filter((x) => x.category === cat.id);
+          const items = itemsForTraveler.filter((x) => x.category === cat.id);
           if (items.length === 0) return null;
 
           const isCollapsed = collapsed[cat.id];
@@ -305,79 +455,117 @@ export function PackingChecklistPage() {
                     style={{ overflow: 'hidden' }}
                   >
                     <div className="pb-3 px-3 space-y-1.5">
-                      {items.map((item) => (
-                        <motion.label
-                          key={item.id}
-                          layout
-                          className="flex items-center gap-3 rounded-2xl px-4 py-3 cursor-pointer select-none"
-                          style={{
-                            background: item.checked
-                              ? 'rgba(48,112,130,0.06)'
-                              : 'rgba(18,33,46,0.03)',
-                            border: item.checked
-                              ? '1px solid rgba(48,112,130,0.18)'
-                              : '1px solid transparent',
-                          }}
-                        >
-                          {/* Checkbox custom */}
-                          <div
-                            className="flex-shrink-0 flex items-center justify-center rounded-lg"
+                      {items.map((item) => {
+                        const hasEvidence = packingEvidence.some(
+                          (e) => e.itemId === item.id && e.travelerId === (currentTravelerId ?? '')
+                        );
+                        return (
+                          <motion.div
+                            key={item.id}
+                            layout
+                            className="flex items-center gap-3 rounded-2xl px-4 py-3"
                             style={{
-                              width: 24,
-                              height: 24,
-                              background: item.checked ? '#307082' : 'rgba(18,33,46,0.08)',
-                              border: item.checked ? 'none' : '1.5px solid rgba(18,33,46,0.15)',
-                              transition: 'all 0.2s ease',
+                              background: item.checked
+                                ? 'rgba(48,112,130,0.06)'
+                                : 'rgba(18,33,46,0.03)',
+                              border: item.checked
+                                ? '1px solid rgba(48,112,130,0.18)'
+                                : '1px solid transparent',
                             }}
-                            onClick={() => togglePackingItem(item.id)}
                           >
-                            {item.checked && (
-                              <svg width="13" height="13" viewBox="0 0 48 48" fill="none">
-                                <path d="M10 24l10 10 18-18" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                              </svg>
-                            )}
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={item.checked}
-                            onChange={() => togglePackingItem(item.id)}
-                            className="sr-only"
-                          />
-
-                          {/* Label */}
-                          <div className="flex-1 min-w-0">
-                            <div style={{
-                              color: item.checked ? 'rgba(18,33,46,0.40)' : '#12212E',
-                              fontSize: 14,
-                              fontWeight: 600,
-                              fontFamily: 'Questrial, sans-serif',
-                              textDecoration: item.checked ? 'line-through' : 'none',
-                            }}>
-                              {item.labelKey ? t(item.labelKey) : item.label}
-                              {item.required && !item.checked && (
-                                <span style={{
-                                  marginLeft: 6,
-                                  fontSize: 10,
-                                  color: '#EA9940',
-                                  fontWeight: 700,
-                                  letterSpacing: 0.5,
-                                }}>
-                                  ★
-                                </span>
+                            {/* Checkbox custom */}
+                            <div
+                              className="flex-shrink-0 flex items-center justify-center rounded-lg cursor-pointer"
+                              style={{
+                                width: 24,
+                                height: 24,
+                                background: item.checked ? '#307082' : 'rgba(18,33,46,0.08)',
+                                border: item.checked ? 'none' : '1.5px solid rgba(18,33,46,0.15)',
+                                transition: 'all 0.2s ease',
+                              }}
+                              onClick={() => togglePackingItem(item.id)}
+                            >
+                              {item.checked && (
+                                <svg width="13" height="13" viewBox="0 0 48 48" fill="none">
+                                  <path d="M10 24l10 10 18-18" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                                </svg>
                               )}
                             </div>
-                            {item.quantity > 1 && (
+
+                            {/* Label */}
+                            <div
+                              className="flex-1 min-w-0 cursor-pointer"
+                              onClick={() => togglePackingItem(item.id)}
+                            >
                               <div style={{
-                                color: item.checked ? 'rgba(18,33,46,0.25)' : 'rgba(18,33,46,0.45)',
-                                fontSize: 12,
-                                marginTop: 1,
+                                color: item.checked ? 'rgba(18,33,46,0.40)' : '#12212E',
+                                fontSize: 14,
+                                fontWeight: 600,
+                                fontFamily: 'Questrial, sans-serif',
+                                textDecoration: item.checked ? 'line-through' : 'none',
                               }}>
-                                {t('packing.item.quantity', { count: item.quantity })}
+                                {item.labelKey ? t(item.labelKey) : item.label}
+                                {item.required && !item.checked && (
+                                  <span style={{
+                                    marginLeft: 6,
+                                    fontSize: 10,
+                                    color: '#EA9940',
+                                    fontWeight: 700,
+                                    letterSpacing: 0.5,
+                                  }}>
+                                    ★
+                                  </span>
+                                )}
                               </div>
+                              {item.quantity > 1 && (
+                                <div style={{
+                                  color: item.checked ? 'rgba(18,33,46,0.25)' : 'rgba(18,33,46,0.45)',
+                                  fontSize: 12,
+                                  marginTop: 1,
+                                }}>
+                                  {t('packing.item.quantity', { count: item.quantity })}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Botón de foto de evidencia */}
+                            {currentTravelerId && (
+                              <button
+                                type="button"
+                                onClick={() => setEvidenceModal({
+                                  itemId: item.id,
+                                  itemLabel: item.labelKey ? t(item.labelKey) : item.label,
+                                })}
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 10,
+                                  background: hasEvidence ? 'rgba(48,112,130,0.12)' : 'rgba(18,33,46,0.06)',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {hasEvidence ? (
+                                  <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+                                    <circle cx="24" cy="24" r="20" fill="#307082" />
+                                    <path d="M14 24l8 8 12-12" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+                                    <rect x="4" y="10" width="40" height="30" rx="7" fill="#EA9940" opacity="0.6" />
+                                    <circle cx="24" cy="27" r="7" fill="white" opacity="0.6" />
+                                    <rect x="16" y="6" width="16" height="6" rx="3" fill="#EA9940" opacity="0.6" />
+                                  </svg>
+                                )}
+                              </button>
                             )}
-                          </div>
-                        </motion.label>
-                      ))}
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}
@@ -404,7 +592,7 @@ export function PackingChecklistPage() {
               }}
             >
               <p style={{ color: '#12212E', fontSize: 13, fontWeight: 700, marginBottom: 10, fontFamily: 'Questrial, sans-serif' }}>
-                {t('packing.addCustom.title', 'Agregar artículo')}
+                {t('packing.addCustom.title')}
               </p>
               <div
                 className="flex items-center rounded-2xl px-3"
@@ -419,10 +607,10 @@ export function PackingChecklistPage() {
                   type="text"
                   value={customLabel}
                   onChange={(e) => setCustomLabel(e.target.value)}
-                  placeholder={t('packing.addCustom.placeholder', 'Ej: Adaptador de corriente')}
+                  placeholder={t('packing.addCustom.placeholder')}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && currentTripId && customLabel.trim()) {
-                      addCustomPackingItem(currentTripId, customLabel.trim(), 1);
+                      addCustomPackingItem(currentTripId, customLabel.trim(), 1, currentTravelerId ?? undefined);
                       setCustomLabel('');
                       setShowAddInput(false);
                     }
@@ -443,7 +631,7 @@ export function PackingChecklistPage() {
                 type="button"
                 onClick={() => {
                   if (!currentTripId || !customLabel.trim()) return;
-                  addCustomPackingItem(currentTripId, customLabel.trim(), 1);
+                  addCustomPackingItem(currentTripId, customLabel.trim(), 1, currentTravelerId ?? undefined);
                   setCustomLabel('');
                   setShowAddInput(false);
                 }}
@@ -461,7 +649,7 @@ export function PackingChecklistPage() {
                   cursor: customLabel.trim() ? 'pointer' : 'default',
                 }}
               >
-                {t('packing.addCustom.cta', 'Agregar')}
+                {t('packing.addCustom.cta')}
               </button>
             </motion.div>
           )}
@@ -498,9 +686,21 @@ export function PackingChecklistPage() {
             <path d="M18 12v-4a6 6 0 0 1 12 0v4" stroke="#12212E" strokeWidth="3.5" strokeLinecap="round" fill="none" />
           </svg>
           <p style={{ color: 'rgba(18,33,46,0.40)', fontSize: 15, marginTop: 16, fontFamily: 'Questrial, sans-serif' }}>
-            {t('packing.empty', 'Crea un viaje para generar tu lista')}
+            {t('packing.empty')}
           </p>
         </div>
+      )}
+
+      {/* Modal de evidencia */}
+      {evidenceModal && currentTravelerId && (
+        <PackingEvidenceModal
+          open={!!evidenceModal}
+          onClose={() => setEvidenceModal(null)}
+          itemId={evidenceModal.itemId}
+          itemLabel={evidenceModal.itemLabel}
+          travelerId={currentTravelerId}
+          travelerName={activeTraveler?.name ?? ''}
+        />
       )}
     </div>
   );

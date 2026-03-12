@@ -35,6 +35,10 @@ import { PreferencesPage } from '../../modules/onboarding/pages/PreferencesPage'
 import { OnboardingSummaryPage } from '../../modules/onboarding/pages/OnboardingSummaryPage';
 import { TransportPage } from '../../modules/onboarding/pages/TransportPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { TripHistoryPage } from '../../modules/trips/pages/TripHistoryPage';
+import { BusinessTripPage } from '../../modules/trips/pages/BusinessTripPage';
+import { TripActivitiesPage } from '../../modules/activities/pages/TripActivitiesPage';
+import { WeatherForecastModal } from '../../modules/weather/components/WeatherForecastModal';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -130,6 +134,9 @@ export function AppRouter() {
           <Route path="/adapters" element={<AdapterGuidePage />} />
           <Route path="/departure" element={<DepartureReminderPage />} />
           <Route path="/premium" element={<PremiumPage />} />
+          <Route path="/history" element={<TripHistoryPage />} />
+          <Route path="/business" element={<BusinessTripPage />} />
+          <Route path="/activities" element={<TripActivitiesPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
