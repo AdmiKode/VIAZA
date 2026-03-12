@@ -81,6 +81,29 @@ export async function getSession(): Promise<AuthUser | null> {
   };
 }
 
+/** Iniciar sesión con Google (OAuth redirect) */
+export async function signInWithGoogle(): Promise<void> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+      queryParams: { prompt: 'select_account' },
+    },
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Iniciar sesión con Apple (OAuth redirect) */
+export async function signInWithApple(): Promise<void> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Escuchar cambios de sesión (útil en AppProviders) */
 export function onAuthStateChange(
   callback: (user: AuthUser | null) => void
@@ -93,6 +116,7 @@ export function onAuthStateChange(
       email: user.email ?? '',
       name:
         (user.user_metadata?.full_name as string) ??
+        user.user_metadata?.name as string ??
         user.email?.split('@')[0] ??
         'Usuario',
     });

@@ -4,20 +4,18 @@ import { ThemeProvider } from '../theme/ThemeProvider';
 import i18n from '../../lib/i18n/i18nInstance';
 import { useAppStore } from '../store/useAppStore';
 import { useEffect } from 'react';
-import { getSession } from '../../services/authService';
+import { onAuthStateChange } from '../../services/authService';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const currentLanguage = useAppStore((s) => s.currentLanguage);
   const setSupabaseUser = useAppStore((s) => s.setSupabaseUser);
-  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
 
-  // Restaurar sesión de Supabase al arrancar la app
+  // Escuchar cambios de sesión (incluye OAuth callback redirect)
   useEffect(() => {
-    if (!isAuthenticated) {
-      void getSession().then((user) => {
-        if (user) setSupabaseUser(user);
-      });
-    }
+    const { data: { subscription } } = onAuthStateChange((user) => {
+      if (user) setSupabaseUser(user);
+    });
+    return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
