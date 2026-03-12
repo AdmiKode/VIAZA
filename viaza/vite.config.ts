@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -7,12 +8,20 @@ export default defineConfig({
     port: 5173,
     strictPort: true
   },
+  resolve: {
+    alias: {
+      // En web, @revenuecat/purchases-capacitor se reemplaza por un stub vacío.
+      // En builds nativos (Capacitor), el paquete real está disponible.
+      '@revenuecat/purchases-capacitor': path.resolve(
+        __dirname,
+        'src/stubs/revenuecat-stub.ts'
+      ),
+    },
+  },
   build: {
     rollupOptions: {
-      // @revenuecat/purchases-capacitor solo existe en builds nativos (iOS/Android).
-      // En web se importa dinámicamente dentro de un try/catch que nunca se ejecuta
-      // porque isNative=false. Externalizamos para que Rollup no intente resolverlo.
-      external: ['@revenuecat/purchases-capacitor'],
+      // El alias ya resuelve el paquete; esto es solo por si algún loader lo necesita.
+      external: [],
     },
   },
 });
