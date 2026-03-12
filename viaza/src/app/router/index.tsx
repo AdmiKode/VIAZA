@@ -51,6 +51,9 @@ import { AddEventPage } from '../../modules/itinerary/pages/AddEventPage';
 import { PlacesPage } from '../../modules/places/pages/PlacesPage';
 import { AddPlacePage } from '../../modules/places/pages/AddPlacePage';
 import { ImportReservationPage } from '../../modules/import-reservation/pages/ImportReservationPage';
+import { LandingPage } from '../../modules/landing/pages/LandingPage';
+import { PrivacyPage } from '../../modules/landing/pages/PrivacyPage';
+import { TermsPage } from '../../modules/landing/pages/TermsPage';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -85,6 +88,11 @@ export function AppRouter() {
         {/* ── Intro pre-auth (sin guards) ─────────────────────────── */}
         <Route path="/splash" element={<SplashPage />} />
         <Route path="/intro" element={<IntroPage />} />
+
+        {/* ── Landing pública ─────────────────────────────────────── */}
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
         {/* Alias para el link del email de Supabase → /reset-password?token=... */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
