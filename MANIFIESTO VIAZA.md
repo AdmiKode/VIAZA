@@ -402,6 +402,132 @@ Tips locales
 
 Información útil inmediata.
 
+---
+
+## MÓDULOS NUEVOS — ROADMAP CONFIRMADO (12 marzo 2026)
+
+### MÓDULO: AGENDA PERSONAL DE VIAJE
+El viajero necesita recordar cosas específicas durante el viaje. No es un calendario general — es una agenda de viaje inteligente con categorías y notificaciones push nativas.
+
+**Funciones:**
+- Crear recordatorios por categoría: medicamentos, llamadas, juntas, check-in hotel, renovar visa, actividades reservadas
+- Notificaciones push nativas via Capacitor LocalNotifications
+- Vista de agenda por día (integrada con las fechas del viaje activo)
+- Recordatorios recurrentes (ej: tomar medicamento cada 8h)
+- Sin conexión a internet — 100% local
+
+**Pantallas:** `AgendaPage`, `NewReminderPage`, `ReminderDetailPage`
+**Ruta:** `/agenda`
+**Premium:** Recordatorios ilimitados (free: máximo 5). Notificaciones recurrentes (premium only).
+
+---
+
+### MÓDULO: ITINERARIO + TIMELINE DEL VIAJE
+Vista de todos los días del viaje con actividades, vuelos, hoteles y lugares organizados cronológicamente.
+
+**Funciones:**
+- Timeline vertical por día (Día 1, Día 2... hasta Día N)
+- Cada día muestra: eventos, actividades, vuelos, horarios
+- Añadir eventos manualmente a cualquier día
+- Añadir lugares desde Google Places directamente al día
+- Vista de mapa con los pins del día seleccionado (Google Maps embed)
+- Reordenar eventos dentro del día (drag & drop)
+
+**Pantallas:** `ItineraryPage`, `DayDetailPage`, `AddEventPage`
+**Ruta:** `/itinerary`, `/itinerary/day/:dayIndex`
+**Premium:** Más de 3 días de itinerario detallado (free: solo primer y último día). Mapa interactivo.
+
+---
+
+### MÓDULO: LUGARES GUARDADOS
+El viajero marca lugares que quiere visitar, los organiza por día del itinerario y los ve en mapa.
+
+**Funciones:**
+- Buscar lugares via Google Places API (ya tenemos key)
+- Guardar lugar con nombre, foto, categoría (restaurante, museo, playa, hotel, etc.)
+- Asignar lugar a un día del itinerario
+- Ver todos los lugares guardados del viaje en lista y en mapa
+- Calcular ruta entre lugares del mismo día
+
+**Pantallas:** `PlacesPage`, `PlaceDetailPage`, `AddPlacePage`
+**Ruta:** `/places`
+**Premium:** Lugares ilimitados (free: máximo 5 por viaje). Mapa con rutas.
+
+---
+
+### MÓDULO: IMPORTAR RESERVAS DE CORREO / PDF
+El viajero pega el texto de un email de confirmación (vuelo, hotel, actividad) y la IA extrae todos los datos automáticamente.
+
+**Funciones:**
+- Input de texto libre (pegar email de confirmación)
+- GPT-4 parsea: tipo de reserva, fechas, hora, número de confirmación, proveedor, precio
+- Los datos se añaden automáticamente al itinerario del viaje
+- Soporte: vuelos (número, aerolínea, salida/llegada), hoteles (nombre, check-in/out), actividades/tours, trenes, autobuses
+- Historial de reservas importadas
+
+**Pantallas:** `ImportReservationPage`, `ReservationDetailPage`
+**Ruta:** `/import-reservation`
+**Premium:** Esta función es PREMIUM ONLY. Requiere GPT-4 (ya conectado).
+
+---
+
+### MÓDULO: COLABORACIÓN CON AMIGOS
+Compartir el viaje con otros usuarios para que vean o co-editen el itinerario.
+
+**Funciones:**
+- Invitar por link único (generado en Supabase)
+- Rol viewer: solo ver itinerario, lista de lugares, packing progress
+- Rol co-editor: añadir eventos, lugares, ítems de packing
+- Notificación push cuando un colaborador añade algo
+- Máximo 5 colaboradores por viaje
+
+**Backend requerido:** Tabla `trip_members` en Supabase, RLS policies, Realtime subscriptions
+**Pantallas:** `CollaboratorsPage`, `InviteCollaboratorPage`
+**Ruta:** `/trip/:id/collaborators`
+**Premium:** PREMIUM ONLY. La colaboración requiere cuenta Premium.
+
+---
+
+### MÓDULO: VER VUELOS Y HOTELES
+Búsqueda y comparación básica de vuelos y hoteles desde dentro de la app.
+
+**Funciones:**
+- Búsqueda de vuelos por origen/destino/fecha (via Amadeus API o Skyscanner Affiliate)
+- Búsqueda de hoteles por destino/fechas (via Booking Affiliate o Hotels.com API)
+- Guardar resultado como "considerando" o "reservado" en el viaje
+- Deep link a la aerolínea/hotel para completar reserva
+
+**Nota:** Esta función requiere contratos con proveedores de API. Complejidad alta. Fase V2.
+**Premium:** Esta función es PREMIUM ONLY.
+
+---
+
+## FEATURES PREMIUM — TABLA ACTUALIZADA
+
+| Feature | Free | Premium |
+|---------|------|---------|
+| Crear viajes | Máximo 3 | Ilimitados |
+| Packing list inteligente | ✅ | ✅ |
+| Checklist + progreso | ✅ | ✅ |
+| Currency converter | ✅ | ✅ |
+| Tips locales + supervivencia | ✅ | ✅ |
+| Split bill | ✅ | ✅ |
+| Frases rápidas | ✅ | ✅ |
+| Airline rules + allowed items | ✅ | ✅ |
+| Agenda de viaje | Máximo 5 recordatorios | Ilimitados + recurrentes |
+| Itinerario por días | Solo día 1 y último | Todos los días + mapa |
+| Lugares guardados | Máximo 5 por viaje | Ilimitados + mapa |
+| Timeline visual | Básico | Completo con mapa |
+| Escáner de boarding pass (OCR) | ❌ | ✅ |
+| Asistente de maleta IA | ❌ | ✅ |
+| Importar reservas de correo IA | ❌ | ✅ |
+| Colaboración con amigos | ❌ | ✅ (máx 5) |
+| Ver vuelos y hoteles | ❌ | ✅ (fase V2) |
+| Modo sin conexión completo | ❌ | ✅ |
+| Soporte prioritario | ❌ | ✅ |
+
+---
+
 Roadmap futuro
 Scan My Bag
 

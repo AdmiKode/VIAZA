@@ -393,6 +393,45 @@ export function HomePage() {
         )}
 
         {/* ═══════════════════════════════
+            ACTIVIDADES DEL VIAJE
+        ══════════════════════════════ */}
+        {trip && trip.activities && trip.activities.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#12212E', marginBottom: 12 }}>
+              {t('home.activities.title', 'Actividades planeadas')}
+            </div>
+            <div
+              className="rounded-3xl p-4"
+              style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}
+            >
+              <div className="flex flex-wrap gap-2">
+                {trip.activities.map((act) => (
+                  <span
+                    key={act}
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                    style={{ background: 'rgba(48,112,130,0.10)', color: '#307082' }}
+                  >
+                    {t(`activity.${act}`, act)}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/activities')}
+                className="mt-3 w-full rounded-2xl py-2.5 text-sm font-bold transition active:scale-[0.98]"
+                style={{ background: 'rgba(18,33,46,0.05)', color: '#12212E', border: 'none', cursor: 'pointer' }}
+              >
+                {t('home.activities.cta', 'Ver actividades')} →
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══════════════════════════════
             QUICK TOOLS 2×2
         ══════════════════════════════ */}
         <div>

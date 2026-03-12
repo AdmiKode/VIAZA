@@ -42,6 +42,13 @@ import { WeatherForecastModal } from '../../modules/weather/components/WeatherFo
 import { TripRoutePage } from '../../modules/trips/pages/TripRoutePage';
 import { BoardingPassScannerPage } from '../../modules/airline/pages/BoardingPassScannerPage';
 import { LuggageAssistantRoute } from '../../modules/packing/pages/LuggageAssistantRoute';
+import { AgendaPage } from '../../modules/agenda/pages/AgendaPage';
+import { NewAgendaItemPage } from '../../modules/agenda/pages/NewAgendaItemPage';
+import { ItineraryPage } from '../../modules/itinerary/pages/ItineraryPage';
+import { AddEventPage } from '../../modules/itinerary/pages/AddEventPage';
+import { PlacesPage } from '../../modules/places/pages/PlacesPage';
+import { AddPlacePage } from '../../modules/places/pages/AddPlacePage';
+import { ImportReservationPage } from '../../modules/import-reservation/pages/ImportReservationPage';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -143,6 +150,15 @@ export function AppRouter() {
           <Route path="/route" element={<TripRoutePage />} />
           <Route path="/boarding-pass-scanner" element={<BoardingPassScannerPage />} />
           <Route path="/luggage-assistant" element={<LuggageAssistantRoute />} />
+
+          {/* ── Nuevos módulos ─────────────────────────────────────── */}
+          <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/agenda/new" element={<NewAgendaItemPage />} />
+          <Route path="/itinerary" element={<ItineraryPage />} />
+          <Route path="/itinerary/add-event" element={<AddEventPage />} />
+          <Route path="/places" element={<PlacesPage />} />
+          <Route path="/places/add" element={<AddPlacePage />} />
+          <Route path="/import-reservation" element={<ImportReservationPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

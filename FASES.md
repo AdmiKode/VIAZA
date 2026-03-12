@@ -338,3 +338,204 @@ Checkpoint fin Día 2:
 | 8 | Componentes UI reutilizables (EmptyState, ProgressBar, ModalSheet) | Medio — deuda técnica |
 | 9 | SettingsPage — theme preview completa | Bajo |
 | 10 | Build nativo Capacitor | Alto para lanzamiento real |
+
+---
+
+## FASE 9 — AGENDA DE VIAJE (nueva)
+
+**Objetivo:** Recordatorios inteligentes por categoría, nativos, con notificaciones push.
+
+### Estructura de datos
+```typescript
+interface AgendaItem {
+  id: string;
+  tripId: string;
+  title: string;
+  category: 'medication' | 'call' | 'meeting' | 'checkin' | 'activity' | 'reminder' | 'custom';
+  date: string;        // ISO date
+  time: string;        // HH:MM
+  recurrence: 'none' | 'daily' | 'every_8h' | 'every_12h' | 'weekly';
+  notes?: string;
+  notificationId?: number;  // Capacitor LocalNotifications ID
+  completed: boolean;
+  createdAt: string;
+}
+```
+
+### Pantallas
+| Pantalla | Ruta | Descripción |
+|----------|------|-------------|
+| `AgendaPage` | `/agenda` | Lista de eventos del viaje activo, agrupados por día |
+| `NewAgendaItemPage` | `/agenda/new` | Formulario: título, categoría, fecha, hora, recurrencia |
+| `AgendaItemDetailPage` | `/agenda/:id` | Detalle + editar + eliminar + marcar completado |
+
+### Servicios
+- `notificationsService.ts` — `scheduleNotification(item)`, `cancelNotification(id)`, `requestPermission()`
+- Capacitor `@capacitor/local-notifications`
+- En web: `Notification API` como fallback
+
+### Premium gate
+- Free: máximo 5 ítems de agenda
+- Premium: ilimitados + recurrencias
+
+---
+
+## FASE 10 — ITINERARIO + TIMELINE + LUGARES (nueva)
+
+**Objetivo:** Vista día a día del viaje con eventos, lugares en mapa y drag & drop para reordenar.
+
+### Estructura de datos
+```typescript
+interface ItineraryEvent {
+  id: string;
+  tripId: string;
+  dayIndex: number;       // 0 = día 1 del viaje
+  order: number;          // posición dentro del día
+  type: 'flight' | 'hotel' | 'activity' | 'place' | 'transport' | 'meal' | 'free';
+  title: string;
+  description?: string;
+  startTime?: string;     // HH:MM
+  endTime?: string;
+  placeId?: string;       // ref a SavedPlace
+  confirmationCode?: string;
+  source: 'manual' | 'imported' | 'suggestion';
+  createdAt: string;
+}
+
+interface SavedPlace {
+  id: string;
+  tripId: string;
+  name: string;
+  address?: string;
+  lat: number;
+  lon: number;
+  category: 'restaurant' | 'museum' | 'hotel' | 'beach' | 'park' | 'shopping' | 'transport' | 'other';
+  googlePlaceId?: string;
+  photo?: string;
+  assignedDayIndex?: number;
+  notes?: string;
+  status: 'want_to_go' | 'booked' | 'visited';
+  createdAt: string;
+}
+```
+
+### Pantallas
+| Pantalla | Ruta | Descripción |
+|----------|------|-------------|
+| `ItineraryPage` | `/itinerary` | Timeline vertical — todos los días del viaje |
+| `DayDetailPage` | `/itinerary/day/:index` | Eventos del día + mapa Google Maps con pins |
+| `AddEventPage` | `/itinerary/add-event` | Crear evento: tipo, título, hora, lugar |
+| `PlacesPage` | `/places` | Lista de lugares guardados del viaje activo |
+| `AddPlacePage` | `/places/add` | Buscar Google Places → guardar al viaje |
+| `PlaceDetailPage` | `/places/:id` | Detalle del lugar + asignar a día |
+
+### Servicios
+- `placesService.ts` — Google Places API (ya tenemos `VITE_GOOGLE_MAPS_KEY`)
+- `itineraryService.ts` — CRUD eventos, ordenar por día, exportar
+
+### Premium gate
+- Free: itinerario básico día 1 y último día, máximo 5 lugares
+- Premium: todos los días + mapa interactivo + lugares ilimitados
+
+---
+
+## FASE 11 — IMPORTAR RESERVAS + COLABORACIÓN (nueva)
+
+**Objetivo:** IA parsea emails de confirmación → puebla el itinerario. Colaborar con amigos en tiempo real.
+
+### IMPORTAR RESERVAS
+- Usuario pega texto de email de confirmación (vuelo, hotel, tour, tren)
+- GPT-4 (ya conectado) extrae: tipo, fechas, horas, confirmación, proveedor, precio
+- Se crea automáticamente un `ItineraryEvent` del tipo correcto
+- Historial de importaciones por viaje
+
+**Pantallas:**
+| Pantalla | Ruta | Descripción |
+|----------|------|-------------|
+| `ImportReservationPage` | `/import-reservation` | Input de texto + procesamiento IA + preview |
+| `ReservationsPage` | `/reservations` | Historial de reservas del viaje activo |
+
+**Servicios:** `reservationParserService.ts` — llama a OpenAI con prompt estructurado
+
+**Premium:** PREMIUM ONLY — funciona con GPT-4
+
+### COLABORACIÓN
+- Tabla `trip_members` en Supabase (tripId, userId, role: viewer | editor, invitedAt, acceptedAt)
+- Link de invitación único `/join/:token`
+- Supabase Realtime para sincronizar cambios en tiempo real
+- Rol viewer: solo lectura. Rol editor: añadir eventos/lugares
+
+**Pantallas:**
+| Pantalla | Ruta | Descripción |
+|----------|------|-------------|
+| `CollaboratorsPage` | `/trip/:id/collaborators` | Ver colaboradores, gestionar roles |
+| `InvitePage` | `/trip/:id/invite` | Generar link + copiar |
+| `JoinTripPage` | `/join/:token` | Aceptar invitación |
+
+**Premium:** PREMIUM ONLY
+
+---
+
+## PLAN DE TRABAJO — 12 DE MARZO DE 2026
+
+> Estado: sesión activa. Lo pendiente del sprint anterior + los módulos nuevos.
+
+### URGENTE — Terminar sprint anterior (1-2h)
+```
+[ ] PASO 4 — TripDetailsPage premium (reescritura ejecutada, falta verificar build)
+[ ] PASO 5 — PackingChecklistPage: auto-generar si items vacíos
+[ ] npm run build — 0 errores TS
+[ ] git commit + push
+```
+
+### HOY — Módulo Agenda (2-3h)
+```
+[ ] Crear types/agenda.ts (AgendaItem interface)
+[ ] Añadir agendaItems[] al store Zustand con CRUD
+[ ] AgendaPage — lista de eventos agrupados por día
+[ ] NewAgendaItemPage — formulario completo con categorías hermosas
+[ ] notificationsService.ts — scheduleNotification + cancelNotification
+[ ] Conectar con Capacitor LocalNotifications
+[ ] Añadir ruta /agenda al router
+[ ] Añadir acceso desde HomePage y ToolsHub
+```
+
+### HOY — Módulo Itinerario/Timeline (2-3h)
+```
+[ ] Crear types/itinerary.ts (ItineraryEvent + SavedPlace interfaces)
+[ ] Añadir itineraryEvents[] + savedPlaces[] al store
+[ ] ItineraryPage — timeline vertical por días
+[ ] DayDetailPage — eventos del día + map placeholder
+[ ] AddEventPage — formulario nuevo evento
+[ ] PlacesPage — lista de lugares guardados
+[ ] AddPlacePage — buscador Google Places
+[ ] Añadir rutas /itinerary y /places al router
+```
+
+### HOY — Módulo Importar Reservas (1h)
+```
+[ ] ImportReservationPage — UI + textarea + botón procesar
+[ ] reservationParserService.ts — prompt GPT-4 estructurado
+[ ] Preview del evento extraído antes de confirmar
+[ ] Añadir ruta /import-reservation
+```
+
+### HOY — Actualizar PremiumPage con nuevos beneficios (30min)
+```
+[ ] Añadir a la lista de beneficios:
+    - Agenda ilimitada con notificaciones recurrentes
+    - Itinerario completo con mapa interactivo
+    - Importar reservas con IA
+    - Colaboración con amigos (próximamente)
+[ ] Actualizar descripción del precio
+```
+
+### PENDIENTE (próxima sesión)
+```
+[ ] Colaboración con amigos — requiere backend Supabase
+[ ] Búsqueda de vuelos/hoteles — requiere contrato Amadeus/Skyscanner
+[ ] Build nativo Capacitor (iOS + Android)
+[ ] TranslatorPage con API real (OpenAI ya conectado, solo el prompt)
+[ ] CountryPickerPage
+[ ] ProfilePage completa
+```

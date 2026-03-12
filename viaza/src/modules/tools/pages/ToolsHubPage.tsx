@@ -4,10 +4,14 @@ import { AppHeader } from '../../../components/ui/AppHeader';
 import { AppCard } from '../../../components/ui/AppCard';
 
 const tools = [
-  { to: '/translator', titleKey: 'translator.title', subtitleKey: 'tools.translator.subtitle' },
-  { to: '/currency', titleKey: 'currency.title', subtitleKey: 'tools.currency.subtitle' },
-  { to: '/split-bill', titleKey: 'splitBill.title', subtitleKey: 'tools.splitBill.subtitle' },
-  { to: '/adapters', titleKey: 'adapters.title', subtitleKey: 'tools.adapters.subtitle' }
+  { to: '/translator',         titleKey: 'translator.title',  subtitleKey: 'tools.translator.subtitle' },
+  { to: '/currency',           titleKey: 'currency.title',    subtitleKey: 'tools.currency.subtitle' },
+  { to: '/split-bill',         titleKey: 'splitBill.title',   subtitleKey: 'tools.splitBill.subtitle' },
+  { to: '/adapters',           titleKey: 'adapters.title',    subtitleKey: 'tools.adapters.subtitle' },
+  { to: '/itinerary',          titleKey: 'itinerary.title',   subtitleKey: 'tools.itinerary.subtitle' },
+  { to: '/agenda',             titleKey: 'agenda.title',      subtitleKey: 'tools.agenda.subtitle' },
+  { to: '/places',             titleKey: 'places.title',      subtitleKey: 'tools.places.subtitle' },
+  { to: '/import-reservation', titleKey: 'import.title',      subtitleKey: 'tools.import.subtitle' },
 ];
 
 export function ToolsHubPage() {

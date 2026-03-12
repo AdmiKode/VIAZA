@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { packingCategories } from '../utils/packingCategories';
 import type { PackingCategory } from '../../../types/packing';
+import { generatePackingItemsForTrip } from '../utils/packingGenerator';
 import { PackingEvidenceModal } from '../components/PackingEvidenceModal';
 import { LuggageAssistantPage } from './LuggageAssistantPage';
 
@@ -93,6 +94,16 @@ export function PackingChecklistPage() {
   useEffect(() => {
     if (currentTripId) initTravelersFromTrip(currentTripId);
   }, [currentTripId, initTravelersFromTrip]);
+
+  // ── Auto-generar ítems si el trip no tiene ninguno todavía ──────
+  const addPackingItems = useAppStore((s) => s.addPackingItems);
+  useEffect(() => {
+    if (!currentTrip) return;
+    const existing = packingItems.filter((x) => x.tripId === currentTrip.id);
+    if (existing.length > 0) return;          // ya hay ítems, no regenerar
+    const generated = generatePackingItemsForTrip(currentTrip);
+    if (generated.length > 0) addPackingItems(generated);
+  }, [currentTrip, packingItems, addPackingItems]);
 
   const tripTravelers = useMemo(
     () => travelers.filter((tr) => tr.tripId === currentTripId).sort((a, b) => a.order - b.order),
