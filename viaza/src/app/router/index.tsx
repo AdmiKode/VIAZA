@@ -74,7 +74,11 @@ export function AppRouter() {
          * Cuando terminemos el desarrollo, ese botón se elimina
          * y los botones de tienda quedan como único CTA.
          */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={
+          isAuthenticated
+            ? <Navigate to={onboardingCompleted ? '/home' : '/onboarding'} replace />
+            : <LandingPage />
+        } />
 
         {/* ── Intro pre-auth (sin guards) ─────────────────────────── */}
         <Route path="/splash" element={<SplashPage />} />
@@ -96,11 +100,11 @@ export function AppRouter() {
           <Route index element={<Navigate to="/auth/login" replace />} />
           <Route
             path="login"
-            element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+            element={isAuthenticated ? <Navigate to={onboardingCompleted ? '/home' : '/onboarding'} replace /> : <LoginPage />}
           />
           <Route
             path="register"
-            element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
+            element={isAuthenticated ? <Navigate to={onboardingCompleted ? '/home' : '/onboarding'} replace /> : <RegisterPage />}
           />
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />

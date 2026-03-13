@@ -25,7 +25,7 @@ export function RegisterPage() {
     try {
       const user = await signUp({ name, email, password });
       setSupabaseUser(user);
-      navigate('/', { replace: true });
+      navigate('/onboarding', { replace: true });
     } catch {
       setError(t('auth.register.error'));
     } finally {

@@ -29,6 +29,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const setSupabaseUser = useAppStore((s) => s.setSupabaseUser);
+  const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,7 +58,7 @@ export function LoginPage() {
     try {
       const user = await signIn({ email, password });
       setSupabaseUser(user);
-      navigate('/', { replace: true });
+      navigate(onboardingCompleted ? '/home' : '/onboarding', { replace: true });
     } catch {
       setError(t('auth.login.error'));
     } finally {
