@@ -12,16 +12,16 @@ interface Suggestion {
   structured_formatting: { main_text: string; secondary_text?: string };
 }
 
-const CATS: { key: PlaceCategory; label: string; emoji: string }[] = [
-  { key: 'restaurant', label: 'Restaurante', emoji: '🍽️' },
-  { key: 'museum', label: 'Museo', emoji: '🏛️' },
-  { key: 'hotel', label: 'Hotel', emoji: '🏨' },
-  { key: 'beach', label: 'Playa', emoji: '🏖️' },
-  { key: 'park', label: 'Parque', emoji: '🌿' },
-  { key: 'shopping', label: 'Compras', emoji: '🛍️' },
-  { key: 'transport', label: 'Transporte', emoji: '🚌' },
-  { key: 'attraction', label: 'Atracción', emoji: '🎡' },
-  { key: 'other', label: 'Otro', emoji: '📍' },
+const CATS: { key: PlaceCategory; label: string }[] = [
+  { key: 'restaurant', label: 'Restaurante' },
+  { key: 'museum', label: 'Museo'           },
+  { key: 'hotel', label: 'Hotel'            },
+  { key: 'beach', label: 'Playa'            },
+  { key: 'park', label: 'Parque'            },
+  { key: 'shopping', label: 'Compras'       },
+  { key: 'transport', label: 'Transporte'   },
+  { key: 'attraction', label: 'Atracción'   },
+  { key: 'other', label: 'Otro'             },
 ];
 
 const STATUSES: { key: PlaceStatus; label: string }[] = [
@@ -170,7 +170,6 @@ export function AddPlacePage() {
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {CATS.map((c) => (
               <button key={c.key} type="button" onClick={() => setCat(c.key)} className="rounded-2xl py-3 flex flex-col items-center gap-1 transition" style={{ background: cat === c.key ? 'rgba(48,112,130,0.15)' : 'white', border: cat === c.key ? '2px solid #307082' : '2px solid transparent', cursor: 'pointer', boxShadow: '0 2px 8px rgba(18,33,46,0.06)' }}>
-                <span style={{ fontSize: 20 }}>{c.emoji}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: cat === c.key ? '#307082' : 'rgba(18,33,46,0.55)', fontFamily: 'Questrial, sans-serif' }}>{c.label}</span>
               </button>
             ))}

@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { parseReservation, type ParsedReservation } from '../../../services/reservationParserService';
 
-const TYPE_META: Record<string, { label: string; emoji: string }> = {
-  flight:    { label: 'Vuelo',      emoji: '✈️' },
-  hotel:     { label: 'Hotel',      emoji: '🏨' },
-  activity:  { label: 'Actividad',  emoji: '🎭' },
-  place:     { label: 'Lugar',      emoji: '📍' },
-  transport: { label: 'Transporte', emoji: '🚌' },
-  meal:      { label: 'Comida',     emoji: '🍽️' },
-  free:      { label: 'Libre',      emoji: '🌿' },
+const TYPE_META: Record<string, { label: string }> = {
+  flight:    { label: 'Vuelo'      },
+  hotel:     { label: 'Hotel'      },
+  activity:  { label: 'Actividad'  },
+  place:     { label: 'Lugar'      },
+  transport: { label: 'Transporte' },
+  meal:      { label: 'Comida'     },
+  free:      { label: 'Libre'      },
 };
 
 export function ImportReservationPage() {
@@ -71,7 +71,7 @@ export function ImportReservationPage() {
     setSaved(false);
   }
 
-  const typeMeta = parsed ? (TYPE_META[parsed.type] ?? { label: parsed.type, emoji: '📎' }) : null;
+  const typeMeta = parsed ? (TYPE_META[parsed.type] ?? { label: parsed.type }) : null;
 
   return (
     <div className="min-h-dvh pb-32" style={{ background: '#ECE7DC', fontFamily: 'Questrial, sans-serif' }}>
@@ -95,7 +95,6 @@ export function ImportReservationPage() {
         {saved && (
           <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4" style={{ background: 'rgba(18,33,46,0.65)', backdropFilter: 'blur(8px)' }}>
             <div className="flex flex-col items-center gap-4 rounded-3xl p-8" style={{ background: 'white' }}>
-              <div className="text-5xl">🎉</div>
               <div style={{ color: '#12212E', fontSize: 20, fontWeight: 800 }}>¡Evento añadido!</div>
               <div style={{ color: 'rgba(18,33,46,0.45)', fontSize: 14 }}>Volviendo al itinerario…</div>
             </div>
@@ -118,11 +117,11 @@ export function ImportReservationPage() {
                 style={{ background: 'white', fontSize: 14, fontFamily: 'Questrial, sans-serif', color: '#12212E', border: 'none', lineHeight: 1.55, boxShadow: '0 2px 12px rgba(18,33,46,0.09)' }}
               />
               <div className="mt-2 flex flex-wrap gap-2 text-xs" style={{ color: 'rgba(18,33,46,0.40)' }}>
-                <span>✈️ Vuelos</span>
-                <span>🏨 Hoteles</span>
-                <span>🎭 Actividades</span>
-                <span>🍽️ Restaurantes</span>
-                <span>🚌 Transporte</span>
+                <span>Vuelos</span>
+                <span>Hoteles</span>
+                <span>Actividades</span>
+                <span>Restaurantes</span>
+                <span>Transporte</span>
               </div>
             </div>
 
@@ -141,7 +140,7 @@ export function ImportReservationPage() {
                   <svg className="animate-spin" width="18" height="18" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" stroke="rgba(18,33,46,0.30)" strokeWidth="4"/><path d="M24 6a18 18 0 0 1 18 18" stroke="#12212E" strokeWidth="4" strokeLinecap="round"/></svg>
                   Analizando con IA…
                 </>
-              ) : '✨ Analizar con IA'}
+              ) : 'Analizar con IA'}
             </motion.button>
           </>
         )}
@@ -153,7 +152,6 @@ export function ImportReservationPage() {
               {/* Card preview */}
               <div className="rounded-3xl p-5" style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.10)' }}>
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 text-4xl">{typeMeta?.emoji}</div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ background: 'rgba(234,153,64,0.12)', color: '#EA9940' }}>{typeMeta?.label}</span>
@@ -161,9 +159,9 @@ export function ImportReservationPage() {
                     <div style={{ color: '#12212E', fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>{parsed.title}</div>
                     {parsed.description && <div style={{ color: 'rgba(18,33,46,0.50)', fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{parsed.description}</div>}
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {parsed.startTime && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(18,33,46,0.06)', color: '#12212E' }}>⏰ {parsed.startTime}{parsed.endTime ? ` → ${parsed.endTime}` : ''}</span>}
-                      {parsed.confirmationCode && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(48,112,130,0.10)', color: '#307082' }}>🔑 {parsed.confirmationCode}</span>}
-                      {parsed.rawDate && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(108,163,162,0.12)', color: '#6CA3A2' }}>📅 {parsed.rawDate}</span>}
+                      {parsed.startTime && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(18,33,46,0.06)', color: '#12212E' }}>{parsed.startTime}{parsed.endTime ? ` → ${parsed.endTime}` : ''}</span>}
+                      {parsed.confirmationCode && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(48,112,130,0.10)', color: '#307082' }}>{parsed.confirmationCode}</span>}
+                      {parsed.rawDate && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(108,163,162,0.12)', color: '#6CA3A2' }}>{parsed.rawDate}</span>}
                     </div>
                   </div>
                 </div>
@@ -196,7 +194,6 @@ export function ImportReservationPage() {
         {/* Tip */}
         {!parsed && (
           <div className="rounded-2xl px-4 py-3.5 flex gap-3" style={{ background: 'rgba(18,33,46,0.05)' }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>💡</span>
             <div style={{ color: 'rgba(18,33,46,0.55)', fontSize: 12, lineHeight: 1.55 }}>
               Puedes pegar el cuerpo de un email de confirmación, un SMS, o simplemente escribir los datos de tu reserva. La IA detecta vuelos, hoteles, actividades y más.
             </div>

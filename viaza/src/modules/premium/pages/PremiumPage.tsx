@@ -213,7 +213,7 @@ export function PremiumPage() {
               VIAZA
             </div>
             <div style={{ color: 'white', fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>
-              {isPremium ? '✨ Ya eres Premium' : 'Lleva tu viaje\nal siguiente nivel'}
+              {isPremium ? 'Ya eres Premium' : 'Lleva tu viaje\nal siguiente nivel'}
             </div>
             {!isPremium && (
               <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 8 }}>
@@ -261,7 +261,7 @@ export function PremiumPage() {
                     <svg className="animate-spin" width="18" height="18" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" stroke="rgba(255,255,255,0.30)" strokeWidth="4"/><path d="M24 6a18 18 0 0 1 18 18" stroke="white" strokeWidth="4" strokeLinecap="round"/></svg>
                     {isNative ? 'Abriendo tienda…' : 'Abriendo pago…'}
                   </>
-                ) : '✦ Activar Premium ahora'}
+                ) : 'Activar Premium ahora'}
               </motion.button>
 
               {/* Restaurar compras — solo visible en nativo */}

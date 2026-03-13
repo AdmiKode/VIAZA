@@ -232,7 +232,7 @@ export function ResetPasswordPage() {
                     <svg className="animate-spin" width="18" height="18" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" stroke="rgba(18,33,46,0.20)" strokeWidth="4"/><path d="M24 6a18 18 0 0 1 18 18" stroke="rgba(18,33,46,0.40)" strokeWidth="4" strokeLinecap="round"/></svg>
                     Guardando…
                   </>
-                ) : '🔒 Guardar nueva contraseña'}
+                ) : 'Guardar nueva contraseña'}
               </motion.button>
             </div>
           )}

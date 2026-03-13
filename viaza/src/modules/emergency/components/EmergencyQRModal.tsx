@@ -141,7 +141,7 @@ export function EmergencyQRModal({ profile, onClose, onTokenRegenerated }: Props
               disabled={regenerating}
               style={btnStyle(confirmRegen ? C.red : 'rgba(18,33,46,0.08)', confirmRegen ? 'white' : C.dark)}
             >
-              {regenerating ? 'Regenerando...' : confirmRegen ? '⚠️ Confirmar — el QR anterior quedará inválido' : 'Regenerar QR'}
+              {regenerating ? 'Regenerando...' : confirmRegen ? 'Confirmar — el QR anterior quedará inválido' : 'Regenerar QR'}
             </button>
           </div>
         </motion.div>

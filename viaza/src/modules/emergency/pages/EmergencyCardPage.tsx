@@ -104,10 +104,10 @@ export default function EmergencyCardPage() {
         <div style={{ padding: '28px 20px' }}>
           {/* Beneficios */}
           {[
-            ['🩺', 'Datos médicos accesibles al instante', 'Tipo de sangre, alergias y medicamentos siempre disponibles'],
-            ['📞', 'Contactos de emergencia', 'Quienes te cuidan, a un toque de distancia'],
-            ['🔒', 'Privacidad total', 'Tú decides exactamente qué información es pública'],
-            ['⚡', 'Sin app necesaria', 'Cualquier persona puede escanear tu QR, sin descargar nada'],
+            ['Datos medicos', 'Datos médicos accesibles al instante', 'Tipo de sangre, alergias y medicamentos siempre disponibles'],
+            ['Contactos', 'Contactos de emergencia', 'Quienes te cuidan, a un toque de distancia'],
+            ['Privacidad', 'Privacidad total', 'Tú decides exactamente qué información es pública'],
+            ['Sin app', 'Sin app necesaria', 'Cualquier persona puede escanear tu QR, sin descargar nada'],
           ].map(([icon, title, desc]) => (
             <div key={title} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
               <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(192,57,43,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
@@ -177,7 +177,6 @@ export default function EmergencyCardPage() {
           <div style={{ color: C.dark, fontSize: 15, fontWeight: 800, marginBottom: 16 }}>Resumen médico</div>
           {profile!.blood_type && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `rgba(192,57,43,0.10)`, borderRadius: 20, padding: '6px 14px', marginBottom: 12, marginRight: 8 }}>
-              <span style={{ color: C.red, fontSize: 16, fontWeight: 900 }}>🩸</span>
               <span style={{ color: C.red, fontSize: 15, fontWeight: 900 }}>{profile!.blood_type}</span>
             </div>
           )}
@@ -223,7 +222,7 @@ export default function EmergencyCardPage() {
         {/* Estado del QR */}
         {(!profile!.qr_enabled || !profile!.consent_public_display) && (
           <div style={{ background: 'rgba(192,57,43,0.08)', border: '1.5px solid rgba(192,57,43,0.20)', borderRadius: 18, padding: '16px 18px', marginBottom: 14 }}>
-            <div style={{ color: C.red, fontSize: 14, fontWeight: 800, marginBottom: 4 }}>⚠️ QR desactivado</div>
+            <div style={{ color: C.red, fontSize: 14, fontWeight: 800, marginBottom: 4 }}>QR desactivado</div>
             <div style={{ color: C.red, fontSize: 13, opacity: 0.8, marginBottom: 12 }}>Para que tu QR sea escaneable debes activar "QR público" y dar tu consentimiento de visualización.</div>
             <button onClick={() => setView('edit')} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Questrial, sans-serif' }}>
               Activar QR →

@@ -43,7 +43,7 @@ export default function EmergencyPublicPage() {
   if (data === 'error' || data === null) {
     return (
       <div style={{ background: C.cream, minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'Questrial, sans-serif', padding: '0 32px' }}>
-        <div style={{ fontSize: 56, marginBottom: 16 }}>🚫</div>
+        <div style={{ fontSize: 56, marginBottom: 16, color: C.muted, fontWeight: 900 }}>X</div>
         <div style={{ color: C.dark, fontSize: 22, fontWeight: 800, textAlign: 'center', marginBottom: 10 }}>QR inválido o desactivado</div>
         <div style={{ color: C.muted, fontSize: 14, textAlign: 'center', lineHeight: 1.6, marginBottom: 28 }}>
           Este código QR no existe, ha sido desactivado por su dueño, o el enlace es incorrecto.
@@ -62,7 +62,6 @@ export default function EmergencyPublicPage() {
       <div style={{ background: `linear-gradient(160deg, ${C.red} 0%, #8B0000 100%)`, padding: '40px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <div style={{ background: 'rgba(255,255,255,0.20)', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: 'white', fontSize: 12 }}>⚡</span>
             <span style={{ color: 'white', fontSize: 11, fontWeight: 800, letterSpacing: 0.8 }}>EMERGENCY TRAVEL CARD</span>
           </div>
         </div>
@@ -71,7 +70,7 @@ export default function EmergencyPublicPage() {
           {data.nationality && <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 14, marginTop: 5 }}>{data.nationality}</div>}
           {(data.primary_language || data.secondary_language) && (
             <div style={{ color: 'rgba(255,255,255,0.60)', fontSize: 12, marginTop: 3 }}>
-              🌐 {[data.primary_language, data.secondary_language].filter(Boolean).join(' · ')}
+              {[data.primary_language, data.secondary_language].filter(Boolean).join(' · ')}
             </div>
           )}
         </motion.div>
@@ -82,7 +81,7 @@ export default function EmergencyPublicPage() {
         {data.blood_type && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
             style={{ background: `linear-gradient(135deg, ${C.red}, #8B0000)`, borderRadius: 22, padding: '18px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 6px 24px rgba(192,57,43,0.30)' }}>
-            <div style={{ fontSize: 36 }}>🩸</div>
+            <div style={{ color: 'white', fontSize: 28, fontWeight: 900, lineHeight: 1 }}>+</div>
             <div>
               <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Tipo de sangre</div>
               <div style={{ color: 'white', fontSize: 36, fontWeight: 900, lineHeight: 1 }}>{data.blood_type}</div>
@@ -92,35 +91,35 @@ export default function EmergencyPublicPage() {
 
         {/* Alergias */}
         {data.allergies && (
-          <Section title="⚠️ Alergias">
+          <Section title="Alergias">
             <div style={{ color: C.dark, fontSize: 14, lineHeight: 1.6 }}>{data.allergies}</div>
           </Section>
         )}
 
         {/* Condiciones */}
         {data.current_conditions && (
-          <Section title="🏥 Condiciones médicas">
+          <Section title="Condiciones médicas">
             <div style={{ color: C.dark, fontSize: 14, lineHeight: 1.6 }}>{data.current_conditions}</div>
           </Section>
         )}
 
         {/* Medicamentos */}
         {data.medications && (
-          <Section title="💊 Medicamentos">
+          <Section title="Medicamentos">
             <div style={{ color: C.dark, fontSize: 14, lineHeight: 1.6 }}>{data.medications}</div>
           </Section>
         )}
 
         {/* Notas médicas */}
         {data.medical_notes && (
-          <Section title="📋 Notas para el médico">
+          <Section title="Notas para el médico">
             <div style={{ color: C.dark, fontSize: 14, lineHeight: 1.6 }}>{data.medical_notes}</div>
           </Section>
         )}
 
         {/* Contactos de emergencia */}
         {(data.emergency_contact_1_name || data.emergency_contact_2_name) && (
-          <Section title="📞 Contactos de emergencia">
+          <Section title="Contactos de emergencia">
             {[
               [data.emergency_contact_1_name, data.emergency_contact_1_relation, data.emergency_contact_1_phone],
               [data.emergency_contact_2_name, data.emergency_contact_2_relation, data.emergency_contact_2_phone],
@@ -144,7 +143,7 @@ export default function EmergencyPublicPage() {
 
         {/* Seguro */}
         {(data.insurance_provider || data.insurance_policy_number) && (
-          <Section title="🛡️ Seguro de viaje">
+          <Section title="Seguro de viaje">
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               {data.insurance_provider && (
                 <div>

@@ -32,6 +32,10 @@ const ICONS: Record<string, string> = {
   stargazing: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="16" fill="#12212E"/><circle cx="18" cy="20" r="7" fill="white" opacity="0.20"/><circle cx="16" cy="16" r="3" fill="white" opacity="0.8"/><circle cx="26" cy="14" r="2" fill="white" opacity="0.7"/><circle cx="32" cy="20" r="2.5" fill="white" opacity="0.6"/><circle cx="24" cy="30" r="2" fill="white" opacity="0.5"/></svg>`,
   yoga: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="10" r="5" fill="#6CA3A2"/><circle cx="21" cy="7" r="2.5" fill="white" opacity="0.55"/><path d="M24 15v16M14 22l10-4 10 4M16 38l8-7 8 7" stroke="#6CA3A2" strokeWidth="3" strokeLinecap="round" fill="none"/></svg>`,
   cycling: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><circle cx="12" cy="34" r="8" fill="#307082"/><circle cx="36" cy="34" r="8" fill="#307082"/><circle cx="12" cy="34" r="4" fill="white" opacity="0.50"/><circle cx="36" cy="34" r="4" fill="white" opacity="0.50"/><path d="M12 34l12-18 12 18" fill="none" stroke="#EA9940" strokeWidth="3" strokeLinecap="round"/></svg>`,
+  relaxing: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><ellipse cx="24" cy="34" rx="18" ry="6" fill="#307082"/><ellipse cx="24" cy="34" rx="18" ry="2.5" fill="white" opacity="0.30"/><rect x="10" y="22" width="28" height="8" rx="4" fill="#EA9940"/><rect x="10" y="22" width="28" height="4" rx="4" fill="white" opacity="0.35"/></svg>`,
+  beachWalk: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><path d="M4 40c10-8 30-8 40 0" stroke="#307082" strokeWidth="3" strokeLinecap="round" fill="none"/><circle cx="24" cy="14" r="6" fill="#EA9940"/><path d="M24 20v14M18 28l6 4 6-4" stroke="#307082" strokeWidth="3" strokeLinecap="round" fill="none"/></svg>`,
+  familyBeach: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><ellipse cx="24" cy="38" rx="18" ry="5" fill="#307082"/><circle cx="16" cy="16" r="5" fill="#EA9940"/><circle cx="32" cy="14" r="4" fill="#EA9940" opacity="0.8"/><circle cx="24" cy="22" r="3" fill="#6CA3A2"/><path d="M16 21v8M32 18v8M24 25v6" stroke="#307082" strokeWidth="2.5" strokeLinecap="round" fill="none"/></svg>`,
+  pooltime: `<svg width="36" height="36" viewBox="0 0 48 48" fill="none"><rect x="4" y="20" width="40" height="20" rx="6" fill="#307082"/><rect x="4" y="20" width="40" height="8" rx="6" fill="white" opacity="0.30"/><path d="M12 28c2-3 4-3 6 0s4 3 6 0 4-3 6 0" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/><rect x="16" y="8" width="16" height="14" rx="4" fill="#6CA3A2" opacity="0.6"/></svg>`,
 };
 
 // ── Activity catalog ──────────────────────────────────────────────────────────
@@ -59,10 +63,14 @@ const CATALOG: Record<string, Activity> = {
   stargazing:  { id: 'stargazing',  labelKey: 'activity.stargazing',  category: 'outdoor',   icon: ICONS.stargazing },
   yoga:        { id: 'yoga',        labelKey: 'activity.yoga',        category: 'wellness',  icon: ICONS.yoga },
   cycling:     { id: 'cycling',     labelKey: 'activity.cycling',     category: 'sport',     icon: ICONS.cycling },
+  relaxing:    { id: 'relaxing',    labelKey: 'activity.relaxing',    category: 'wellness',  icon: ICONS.relaxing },
+  beachWalk:   { id: 'beachWalk',   labelKey: 'activity.beachWalk',   category: 'outdoor',   icon: ICONS.beachWalk },
+  familyBeach: { id: 'familyBeach', labelKey: 'activity.familyBeach', category: 'outdoor',   icon: ICONS.familyBeach },
+  pooltime:    { id: 'pooltime',    labelKey: 'activity.pooltime',    category: 'wellness',  icon: ICONS.pooltime },
 };
 
 const BY_TRAVEL_TYPE: Record<TravelType, string[]> = {
-  beach:     ['snorkeling', 'surfing', 'kayaking', 'boattour', 'photography', 'nightlife', 'yoga'],
+  beach:     ['snorkeling', 'surfing', 'kayaking', 'boattour', 'photography', 'nightlife', 'yoga', 'relaxing', 'beachWalk', 'familyBeach', 'pooltime', 'gastronomy', 'shopping'],
   mountain:  ['hiking', 'climbing', 'wildlife', 'photography', 'camping_act', 'stargazing', 'cycling'],
   city:      ['museums', 'gastronomy', 'nightlife', 'shopping', 'walkingtour', 'photography'],
   camping:   ['camping_act', 'hiking', 'stargazing', 'wildlife', 'photography', 'cycling'],

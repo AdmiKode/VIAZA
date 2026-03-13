@@ -202,7 +202,7 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
           />
           {form.qr_enabled && !form.consent_public_display && (
             <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 12, padding: '10px 14px', color: C.red, fontSize: 12, fontWeight: 600 }}>
-              ⚠️ Debes activar el consentimiento para que el QR sea visible públicamente.
+              Debes activar el consentimiento para que el QR sea visible públicamente.
             </div>
           )}
         </Section>
