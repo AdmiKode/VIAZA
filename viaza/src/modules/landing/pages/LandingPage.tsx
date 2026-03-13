@@ -116,6 +116,77 @@ const IconCalendar = () => (
     ))}
   </svg>
 );
+const IconTranslator = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M3 5h12M9 3v2M5 9c0 2.21 1.79 4 4 4s4-1.79 4-4" stroke="#EA9940" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M12 19l1.5-4 1.5 4M13 17.5h2" stroke="rgba(180,195,210,0.8)" strokeWidth="1.8" strokeLinecap="round"/>
+    <rect x="10" y="11" width="11" height="10" rx="2" fill="rgba(234,153,64,0.2)" stroke="#EA9940" strokeWidth="1.3"/>
+    <circle cx="9" cy="9" r="4" fill="rgba(48,112,130,0.25)"/>
+  </svg>
+);
+const IconSplit = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <circle cx="7" cy="7" r="3" fill="#EA9940" opacity="0.85"/>
+    <circle cx="17" cy="7" r="3" fill="#EA9940" opacity="0.85"/>
+    <circle cx="12" cy="17" r="3" fill="rgba(48,112,130,0.9)"/>
+    <line x1="7" y1="10" x2="12" y2="14" stroke="rgba(234,153,64,0.5)" strokeWidth="1.5"/>
+    <line x1="17" y1="10" x2="12" y2="14" stroke="rgba(234,153,64,0.5)" strokeWidth="1.5"/>
+    <text x="5.5" y="8.5" fontSize="5" fontWeight="800" fill="white">$</text>
+    <text x="15.5" y="8.5" fontSize="5" fontWeight="800" fill="white">$</text>
+  </svg>
+);
+const IconTips = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" fill="rgba(48,112,130,0.3)" stroke="#307082" strokeWidth="1.3"/>
+    <path d="M12 7v5l3 3" stroke="#EA9940" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="12" r="1.5" fill="#EA9940"/>
+    <path d="M9 6.5C9.8 5.6 10.8 5 12 5s2.2.6 3 1.5" stroke="rgba(180,195,210,0.6)" strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+);
+const IconAirline = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="14" width="20" height="7" rx="2" fill="rgba(48,112,130,0.3)" stroke="#307082" strokeWidth="1.3"/>
+    <path d="M5 14V9a2 2 0 012-2h10a2 2 0 012 2v5" stroke="#EA9940" strokeWidth="1.5"/>
+    <rect x="7" y="10" width="3" height="3" rx="1" fill="rgba(234,153,64,0.6)"/>
+    <rect x="14" y="10" width="3" height="3" rx="1" fill="rgba(234,153,64,0.6)"/>
+    <line x1="2" y1="18" x2="22" y2="18" stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
+  </svg>
+);
+const IconBag = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" fill="rgba(234,153,64,0.2)" stroke="#EA9940" strokeWidth="1.5"/>
+    <line x1="3" y1="6" x2="21" y2="6" stroke="#EA9940" strokeWidth="1.5"/>
+    <path d="M16 10a4 4 0 01-8 0" stroke="rgba(180,195,210,0.7)" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+const IconAdapter = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <rect x="6" y="8" width="12" height="10" rx="2" fill="rgba(48,112,130,0.3)" stroke="#307082" strokeWidth="1.3"/>
+    <line x1="9" y1="5" x2="9" y2="8" stroke="#EA9940" strokeWidth="2" strokeLinecap="round"/>
+    <line x1="15" y1="5" x2="15" y2="8" stroke="#EA9940" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="13" r="2" fill="#EA9940" opacity="0.8"/>
+    <line x1="12" y1="18" x2="12" y2="21" stroke="rgba(180,195,210,0.6)" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const IconBell = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" fill="rgba(234,153,64,0.25)" stroke="#EA9940" strokeWidth="1.5"/>
+    <path d="M13.73 21a2 2 0 01-3.46 0" stroke="rgba(180,195,210,0.7)" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="18" cy="6" r="3" fill="#EA9940"/>
+    <text x="16.5" y="8" fontSize="4" fontWeight="800" fill="white">!</text>
+  </svg>
+);
+const IconItinerary = () => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="3" fill="rgba(48,112,130,0.2)" stroke="#307082" strokeWidth="1.3"/>
+    <line x1="7" y1="8" x2="17" y2="8" stroke="#EA9940" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="7" y1="12" x2="14" y2="12" stroke="rgba(180,195,210,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="7" y1="16" x2="11" y2="16" stroke="rgba(180,195,210,0.4)" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="17" cy="15" r="3" fill="#EA9940" opacity="0.9"/>
+    <path d="M15.5 15l1 1 2-2" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const IconApple = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/>
@@ -294,9 +365,24 @@ export function LandingPage() {
 
       {/* S03 */}
       <ContentSection number="03" title="Todo tu viaje en una sola app" accent={C.teal} reverse={false} illustration={<IllustrationGrid/>}>
-        <p style={{ color: C.muted, fontSize: 17, lineHeight: 1.85, marginBottom: 24 }}>VIAZA integra herramientas que normalmente están dispersas en varias aplicaciones. En lugar de usar cinco apps distintas, VIAZA reúne <strong style={{ color: C.cream }}>todo en un solo lugar.</strong></p>
+        <p style={{ color: C.muted, fontSize: 17, lineHeight: 1.85, marginBottom: 24 }}>VIAZA integra herramientas que normalmente están dispersas en varias aplicaciones. En lugar de usar diez apps distintas, VIAZA reúne <strong style={{ color: C.cream }}>todo en un solo lugar.</strong></p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {[{icon:<IconPlane/>,text:'Crear y organizar tus viajes'},{icon:<IconSuitcase/>,text:'Equipaje de forma inteligente'},{icon:<IconSun/>,text:'Clima esperado en tu destino'},{icon:<IconPin/>,text:'Guardar información del destino'},{icon:<IconCalendar/>,text:'Planear tu experiencia paso a paso'}].map(({icon,text}) => (
+          {[
+            {icon:<IconPlane/>,      text:'Organizar tus viajes'},
+            {icon:<IconSuitcase/>,   text:'Maleta inteligente'},
+            {icon:<IconSun/>,        text:'Clima en tu destino'},
+            {icon:<IconPin/>,        text:'Guardar lugares'},
+            {icon:<IconCalendar/>,   text:'Agenda del viaje'},
+            {icon:<IconTranslator/>, text:'Traductor y frases'},
+            {icon:<IconSplit/>,      text:'Dividir gastos'},
+            {icon:<IconCoin/>,       text:'Conversor de moneda'},
+            {icon:<IconTips/>,       text:'Tips locales y de supervivencia'},
+            {icon:<IconAirline/>,    text:'Reglas de aerolínea'},
+            {icon:<IconBag/>,        text:'Artículos permitidos'},
+            {icon:<IconAdapter/>,    text:'Guía de adaptadores'},
+            {icon:<IconBell/>,       text:'Recordatorio de salida'},
+            {icon:<IconItinerary/>,  text:'Itinerario detallado'},
+          ].map(({icon,text}) => (
             <div key={text} style={{ display:'flex', alignItems:'center', gap:10, background:C.glass, border:`1px solid ${C.glassBorder}`, borderRadius:12, padding:'10px 16px', fontSize:14, color:C.cream }}>
               <div style={{ width:28, height:28, flexShrink:0 }}>{icon}</div>{text}
             </div>
@@ -437,9 +523,12 @@ function IllustrationSuitcase() {
 }
 function IllustrationGrid() {
   const items = [
-    {icon:<IconPlane/>,label:'Vuelo',color:'#307082'},{icon:<IconSun/>,label:'Clima',color:'#EA9940'},
-    {icon:<IconSuitcase/>,label:'Maleta',color:'#EA9940'},{icon:<IconPin/>,label:'Lugares',color:'#307082'},
-    {icon:<IconCoin/>,label:'Moneda',color:'#307082'},{icon:<IconCalendar/>,label:'Agenda',color:'#EA9940'},
+    {icon:<IconPlane/>,     label:'Viajes',      color:'#307082'},
+    {icon:<IconSuitcase/>,  label:'Maleta',      color:'#EA9940'},
+    {icon:<IconSun/>,       label:'Clima',       color:'#EA9940'},
+    {icon:<IconTranslator/>,label:'Traductor',   color:'#307082'},
+    {icon:<IconSplit/>,     label:'Gastos',      color:'#EA9940'},
+    {icon:<IconItinerary/>, label:'Itinerario',  color:'#307082'},
   ];
   return (
     <div style={{ ...boxStyle, display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>

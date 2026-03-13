@@ -54,6 +54,8 @@ import { ImportReservationPage } from '../../modules/import-reservation/pages/Im
 import { LandingPage } from '../../modules/landing/pages/LandingPage';
 import { PrivacyPage } from '../../modules/landing/pages/PrivacyPage';
 import { TermsPage } from '../../modules/landing/pages/TermsPage';
+import EmergencyCardPage from '../../modules/emergency/pages/EmergencyCardPage';
+import EmergencyPublicPage from '../../modules/emergency/pages/EmergencyPublicPage';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -82,6 +84,9 @@ export function AppRouter() {
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+
+        {/* ── Emergency Travel Card (pública, sin auth) ───────────── */}
+        <Route path="/emergency/:publicToken" element={<EmergencyPublicPage />} />
 
         {/* Alias para el link del email de Supabase → /reset-password?token=... */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -163,6 +168,9 @@ export function AppRouter() {
           <Route path="/places" element={<PlacesPage />} />
           <Route path="/places/add" element={<AddPlacePage />} />
           <Route path="/import-reservation" element={<ImportReservationPage />} />
+
+          {/* ── Emergency Travel Card (privada, requiere auth) ───── */}
+          <Route path="/profile/emergency" element={<EmergencyCardPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

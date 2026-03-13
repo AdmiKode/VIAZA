@@ -23,6 +23,35 @@ export function ProfilePage() {
           <div className="mt-1 text-sm font-semibold">{user?.email ?? '-'}</div>
         </AppCard>
 
+        {/* Emergency Travel Card */}
+        <Link to="/profile/emergency" className="block">
+          <div style={{
+            background: 'linear-gradient(135deg, #c0392b 0%, #8B0000 100%)',
+            borderRadius: 18,
+            padding: '16px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 6px 22px rgba(192,57,43,0.28)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                  <path d="M14 14h3v3M17 20h3M20 17v3"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ color: 'white', fontSize: 15, fontWeight: 800, fontFamily: 'Questrial, sans-serif' }}>Emergency Travel Card</div>
+                <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2, fontFamily: 'Questrial, sans-serif' }}>QR de emergencia con tus datos médicos</div>
+              </div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
+        </Link>
+
         <Link to="/settings" className="block">
           <AppButton variant="secondary" className="w-full" type="button">
             {t('profile.goToSettings')}
@@ -43,4 +72,5 @@ export function ProfilePage() {
     </div>
   );
 }
+
 
