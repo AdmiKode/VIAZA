@@ -156,7 +156,7 @@ export function TravelTypePage() {
       <div className="mb-6">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-accent-rgb)/0.12)] px-3 py-1">
           <span className="text-xs font-semibold text-[var(--viaza-accent)]">
-            {t('onboarding.step', { current: 3, total: 7 })}
+            {t('onboarding.step', { current: 1, total: 8 })}
           </span>
         </div>
         <h1 className="text-2xl font-semibold leading-tight text-[var(--viaza-primary)]">
@@ -208,7 +208,7 @@ export function TravelTypePage() {
       <div className="mt-auto flex gap-3 pt-6">
         <button
           type="button"
-          onClick={() => navigate('/onboarding/smart-detection')}
+          onClick={() => navigate('/onboarding/welcome')}
           className="flex-1 rounded-2xl border border-[rgb(var(--viaza-primary-rgb)/0.12)] py-4 text-base font-semibold text-[var(--viaza-primary)] transition-all active:scale-[0.98]"
         >
           {t('common.back')}
@@ -216,7 +216,7 @@ export function TravelTypePage() {
         <button
           type="button"
           disabled={!selected}
-          onClick={() => navigate('/onboarding/activities')}
+          onClick={() => navigate('/onboarding/destination')}
           className="flex-1 rounded-2xl bg-[var(--viaza-accent)] py-4 text-base font-semibold text-white shadow-[var(--shadow-2)] transition-all active:scale-[0.98] disabled:opacity-40"
         >
           {t('common.continue')}

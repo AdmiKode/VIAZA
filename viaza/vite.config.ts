@@ -19,10 +19,10 @@ export default defineConfig({
     },
   },
   build: {
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       // El alias ya resuelve el paquete; esto es solo por si algún loader lo necesita.
       external: [],
     },
   },
 });
-

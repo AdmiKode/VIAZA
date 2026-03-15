@@ -258,15 +258,6 @@ export function LandingPage() {
   return (
     <div style={{ background: C.dark, color: C.cream, fontFamily: 'Questrial, sans-serif', overflowX: 'hidden' }}>
 
-      {/* NAV */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', height: 64, background: 'rgba(18,33,46,0.88)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <img src="/brand/logo-white.png" alt="VIAZA" style={{ height: 30, width: 'auto' }}/>
-        {/* TODO: eliminar este botón cuando lancemos a producción */}
-        <Link to="/splash" style={{ background: 'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', color: C.dark, borderRadius: 10, padding: '8px 22px', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-          Entrar a la app →
-        </Link>
-      </nav>
-
       {/* HERO */}
       <section style={{ position: 'relative', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 24px 80px', textAlign: 'center', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -120, right: -160, width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(48,112,130,0.16) 0%, transparent 65%)', pointerEvents: 'none' }}/>

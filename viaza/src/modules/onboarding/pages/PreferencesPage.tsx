@@ -10,6 +10,19 @@ const LAUNDRY_OPTIONS: Array<{ value: LaundryMode; labelKey: string; descKey: st
   { value: 'washer', labelKey: 'laundryMode.washer', descKey: 'laundryMode.washer.note' },
 ];
 
+const TRAVEL_STYLE_OPTIONS: Array<{ value: 'backpack_light' | 'standard' | 'comfort'; labelKey: string; descKey: string }> = [
+  { value: 'backpack_light', labelKey: 'travelStyle.backpack_light', descKey: 'travelStyle.backpack_light.desc' },
+  { value: 'standard', labelKey: 'travelStyle.standard', descKey: 'travelStyle.standard.desc' },
+  { value: 'comfort', labelKey: 'travelStyle.comfort', descKey: 'travelStyle.comfort.desc' },
+];
+
+const TRAVELER_PROFILE_OPTIONS: Array<{ value: 'economic' | 'balanced' | 'comfort' | 'premium'; labelKey: string; descKey: string }> = [
+  { value: 'economic', labelKey: 'travelerProfile.economic', descKey: 'travelerProfile.economic.desc' },
+  { value: 'balanced', labelKey: 'travelerProfile.balanced', descKey: 'travelerProfile.balanced.desc' },
+  { value: 'comfort', labelKey: 'travelerProfile.comfort', descKey: 'travelerProfile.comfort.desc' },
+  { value: 'premium', labelKey: 'travelerProfile.premium', descKey: 'travelerProfile.premium.desc' },
+];
+
 function Toggle({
   active,
   onToggle,
@@ -51,7 +64,7 @@ export function PreferencesPage() {
       <div className="mb-8">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-accent-rgb)/0.12)] px-3 py-1">
           <span className="text-xs font-semibold text-[var(--viaza-accent)]">
-            {t('onboarding.step', { current: 5, total: 6 })}
+            {t('onboarding.step', { current: 7, total: 8 })}
           </span>
         </div>
         <h1 className="text-2xl font-semibold leading-tight text-[var(--viaza-primary)]">
@@ -127,11 +140,119 @@ export function PreferencesPage() {
         </motion.div>
       </div>
 
+      {/* Perfil del viajero (señales para IA / recomendaciones / organización) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.14, duration: 0.3 }}
+        className="mt-6"
+      >
+        <div className="mb-3 text-sm font-semibold text-[var(--viaza-primary)]">
+          {t('onboarding.profile.title')}
+        </div>
+        <div className="space-y-2">
+          {TRAVELER_PROFILE_OPTIONS.map((opt, i) => {
+            const isSelected = draft.travelerProfile === opt.value;
+            return (
+              <motion.button
+                key={opt.value}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.16 + i * 0.05, duration: 0.25 }}
+                type="button"
+                onClick={() => setDraft({ travelerProfile: opt.value })}
+                className={`flex w-full items-center justify-between rounded-2xl p-4 text-left shadow-[var(--shadow-1)] transition-all active:scale-[0.98] ${
+                  isSelected ? 'bg-[var(--viaza-primary)] shadow-[var(--shadow-2)]' : 'bg-white'
+                }`}
+              >
+                <div>
+                  <div className={`text-sm font-semibold ${isSelected ? 'text-[var(--viaza-background)]' : 'text-[var(--viaza-primary)]'}`}>
+                    {t(opt.labelKey)}
+                  </div>
+                  <div className={`mt-0.5 text-xs ${isSelected ? 'text-[rgb(var(--viaza-background-rgb)/0.65)]' : 'text-[rgb(var(--viaza-primary-rgb)/0.55)]'}`}>
+                    {t(opt.descKey)}
+                  </div>
+                </div>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="ml-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--viaza-accent)]"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 48 48" fill="none">
+                      <path d="M10 24l10 10 18-18" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    </svg>
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* Estilo de viaje / equipaje */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.16, duration: 0.3 }}
+        className="mt-6"
+      >
+        <div className="mb-3 text-sm font-semibold text-[var(--viaza-primary)]">
+          {t('onboarding.travelStyle.title')}
+        </div>
+        <div className="space-y-2">
+          {TRAVEL_STYLE_OPTIONS.map((opt, i) => {
+            const isSelected = draft.travelStyle === opt.value;
+            return (
+              <motion.button
+                key={opt.value}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18 + i * 0.05, duration: 0.25 }}
+                type="button"
+                onClick={() => {
+                  const patch =
+                    opt.value === 'backpack_light'
+                      ? { travelStyle: opt.value, travelLight: true, packingStyle: 'light' as const }
+                      : opt.value === 'comfort'
+                        ? { travelStyle: opt.value, travelLight: false, packingStyle: 'heavy' as const }
+                        : { travelStyle: opt.value, travelLight: false, packingStyle: 'normal' as const };
+                  setDraft(patch);
+                }}
+                className={`flex w-full items-center justify-between rounded-2xl p-4 text-left shadow-[var(--shadow-1)] transition-all active:scale-[0.98] ${
+                  isSelected ? 'bg-[var(--viaza-primary)] shadow-[var(--shadow-2)]' : 'bg-white'
+                }`}
+              >
+                <div>
+                  <div className={`text-sm font-semibold ${isSelected ? 'text-[var(--viaza-background)]' : 'text-[var(--viaza-primary)]'}`}>
+                    {t(opt.labelKey)}
+                  </div>
+                  <div className={`mt-0.5 text-xs ${isSelected ? 'text-[rgb(var(--viaza-background-rgb)/0.65)]' : 'text-[rgb(var(--viaza-primary-rgb)/0.55)]'}`}>
+                    {t(opt.descKey)}
+                  </div>
+                </div>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="ml-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--viaza-accent)]"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 48 48" fill="none">
+                      <path d="M10 24l10 10 18-18" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    </svg>
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div>
+
       {/* Laundry */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.18, duration: 0.3 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
         className="mt-6"
       >
         <div className="mb-3 text-sm font-semibold text-[var(--viaza-primary)]">

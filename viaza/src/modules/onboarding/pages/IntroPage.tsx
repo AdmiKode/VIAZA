@@ -129,25 +129,22 @@ const SLIDES = [
   {
     titleKey: 'intro.slide1.title',
     subtitleKey: 'intro.slide1.subtitle',
-    gradient: 'linear-gradient(165deg, #08151F 0%, #12212E 45%, #0E2C3C 100%)',
-    gradientBottom: 'linear-gradient(165deg, #0E2C3C 0%, #12212E 60%, #08151F 100%)',
-    accent: '#EA9940',
+    gradient: 'linear-gradient(165deg, var(--viaza-primary) 0%, var(--viaza-secondary) 65%, var(--viaza-soft) 100%)',
+    accentToken: 'accent',
     Illu: IlluDestination,
   },
   {
     titleKey: 'intro.slide2.title',
     subtitleKey: 'intro.slide2.subtitle',
-    gradient: 'linear-gradient(165deg, #06161A 0%, #12212E 45%, #0A2828 100%)',
-    gradientBottom: 'linear-gradient(165deg, #0A2828 0%, #12212E 60%, #06161A 100%)',
-    accent: '#307082',
+    gradient: 'linear-gradient(165deg, var(--viaza-primary) 0%, var(--viaza-secondary) 65%, var(--viaza-soft) 100%)',
+    accentToken: 'secondary',
     Illu: IlluWeather,
   },
   {
     titleKey: 'intro.slide3.title',
     subtitleKey: 'intro.slide3.subtitle',
-    gradient: 'linear-gradient(165deg, #140E04 0%, #12212E 45%, #1E1506 100%)',
-    gradientBottom: 'linear-gradient(165deg, #1E1506 0%, #12212E 60%, #140E04 100%)',
-    accent: '#EA9940',
+    gradient: 'linear-gradient(165deg, var(--viaza-primary) 0%, var(--viaza-secondary) 65%, var(--viaza-soft) 100%)',
+    accentToken: 'accent',
     Illu: IlluPacking,
   },
 ] as const;
@@ -160,6 +157,14 @@ export function IntroPage() {
 
   const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
+  const accentColor =
+    slide.accentToken === 'secondary'
+      ? 'var(--viaza-secondary)'
+      : 'var(--viaza-accent)';
+  const accentRgb =
+    slide.accentToken === 'secondary'
+      ? 'var(--viaza-secondary-rgb)'
+      : 'var(--viaza-accent-rgb)';
 
   function goNext() {
     if (!isLast) {
@@ -195,7 +200,7 @@ export function IntroPage() {
           width: 420,
           height: 420,
           borderRadius: '50%',
-          background: `radial-gradient(circle, ${slide.accent}22 0%, ${slide.accent}08 45%, transparent 70%)`,
+          background: `radial-gradient(circle, rgb(${accentRgb} / 0.13) 0%, rgb(${accentRgb} / 0.05) 45%, transparent 70%)`,
         }}
       />
       {/* ── Orbe mediano inferior izquierdo ── */}
@@ -223,7 +228,7 @@ export function IntroPage() {
           width: 500,
           height: 500,
           borderRadius: '50%',
-          background: `radial-gradient(circle, ${slide.accent}0A 0%, transparent 60%)`,
+          background: `radial-gradient(circle, rgb(${accentRgb} / 0.04) 0%, transparent 60%)`,
         }}
       />
 
@@ -246,7 +251,7 @@ export function IntroPage() {
             letterSpacing: 0.5,
           }}
         >
-          {t('common.skip', 'Omitir')}
+          {t('common.skip')}
         </button>
       )}
 
@@ -268,7 +273,7 @@ export function IntroPage() {
               width: 340,
               height: 340,
               borderRadius: '50%',
-              background: `radial-gradient(circle, ${slide.accent}28 0%, transparent 65%)`,
+              background: `radial-gradient(circle, rgb(${accentRgb} / 0.16) 0%, transparent 65%)`,
               zIndex: 0,
             }}
           />
@@ -313,19 +318,19 @@ export function IntroPage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              background: `${slide.accent}22`,
-              border: `1px solid ${slide.accent}44`,
+              background: `rgb(${accentRgb} / 0.14)`,
+              border: `1px solid rgb(${accentRgb} / 0.28)`,
               borderRadius: 99,
               padding: '4px 14px',
               marginBottom: 16,
             }}>
               <span style={{
                 width: 6, height: 6, borderRadius: '50%',
-                background: slide.accent,
+                background: accentColor,
                 display: 'inline-block',
               }} />
               <span style={{
-                color: slide.accent,
+                color: accentColor,
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: 2,
@@ -348,7 +353,7 @@ export function IntroPage() {
               {t(slide.titleKey)}
             </h1>
             <p style={{
-              color: 'rgba(236,231,220,0.60)',
+              color: 'rgb(var(--viaza-background-rgb) / 0.60)',
               fontSize: 16,
               marginTop: 14,
               lineHeight: 1.6,
@@ -366,7 +371,7 @@ export function IntroPage() {
               key={i}
               animate={{
                 width: i === index ? 28 : 8,
-                background: i === index ? slide.accent : 'rgba(255,255,255,0.22)',
+                background: i === index ? accentColor : 'rgba(255,255,255,0.22)',
                 opacity: i === index ? 1 : 0.6,
               }}
               transition={{ duration: 0.35 }}
@@ -407,18 +412,18 @@ export function IntroPage() {
               flex: 2,
               height: 60,
               borderRadius: 20,
-              background: `linear-gradient(135deg, ${slide.accent} 0%, ${slide.accent}CC 100%)`,
+              background: `linear-gradient(135deg, ${accentColor} 0%, rgb(${accentRgb} / 0.75) 100%)`,
               color: '#12212E',
               fontSize: 17,
               fontWeight: 700,
               fontFamily: 'Questrial, sans-serif',
-              boxShadow: `0 8px 32px ${slide.accent}55`,
+              boxShadow: `0 8px 32px rgb(${accentRgb} / 0.35)`,
               border: 'none',
               cursor: 'pointer',
               letterSpacing: 0.3,
             }}
           >
-            {isLast ? t('intro.startCta', 'Empezar') : t('common.continue', 'Continuar')}
+            {isLast ? t('intro.startCta') : t('common.continue')}
           </motion.button>
         </div>
       </div>

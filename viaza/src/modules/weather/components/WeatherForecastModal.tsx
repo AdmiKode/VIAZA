@@ -2,16 +2,61 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
-import { fetchDailyForecast, type DayForecast } from '../../../engines/dailyForecastEngine';
+import type { WeatherForecastDailyEntry } from '../../../types/trip';
+import { fetchWeatherCache } from '../../../services/weatherCacheService';
+import { useAppStore } from '../../../app/store/useAppStore';
 
 interface WeatherForecastModalProps {
   open: boolean;
   onClose: () => void;
+  tripId: string;
   lat: number;
   lon: number;
   startDate: string;
   endDate: string;
+  timezone?: string;
   destination: string;
+  cachedDaily?: WeatherForecastDailyEntry[];
+}
+
+type UiDayForecast = {
+  date: string;
+  maxTemp: number;
+  minTemp: number;
+  morningTemp: number;
+  afternoonTemp: number;
+  nightTemp: number;
+  rainProbability: number;
+  icon: string;
+};
+
+function toUiDays(entries: WeatherForecastDailyEntry[]): UiDayForecast[] {
+  return entries.map((e) => {
+    const temps = [e.morning.temp_avg, e.afternoon.temp_avg, e.night.temp_avg].filter((x) => typeof x === 'number') as number[];
+    const avgTemp = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
+    const maxTemp = temps.length ? Math.max(...temps) : avgTemp;
+    const minTemp = temps.length ? Math.min(...temps) : avgTemp;
+    const rainProbability = Math.round(Math.max(e.morning.rain_prob_max ?? 0, e.afternoon.rain_prob_max ?? 0, e.night.rain_prob_max ?? 0));
+    const avg = Math.round(avgTemp);
+
+    const icon =
+      rainProbability >= 70 ? 'rain' :
+      avg >= 28 ? 'sun_hot' :
+      avg >= 20 ? 'sun' :
+      avg >= 10 ? 'partly_cloudy' :
+      'cold';
+
+    return {
+      date: e.date,
+      maxTemp: Math.round(maxTemp),
+      minTemp: Math.round(minTemp),
+      morningTemp: Math.round(e.morning.temp_avg ?? avgTemp),
+      afternoonTemp: Math.round(e.afternoon.temp_avg ?? avgTemp),
+      nightTemp: Math.round(e.night.temp_avg ?? avgTemp),
+      rainProbability,
+      icon,
+    };
+  });
 }
 
 /* ─── Iconos SVG duotone por tipo de clima ──────────────────────── */
@@ -21,15 +66,15 @@ function WeatherSvgIcon({ icon, size = 32 }: { icon: string; size?: number }) {
     case 'sun_hot':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="12" fill="#EA9940" />
-          <circle cx="24" cy="24" r="12" fill="rgba(180,192,200,0.25)" />
+          <circle cx="24" cy="24" r="12" fill="var(--viaza-accent)" />
+          <circle cx="24" cy="24" r="12" fill="rgb(var(--viaza-primary-rgb) / 0.12)" />
           {[0,45,90,135,180,225,270,315].map((deg) => (
             <line key={deg}
               x1={24 + 15 * Math.cos(deg * Math.PI / 180)}
               y1={24 + 15 * Math.sin(deg * Math.PI / 180)}
               x2={24 + 20 * Math.cos(deg * Math.PI / 180)}
               y2={24 + 20 * Math.sin(deg * Math.PI / 180)}
-              stroke="#EA9940" strokeWidth="2.5" strokeLinecap="round"
+              stroke="var(--viaza-accent)" strokeWidth="2.5" strokeLinecap="round"
             />
           ))}
         </svg>
@@ -37,14 +82,14 @@ function WeatherSvgIcon({ icon, size = 32 }: { icon: string; size?: number }) {
     case 'sun':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="10" fill="#EA9940" />
+          <circle cx="24" cy="24" r="10" fill="var(--viaza-accent)" />
           {[0,60,120,180,240,300].map((deg) => (
             <line key={deg}
               x1={24 + 13 * Math.cos(deg * Math.PI / 180)}
               y1={24 + 13 * Math.sin(deg * Math.PI / 180)}
               x2={24 + 18 * Math.cos(deg * Math.PI / 180)}
               y2={24 + 18 * Math.sin(deg * Math.PI / 180)}
-              stroke="#EA9940" strokeWidth="2" strokeLinecap="round"
+              stroke="var(--viaza-accent)" strokeWidth="2" strokeLinecap="round"
             />
           ))}
         </svg>
@@ -52,51 +97,51 @@ function WeatherSvgIcon({ icon, size = 32 }: { icon: string; size?: number }) {
     case 'partly_cloudy':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <circle cx="20" cy="20" r="8" fill="#EA9940" />
-          <ellipse cx="28" cy="28" rx="12" ry="8" fill="rgba(180,192,200,0.80)" />
-          <ellipse cx="22" cy="30" rx="9" ry="6" fill="rgba(180,192,200,0.60)" />
+          <circle cx="20" cy="20" r="8" fill="var(--viaza-accent)" />
+          <ellipse cx="28" cy="28" rx="12" ry="8" fill="rgb(var(--viaza-primary-rgb) / 0.22)" />
+          <ellipse cx="22" cy="30" rx="9" ry="6" fill="rgb(var(--viaza-primary-rgb) / 0.14)" />
         </svg>
       );
     case 'rain':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <ellipse cx="24" cy="18" rx="14" ry="9" fill="#EA9940" />
-          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgba(180,192,200,0.55)" />
-          <line x1="16" y1="30" x2="14" y2="38" stroke="rgba(180,192,200,0.80)" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="24" y1="30" x2="22" y2="38" stroke="rgba(180,192,200,0.80)" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="32" y1="30" x2="30" y2="38" stroke="rgba(180,192,200,0.80)" strokeWidth="2.5" strokeLinecap="round" />
+          <ellipse cx="24" cy="18" rx="14" ry="9" fill="var(--viaza-accent)" />
+          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgb(var(--viaza-primary-rgb) / 0.20)" />
+          <line x1="16" y1="30" x2="14" y2="38" stroke="rgb(var(--viaza-primary-rgb) / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="24" y1="30" x2="22" y2="38" stroke="rgb(var(--viaza-primary-rgb) / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="32" y1="30" x2="30" y2="38" stroke="rgb(var(--viaza-primary-rgb) / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       );
     case 'snow':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgba(180,192,200,0.70)" />
-          <line x1="24" y1="28" x2="24" y2="42" stroke="rgba(180,192,200,0.90)" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="16" y1="32" x2="32" y2="38" stroke="rgba(180,192,200,0.90)" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="32" y1="32" x2="16" y2="38" stroke="rgba(180,192,200,0.90)" strokeWidth="2.5" strokeLinecap="round" />
+          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgb(var(--viaza-primary-rgb) / 0.20)" />
+          <line x1="24" y1="28" x2="24" y2="42" stroke="rgb(var(--viaza-primary-rgb) / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="16" y1="32" x2="32" y2="38" stroke="rgb(var(--viaza-primary-rgb) / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="32" y1="32" x2="16" y2="38" stroke="rgb(var(--viaza-primary-rgb) / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       );
     case 'storm':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <ellipse cx="24" cy="16" rx="14" ry="9" fill="#EA9940" />
-          <ellipse cx="24" cy="16" rx="14" ry="9" fill="rgba(18,33,46,0.30)" />
-          <path d="M26 26l-6 12h5l-4 8 10-14h-5z" fill="#EA9940" />
+          <ellipse cx="24" cy="16" rx="14" ry="9" fill="var(--viaza-accent)" />
+          <ellipse cx="24" cy="16" rx="14" ry="9" fill="rgb(var(--viaza-primary-rgb) / 0.20)" />
+          <path d="M26 26l-6 12h5l-4 8 10-14h-5z" fill="var(--viaza-accent)" />
         </svg>
       );
     case 'cold':
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgba(180,192,200,0.70)" />
-          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgba(48,112,130,0.35)" />
-          <line x1="24" y1="28" x2="24" y2="42" stroke="rgba(48,112,130,0.70)" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="18" y1="35" x2="30" y2="35" stroke="rgba(48,112,130,0.70)" strokeWidth="2.5" strokeLinecap="round" />
+          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgb(var(--viaza-primary-rgb) / 0.20)" />
+          <ellipse cx="24" cy="18" rx="14" ry="9" fill="rgb(var(--viaza-secondary-rgb) / 0.25)" />
+          <line x1="24" y1="28" x2="24" y2="42" stroke="rgb(var(--viaza-secondary-rgb) / 0.6)" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="18" y1="35" x2="30" y2="35" stroke="rgb(var(--viaza-secondary-rgb) / 0.6)" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       );
     default:
       return (
         <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="10" fill="#EA9940" />
+          <circle cx="24" cy="24" r="10" fill="var(--viaza-accent)" />
         </svg>
       );
   }
@@ -114,22 +159,27 @@ function formatDayLabel(dateStr: string, locale: string): string {
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export function WeatherForecastModal({
-  open, onClose, lat, lon, startDate, endDate, destination,
+  open, onClose, tripId, lat, lon, startDate, endDate, destination, timezone, cachedDaily,
 }: WeatherForecastModalProps) {
   const { t, i18n } = useTranslation();
-  const [days, setDays] = useState<DayForecast[]>([]);
+  const isPremium = useAppStore((s) => s.isPremium);
+  const [days, setDays] = useState<UiDayForecast[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !lat || !lon || !startDate || !endDate) return;
+    if (!open || !isPremium || !tripId || !lat || !lon || !startDate || !endDate) return;
+    if (cachedDaily && cachedDaily.length > 0) {
+      setDays(toUiDays(cachedDaily));
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchDailyForecast(lat, lon, startDate, endDate)
+    fetchWeatherCache({ tripId, lat, lon, startDate, endDate, timezone })
       .then((data) => {
         if (!cancelled) {
-          setDays(data);
+          setDays(toUiDays(data));
           setLoading(false);
         }
       })
@@ -140,7 +190,7 @@ export function WeatherForecastModal({
         }
       });
     return () => { cancelled = true; };
-  }, [open, lat, lon, startDate, endDate]);
+  }, [open, isPremium, tripId, lat, lon, startDate, endDate, timezone, cachedDaily]);
 
   return (
     <ModalSheet open={open} onClose={onClose} title={t('weather.forecast.title')} fullHeight>
@@ -172,13 +222,13 @@ export function WeatherForecastModal({
         {/* Error */}
         {error && !loading && (
           <div style={{
-            background: 'rgba(192,57,43,0.08)',
-            border: '1px solid rgba(192,57,43,0.20)',
+            background: 'rgba(234,153,64,0.12)',
+            border: '1px solid rgba(234,153,64,0.30)',
             borderRadius: 16,
             padding: '16px 18px',
             fontFamily: 'Questrial, sans-serif',
             fontSize: 13,
-            color: '#C0392B',
+            color: '#12212E',
           }}>
             {t('weather.forecast.noData')}
           </div>

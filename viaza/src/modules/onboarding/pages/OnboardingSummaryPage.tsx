@@ -24,14 +24,20 @@ export function OnboardingSummaryPage() {
   const [destInput, setDestInput] = useState(draft.destination);
 
   const canCreate = Boolean(
-    draft.travelType && draft.travelerGroup && (draft.destination.trim().length >= 2 || destInput.trim().length >= 2)
+    draft.travelType &&
+    draft.travelerGroup &&
+    draft.transportType &&
+    draft.startDate &&
+    draft.endDate &&
+    (draft.destination.trim().length >= 2 || destInput.trim().length >= 2)
   );
 
   const handleCreate = () => {
-    if (destInput.trim().length >= 2 && !draft.destination) {
-      setDraft({ destination: destInput.trim() });
+    const resolvedDestination = draft.destination || destInput.trim();
+    if (resolvedDestination.trim().length >= 2 && !draft.destination) {
+      setDraft({ destination: resolvedDestination.trim() });
     }
-    const tripId = createTripFromDraft();
+    const tripId = createTripFromDraft({ destination: resolvedDestination.trim() });
     resetDraft();
     navigate('/home', { replace: true, state: { createdTripId: tripId } });
   };
@@ -53,7 +59,7 @@ export function OnboardingSummaryPage() {
       <div className="mb-6">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-accent-rgb)/0.12)] px-3 py-1">
           <span className="text-xs font-semibold text-[var(--viaza-accent)]">
-            {t('onboarding.step', { current: 6, total: 6 })}
+            {t('onboarding.step', { current: 8, total: 8 })}
           </span>
         </div>
         <h1 className="text-2xl font-semibold leading-tight text-[var(--viaza-primary)]">
@@ -131,11 +137,24 @@ export function OnboardingSummaryPage() {
         {draft.travelerGroup && (
           <Row label={t('onboarding.summary.group')} value={t(`travelerGroup.${draft.travelerGroup}`)} />
         )}
-        {(draft.numberOfAdults > 1 || draft.numberOfKids > 0) && (
+        {(draft.numberOfAdults > 1 || draft.numberOfKids > 0 || draft.numberOfBabies > 0) && (
           <Row
-            label={t('travelers.howMany', '¿Cuántos viajan?')}
-            value={`${draft.numberOfAdults} adultos${draft.numberOfKids > 0 ? ` · ${draft.numberOfKids} niños` : ''}`}
+            label={t('travelers.howMany')}
+            value={[
+              t('travelers.count.adults', { n: draft.numberOfAdults }),
+              draft.numberOfKids > 0 ? t('travelers.count.kids', { n: draft.numberOfKids }) : null,
+              draft.numberOfBabies > 0 ? t('travelers.count.babies', { n: draft.numberOfBabies }) : null,
+            ].filter(Boolean).join(' · ')}
           />
+        )}
+        {draft.transportType && (
+          <Row label={t('onboarding.summary.transport')} value={t(`transport.${draft.transportType}`)} />
+        )}
+        {draft.travelerProfile && (
+          <Row label={t('onboarding.summary.profile')} value={t(`travelerProfile.${draft.travelerProfile}`)} />
+        )}
+        {draft.travelStyle && (
+          <Row label={t('onboarding.summary.style')} value={t(`travelStyle.${draft.travelStyle}`)} />
         )}
         <Row
           label={t('onboarding.preferences.laptop')}

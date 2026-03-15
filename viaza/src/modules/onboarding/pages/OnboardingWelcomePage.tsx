@@ -220,7 +220,7 @@ export function OnboardingWelcomePage() {
             cursor: 'pointer',
           }}
         >
-          {t('onboarding.welcome.haveAccount', 'Ya tengo una cuenta')}
+          {t('onboarding.welcome.haveAccount')}
         </button>
       </motion.div>
     </div>

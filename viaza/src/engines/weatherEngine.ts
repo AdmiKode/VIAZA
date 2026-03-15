@@ -45,21 +45,11 @@ export async function fetchCurrentConditions(
   lat: number,
   lon: number,
 ): Promise<{ icon: string; description: string; temp: number } | null> {
-  const key = import.meta.env.VITE_OPENWEATHERMAP_KEY as string | undefined;
-  if (!key) return null;
-  try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${key}&units=metric&lang=es`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return {
-      icon: data.weather?.[0]?.icon ?? '01d',
-      description: data.weather?.[0]?.description ?? '',
-      temp: Math.round(data.main?.temp ?? 0),
-    };
-  } catch {
-    return null;
-  }
+  void lat;
+  void lon;
+  // Regla de seguridad: no exponer API keys en frontend.
+  // Para condiciones en tiempo real (si se requieren), implementar vía Edge Function.
+  return null;
 }
 
 /**

@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { takePhoto } from '../../../services/cameraService';
 import { impactMedium, notificationSuccess, notificationError } from '../../../services/hapticsService';
+import { supabase } from '../../../services/supabaseClient';
 import type { LuggagePhoto } from '../../../types/traveler';
 
 type LuggageSize = LuggagePhoto['luggageSize'];
@@ -74,56 +75,15 @@ const LUGGAGE_SIZES: { id: LuggageSize; labelKey: string; descKey: string; icon:
 ];
 
 async function analyzeWithAI(photoDataUrl: string, luggageSize: LuggageSize, lang: string): Promise<string> {
-  const apiKey = import.meta.env.VITE_OPENAI_KEY as string | undefined;
-  if (!apiKey) throw new Error('VITE_OPENAI_KEY no configurada');
-
-  const sizeLabels: Record<LuggageSize, string> = {
-    cabin: 'maleta de cabina (max 55cm)',
-    medium: 'maleta mediana (65cm)',
-    large: 'maleta grande (75cm)',
-    extra_large: 'maleta extra grande (85cm+)',
-  };
-
-  const systemPrompt = `Eres un experto en organización de maletas para viajes. Analiza la foto de la maleta abierta y da recomendaciones específicas de acomodo por zonas. Responde en ${lang === 'es' ? 'español' : lang === 'en' ? 'inglés' : lang === 'fr' ? 'francés' : lang === 'de' ? 'alemán' : 'español'}. Sé conciso y práctico.`;
-
-  const userPrompt = `Esta es una ${sizeLabels[luggageSize]}. Analiza el contenido visible y recomienda:
-1. Zona izquierda: qué poner
-2. Zona derecha: qué poner
-3. Centro/fondo: qué poner
-4. Acceso rápido (bolsillos exteriores): qué poner
-5. Consejo especial para revisiones de aduana
-
-Sé específico con los ítems que ves en la foto.`;
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+  const { data, error } = await supabase.functions.invoke('ai-orchestrator', {
+    body: {
+      task_type: 'luggage_analysis',
+      payload: { imageDataUrl: photoDataUrl, luggageSize },
+      language_context: { app_lang: lang },
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      max_tokens: 600,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: photoDataUrl, detail: 'low' } },
-          ],
-        },
-      ],
-    }),
   });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message ?? `OpenAI error ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content ?? '';
+  if (error) throw error;
+  return (data as { result?: { suggestion?: string } } | null)?.result?.suggestion ?? '';
 }
 
 interface LuggageAssistantPageProps {

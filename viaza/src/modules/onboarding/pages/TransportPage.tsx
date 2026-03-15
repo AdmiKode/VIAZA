@@ -1,9 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import type { TransportType } from '../../../types/trip';
+import { SUPABASE_URL, supabase } from '../../../services/supabaseClient';
+
+type PlacesPrediction = {
+  place_id: string;
+  description: string;
+  structured_formatting: { main_text: string; secondary_text?: string };
+};
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 /* ─── Haversine: distancia en km entre dos puntos ──────────────── */
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -60,7 +76,7 @@ function EstimatedTimeCard({ type }: { type: TransportType }) {
       </svg>
       <div>
         <div style={{ color: '#307082', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Questrial, sans-serif' }}>
-          {t('transport.estimatedTime', 'Tiempo estimado')}
+          {t('transport.estimatedTime')}
         </div>
         <div style={{ color: '#12212E', fontSize: 16, fontWeight: 700, fontFamily: 'Questrial, sans-serif' }}>
           {formatDuration(hours)}
@@ -240,6 +256,381 @@ function NeuInput({
   );
 }
 
+/* ─── Airline autocomplete ───────────────────────────────────────── */
+const AVIATION_KEY = import.meta.env.VITE_AVIATIONSTACK_KEY as string;
+
+type AirlineSuggestion = { name: string; iata: string };
+
+function AirlineInput({ label, placeholder }: { label: string; placeholder: string }) {
+  const setDraft = useAppStore((s) => s.setOnboardingDraft);
+  const value = useAppStore((s) => s.onboardingDraft.airline ?? '');
+  const [results, setResults] = useState<AirlineSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const debouncedQ = useDebounce(value, 400);
+
+  useEffect(() => {
+    if (debouncedQ.trim().length < 2) { setResults([]); return; }
+    void fetch(
+      `https://api.aviationstack.com/v1/airlines?access_key=${AVIATION_KEY}&airline_name=${encodeURIComponent(debouncedQ.trim())}&limit=6`
+    )
+      .then((r) => r.json())
+      .then((json: { data?: Array<{ airline_name: string; iata_code: string }> }) => {
+        const suggestions = (json.data ?? [])
+          .filter((a) => a.airline_name && a.iata_code)
+          .map((a) => ({ name: a.airline_name, iata: a.iata_code }));
+        setResults(suggestions);
+        setOpen(suggestions.length > 0);
+      })
+      .catch(() => setResults([]));
+  }, [debouncedQ]);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <label style={{
+        display: 'block',
+        color: 'rgba(18,33,46,0.50)',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        marginBottom: 6,
+        fontFamily: 'Questrial, sans-serif',
+      }}>
+        {label}
+      </label>
+      <div
+        className="flex items-center rounded-2xl px-4"
+        style={{
+          height: 48,
+          background: '#ECE7DC',
+          boxShadow: 'inset 3px 3px 8px rgba(18,33,46,0.09), inset -2px -2px 6px rgba(255,255,255,0.70)',
+        }}
+      >
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => { setDraft({ airline: e.target.value }); setOpen(false); }}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder={placeholder}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            fontSize: 15,
+            color: '#12212E',
+            fontFamily: 'Questrial, sans-serif',
+          }}
+        />
+        {value.length > 0 && (
+          <button
+            type="button"
+            onClick={() => { setDraft({ airline: '' }); setResults([]); setOpen(false); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(18,33,46,0.35)' }}
+          >✕</button>
+        )}
+      </div>
+      <AnimatePresence>
+        {open && results.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              zIndex: 50,
+              background: 'white',
+              borderRadius: 16,
+              boxShadow: '0 8px 32px rgba(18,33,46,0.14)',
+              overflow: 'hidden',
+              marginTop: 4,
+            }}
+          >
+            {results.map((a) => (
+              <button
+                key={a.iata}
+                type="button"
+                onClick={() => {
+                  setDraft({ airline: a.name });
+                  setResults([]);
+                  setOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(18,33,46,0.06)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span style={{
+                  background: '#307082',
+                  color: 'white',
+                  borderRadius: 6,
+                  padding: '2px 7px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: 'Questrial, sans-serif',
+                  minWidth: 36,
+                  textAlign: 'center',
+                }}>
+                  {a.iata}
+                </span>
+                <span style={{ fontSize: 14, color: '#12212E', fontFamily: 'Questrial, sans-serif' }}>
+                  {a.name}
+                </span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function OriginCityInput({
+  label,
+  placeholder,
+}: {
+  label: string;
+  placeholder: string;
+}) {
+  const { t } = useTranslation();
+  const lang = useAppStore((s) => s.currentLanguage);
+  const setDraft = useAppStore((s) => s.setOnboardingDraft);
+  const draft = useAppStore((s) => s.onboardingDraft);
+
+  const [inputValue, setInputValue] = useState(draft.originCity);
+  const [results, setResults] = useState<PlacesPrediction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<PlacesPrediction | null>(null);
+  const [error, setError] = useState(false);
+  const [errorText, setErrorText] = useState<string>('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const debouncedQuery = useDebounce(inputValue, 420);
+
+  useEffect(() => {
+    setInputValue(draft.originCity);
+  }, [draft.originCity]);
+
+  // Clear selection if user edits after picking
+  useEffect(() => {
+    if (selected && inputValue !== selected.structured_formatting.main_text) {
+      setSelected(null);
+    }
+  }, [inputValue, selected]);
+
+  // Autocomplete
+  useEffect(() => {
+    if (selected) return;
+    if (debouncedQuery.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    setError(false);
+    setErrorText('');
+    supabase.functions
+      .invoke('places-autocomplete', { body: { input: debouncedQuery, language: lang } })
+      .then(({ data, error: fnErr }) => {
+        if (fnErr) throw fnErr;
+        const payload = data as { ok?: boolean; error?: string; predictions?: PlacesPrediction[] } | null;
+        if (payload && payload.ok === false) throw new Error(payload.error ?? 'Places error');
+        setResults((payload?.predictions ?? []).slice(0, 6));
+        setLoading(false);
+      })
+      .catch((e: unknown) => {
+        setError(true);
+        setErrorText((e as Error)?.message ?? '');
+        setLoading(false);
+      });
+  }, [debouncedQuery, selected, lang]);
+
+  async function handleSelect(result: PlacesPrediction) {
+    setSelected(result);
+    setInputValue(result.structured_formatting.main_text);
+    setResults([]);
+    setError(false);
+    setErrorText('');
+    setDraft({ originCity: result.structured_formatting.main_text });
+
+    try {
+      setLoading(true);
+      const { data, error: fnErr } = await supabase.functions.invoke('places-details', {
+        body: { place_id: result.place_id, language: lang },
+      });
+      if (fnErr) throw fnErr;
+      const payload = data as { ok?: boolean; error?: string; place?: { lat: number | null; lon: number | null } } | null;
+      if (payload && payload.ok === false) throw new Error(payload.error ?? 'Places error');
+      const place = payload?.place;
+      if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lon)) throw new Error('Missing origin geometry');
+      setDraft({ originLat: place.lat as number, originLon: place.lon as number });
+    } catch (e: unknown) {
+      setError(true);
+      setErrorText((e as Error)?.message ?? '');
+      setDraft({ originLat: 0, originLon: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const showDropdown = results.length > 0 && !selected;
+
+  return (
+    <div className="relative">
+      <label style={{
+        display: 'block',
+        color: 'rgba(18,33,46,0.50)',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        marginBottom: 6,
+        fontFamily: 'Questrial, sans-serif',
+      }}>
+        {label}
+      </label>
+
+      <div
+        className="flex items-center rounded-2xl px-4"
+        style={{
+          height: 48,
+          background: '#ECE7DC',
+          boxShadow: 'inset 3px 3px 8px rgba(18,33,46,0.09), inset -2px -2px 6px rgba(255,255,255,0.70)',
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={(e) => {
+            const v = e.target.value;
+            setInputValue(v);
+            setDraft({ originCity: v, originLat: 0, originLon: 0 });
+          }}
+          placeholder={placeholder}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            fontSize: 15,
+            color: '#12212E',
+            fontFamily: 'Questrial, sans-serif',
+          }}
+        />
+        {inputValue.length > 0 && (
+          <div style={{ marginLeft: 8 }}>
+            {loading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+                style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid #EA9940', borderTopColor: 'transparent' }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputValue('');
+                  setResults([]);
+                  setSelected(null);
+                  setDraft({ originCity: '', originLat: 0, originLon: 0 });
+                  inputRef.current?.focus();
+                }}
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 999,
+                  background: 'rgba(18,33,46,0.08)',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 48 48" fill="none">
+                  <path d="M12 12l24 24M36 12L12 36" stroke="#12212E" strokeWidth="5" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-2xl bg-white"
+            style={{ boxShadow: '0 10px 30px rgba(18,33,46,0.18)' }}
+          >
+            {results.map((r, i) => (
+              <motion.button
+                key={r.place_id}
+                type="button"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => void handleSelect(r)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition"
+                style={{
+                  borderBottom: '1px solid rgba(18,33,46,0.06)',
+                }}
+              >
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: 'rgba(48,112,130,0.12)' }}>
+                  <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+                    <path d="M24 4C16.3 4 10 10.3 10 18c0 11 14 26 14 26s14-15 14-26c0-7.7-6.3-14-14-14z" fill="#307082" />
+                    <path d="M24 4C16.3 4 10 10.3 10 18c0 5 3 10 7 16L24 4z" fill="white" opacity="0.35" />
+                    <circle cx="24" cy="18" r="5" fill="white" opacity="0.6" />
+                  </svg>
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ color: '#12212E', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.structured_formatting.main_text}
+                  </div>
+                  <div style={{ color: 'rgba(18,33,46,0.55)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.structured_formatting.secondary_text || r.description}
+                  </div>
+                </div>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {error && (
+        <div style={{ marginTop: 6, color: '#EA9940', fontSize: 12, fontWeight: 600 }}>
+          {t('onboarding.destination.searchError')}
+          {errorText ? (
+            <div style={{ marginTop: 4, color: 'rgba(18,33,46,0.55)', fontSize: 10, fontWeight: 600 }}>
+              {errorText}
+              {SUPABASE_URL ? (
+                <div style={{ marginTop: 4 }}>
+                  {new URL('/functions/v1/places-autocomplete', SUPABASE_URL).toString()}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── SubForm según tipo de transporte ──────────────────────────── */
 function TransportSubForm({ type }: { type: TransportType }) {
   const { t } = useTranslation();
@@ -261,27 +652,23 @@ function TransportSubForm({ type }: { type: TransportType }) {
     >
       {type === 'flight' && (
         <>
-          <NeuInput
-            label={t('transport.originCity', '¿Desde qué ciudad sales?')}
-            placeholder="Ej: Guadalajara, México"
-            value={draft.originCity}
-            onChange={(v) => setDraft({ originCity: v })}
+          <OriginCityInput
+            label={t('transport.originCity')}
+            placeholder={t('transport.originCity.placeholder')}
+          />
+          <AirlineInput
+            label={t('transport.airline')}
+            placeholder={t('transport.airline.placeholder')}
           />
           <NeuInput
-            label={t('transport.airline', 'Aerolínea (opcional)')}
-            placeholder="Ej: Aeroméxico"
-            value={draft.airline}
-            onChange={(v) => setDraft({ airline: v })}
-          />
-          <NeuInput
-            label={t('transport.flightNumber', 'Número de vuelo (opcional)')}
-            placeholder="Ej: AM 123"
+            label={t('transport.flightNumber')}
+            placeholder={t('transport.flightNumber.placeholder')}
             value={draft.flightNumber}
             onChange={(v) => setDraft({ flightNumber: v })}
           />
           <NeuInput
-            label={t('transport.airportCode', 'Código aeropuerto destino (opcional)')}
-            placeholder="Ej: CUN"
+            label={t('transport.airportCode')}
+            placeholder={t('transport.airportCode.placeholder')}
             value={draft.airportCode}
             onChange={(v) => setDraft({ airportCode: v })}
           />
@@ -289,11 +676,9 @@ function TransportSubForm({ type }: { type: TransportType }) {
       )}
       {type === 'car' && (
         <>
-          <NeuInput
-            label={t('transport.originCity', '¿Desde dónde sales?')}
-            placeholder="Ej: Guadalajara, México"
-            value={draft.originCity}
-            onChange={(v) => setDraft({ originCity: v })}
+          <OriginCityInput
+            label={t('transport.originCity')}
+            placeholder={t('transport.originCity.placeholder')}
           />
           <EstimatedTimeCard type={type} />
           <div
@@ -305,23 +690,21 @@ function TransportSubForm({ type }: { type: TransportType }) {
               <circle cx="24" cy="18" r="6" fill="rgba(255,255,255,0.50)" />
             </svg>
             <span style={{ color: '#307082', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>
-              {t('transport.car.mapsNote', 'Al crear el viaje generaremos la ruta en Maps/Waze')}
+              {t('transport.car.mapsNote')}
             </span>
           </div>
         </>
       )}
       {type === 'bus' && (
         <>
-          <NeuInput
-            label={t('transport.originCity', '¿Desde dónde sales?')}
-            placeholder="Ej: Guadalajara, México"
-            value={draft.originCity}
-            onChange={(v) => setDraft({ originCity: v })}
+          <OriginCityInput
+            label={t('transport.originCity')}
+            placeholder={t('transport.originCity.placeholder')}
           />
           <EstimatedTimeCard type={type} />
           <NeuInput
-            label={t('transport.busTerminal', 'Terminal de autobús (opcional)')}
-            placeholder="Ej: Central de Autobuses Norte"
+            label={t('transport.busTerminal')}
+            placeholder={t('transport.busTerminal.placeholder')}
             value={draft.busTerminal}
             onChange={(v) => setDraft({ busTerminal: v })}
           />
@@ -329,16 +712,14 @@ function TransportSubForm({ type }: { type: TransportType }) {
       )}
       {type === 'train' && (
         <>
-          <NeuInput
-            label={t('transport.originCity', '¿Desde dónde sales?')}
-            placeholder="Ej: Ciudad de México"
-            value={draft.originCity}
-            onChange={(v) => setDraft({ originCity: v })}
+          <OriginCityInput
+            label={t('transport.originCity')}
+            placeholder={t('transport.originCity.placeholder')}
           />
           <EstimatedTimeCard type={type} />
           <NeuInput
-            label={t('transport.trainStation', 'Estación de salida (opcional)')}
-            placeholder="Ej: Estación Central"
+            label={t('transport.trainStation')}
+            placeholder={t('transport.trainStation.placeholder')}
             value={draft.trainStation}
             onChange={(v) => setDraft({ trainStation: v })}
           />
@@ -346,8 +727,8 @@ function TransportSubForm({ type }: { type: TransportType }) {
       )}
       {type === 'cruise' && (
         <NeuInput
-          label={t('transport.cruisePort', 'Puerto de salida')}
-          placeholder="Ej: Puerto de Veracruz"
+          label={t('transport.cruisePort')}
+          placeholder={t('transport.cruisePort.placeholder')}
           value={draft.cruisePort}
           onChange={(v) => setDraft({ cruisePort: v })}
         />
@@ -368,6 +749,7 @@ export function TransportPage() {
   }
 
   function handleContinue() {
+    if (!selected) return;
     navigate('/onboarding/smart-detection');
   }
 
@@ -396,7 +778,7 @@ export function TransportPage() {
           lineHeight: 1.15,
           fontFamily: 'Questrial, sans-serif',
         }}>
-          {t('transport.title', '¿Cómo llegas?')}
+          {t('transport.title')}
         </h1>
         <p style={{
           color: 'rgba(18,33,46,0.55)',
@@ -404,7 +786,7 @@ export function TransportPage() {
           marginTop: 6,
           fontFamily: 'Questrial, sans-serif',
         }}>
-          {t('transport.prompt', 'Define tu medio de transporte para personalizar tu viaje')}
+          {t('transport.prompt')}
         </p>
       </div>
 
@@ -517,6 +899,7 @@ export function TransportPage() {
         <button
           type="button"
           onClick={handleContinue}
+          disabled={!selected}
           style={{
             flex: 2,
             height: 54,
@@ -532,28 +915,9 @@ export function TransportPage() {
             transition: 'all 0.25s ease',
           }}
         >
-          {selected ? t('common.continue') : t('transport.selectFirst', 'Elige un transporte')}
+          {selected ? t('common.continue') : t('transport.selectFirst')}
         </button>
       </div>
-
-      {/* Skip */}
-      <button
-        type="button"
-        onClick={() => navigate('/onboarding/smart-detection')}
-        style={{
-          marginTop: 12,
-          background: 'transparent',
-          border: 'none',
-          color: 'rgba(18,33,46,0.38)',
-          fontSize: 13,
-          fontFamily: 'Questrial, sans-serif',
-          cursor: 'pointer',
-          textAlign: 'center',
-          width: '100%',
-        }}
-      >
-        {t('common.skip', 'Omitir por ahora')}
-      </button>
     </motion.div>
   );
 }

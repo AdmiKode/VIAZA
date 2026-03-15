@@ -2,9 +2,8 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { supabase } from '../../../services/supabaseClient';
 import type { PlaceCategory, PlaceStatus } from '../../../types/itinerary';
-
-const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string;
 
 interface Suggestion {
   place_id: string;
@@ -35,6 +34,7 @@ export function AddPlacePage() {
   const currentTripId = useAppStore((s) => s.currentTripId);
   const trips = useAppStore((s) => s.trips);
   const addSavedPlace = useAppStore((s) => s.addSavedPlace);
+  const lang = useAppStore((s) => s.currentLanguage);
 
   const currentTrip = trips.find((t) => t.id === currentTripId);
   const tripDays = currentTrip ? Math.max(1, currentTrip.durationDays ?? 1) : 1;
@@ -42,7 +42,7 @@ export function AddPlacePage() {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<{ name: string; address: string; placeId: string } | null>(null);
+  const [selected, setSelected] = useState<{ name: string; address: string; placeId: string; lat?: number; lon?: number } | null>(null);
   const [cat, setCat] = useState<PlaceCategory>('other');
   const [status, setStatus] = useState<PlaceStatus>('want_to_go');
   const [assignedDay, setAssignedDay] = useState<number | undefined>(undefined);
@@ -54,16 +54,14 @@ export function AddPlacePage() {
     if (!value || value.length < 3) { setSuggestions([]); return; }
     setLoading(true);
     try {
-      const endpoint = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(value)}&key=${MAPS_KEY}&language=es`;
-      // En web, el CORS de la API de Places bloquea llamadas directas.
-      // Usamos un proxy local o el SDK JS. Aquí simulamos con fetch y allowamos el modo no-cors.
-      const res = await fetch(endpoint, { mode: 'cors' });
-      if (res.ok) {
-        const data = await res.json();
-        setSuggestions((data.predictions ?? []).slice(0, 5));
-      }
-    } catch {
-      // Si falla (CORS en web), permitimos entrada manual
+      const { data, error } = await supabase.functions.invoke('places-autocomplete', {
+        body: { input: value, language: lang },
+      });
+      if (error) throw error;
+      const preds = (data as { predictions?: Suggestion[] } | null)?.predictions ?? [];
+      setSuggestions(preds.slice(0, 5));
+    } catch (e) {
+      console.warn('[AddPlacePage] places-autocomplete failed:', (e as Error).message ?? e);
       setSuggestions([]);
     } finally {
       setLoading(false);
@@ -77,10 +75,32 @@ export function AddPlacePage() {
     debounceRef.current = setTimeout(() => fetchSuggestions(v), 400);
   }
 
-  function pickSuggestion(s: Suggestion) {
-    setSelected({ name: s.structured_formatting.main_text, address: s.description, placeId: s.place_id });
-    setQuery(s.structured_formatting.main_text);
-    setSuggestions([]);
+  async function pickSuggestion(s: Suggestion) {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('places-details', {
+        body: { place_id: s.place_id, language: lang },
+      });
+      if (error) throw error;
+      const place = (data as { place?: { formatted_address?: string | null; lat?: number | null; lon?: number | null } } | null)?.place;
+
+      setSelected({
+        name: s.structured_formatting.main_text,
+        address: place?.formatted_address ?? s.description,
+        placeId: s.place_id,
+        lat: place?.lat ?? undefined,
+        lon: place?.lon ?? undefined,
+      });
+      setQuery(s.structured_formatting.main_text);
+      setSuggestions([]);
+    } catch (e) {
+      console.warn('[AddPlacePage] places-details failed:', (e as Error).message ?? e);
+      setSelected({ name: s.structured_formatting.main_text, address: s.description, placeId: s.place_id });
+      setQuery(s.structured_formatting.main_text);
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleManual() {
@@ -97,8 +117,8 @@ export function AddPlacePage() {
       tripId: currentTripId,
       name,
       address: selected?.address || undefined,
-      lat: 0,
-      lon: 0,
+      lat: selected?.lat ?? 0,
+      lon: selected?.lon ?? 0,
       category: cat,
       googlePlaceId: selected?.placeId || undefined,
       notes: notes.trim() || undefined,
@@ -205,7 +225,7 @@ export function AddPlacePage() {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Horario, recomendaciones, precio..." rows={3} className="w-full rounded-2xl px-4 py-3 resize-none outline-none" style={{ background: 'white', fontSize: 14, fontFamily: 'Questrial, sans-serif', color: '#12212E', border: 'none', boxShadow: '0 2px 12px rgba(18,33,46,0.09)' }}/>
         </div>
 
-        {error && <div className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(192,57,43,0.08)', color: '#c0392b' }}>{error}</div>}
+        {error && <div className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(234,153,64,0.12)', color: 'var(--viaza-primary)' }}>{error}</div>}
 
         {/* CTA */}
         <motion.button whileTap={{ scale: 0.97 }} type="button" onClick={handleSave} className="w-full rounded-3xl py-4 font-extrabold text-base" style={{ background: 'linear-gradient(135deg, #307082 0%, #6CA3A2 100%)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 8px 24px rgba(48,112,130,0.35)' }}>

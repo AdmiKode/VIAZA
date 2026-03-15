@@ -68,7 +68,7 @@ export function VIcon({
   size = 24,
   className,
   baseColor,
-  topColor = '#ffffff',
+  topColor = 'var(--viaza-background)',
   topOpacity = 0.55,
 }: VIconProps) {
   const base = baseColor ?? 'var(--viaza-accent)';

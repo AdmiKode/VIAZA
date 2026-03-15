@@ -9,6 +9,7 @@ export type ItineraryEventType =
 
 export type PlaceCategory =
   | 'restaurant'
+  | 'cafe'
   | 'museum'
   | 'hotel'
   | 'beach'

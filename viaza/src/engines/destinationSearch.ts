@@ -295,11 +295,5 @@ export async function searchDestinations(query: string): Promise<DestinationResu
   return results;
 }
 
-/** Returns the flag emoji for a 2-letter ISO country code */
-export function countryFlag(countryCode: string): string {
-  const code = countryCode.toUpperCase();
-  if (code.length !== 2) return '';
-  return String.fromCodePoint(
-    ...code.split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
-  );
-}
+// Nota: VIAZA no usa emojis en UI. Si necesitas representar país en UI,
+// usa texto (ISO) o iconografía propia (VIcon).

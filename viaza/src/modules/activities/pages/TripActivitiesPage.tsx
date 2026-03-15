@@ -246,6 +246,12 @@ export function TripActivitiesPage() {
     return `${activity.priceRange.currency} ${activity.priceRange.min}–${activity.priceRange.max}`;
   };
 
+  const tOptional = (key?: string) => {
+    if (!key) return '';
+    const value = t(key);
+    return value === key ? '' : value;
+  };
+
   if (!currentTrip) {
     return (
       <div style={{
@@ -358,7 +364,7 @@ export function TripActivitiesPage() {
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                 }}>
-                  {t(activity.descKey, '')}
+                  {tOptional(activity.descKey)}
                 </p>
 
                 {/* Chips de info */}
@@ -417,7 +423,7 @@ export function TripActivitiesPage() {
                       <rect x="22" y="20" width="4" height="12" rx="2" fill="white" />
                       <circle cx="24" cy="36" r="2.5" fill="white" />
                     </svg>
-                    {t(activity.alertKey, '')}
+                    {tOptional(activity.alertKey)}
                   </div>
                 )}
               </div>
@@ -447,7 +453,7 @@ export function TripActivitiesPage() {
                 lineHeight: 1.6,
                 marginBottom: 20,
               }}>
-                {t(selectedActivity.descKey, '')}
+                {tOptional(selectedActivity.descKey)}
               </p>
 
               {/* Info grid */}
@@ -523,7 +529,7 @@ export function TripActivitiesPage() {
                     <circle cx="24" cy="15" r="2.5" fill="white" />
                   </svg>
                   <p style={{ fontSize: 13, color: '#307082', lineHeight: 1.5 }}>
-                    {t(selectedActivity.tipKey, '')}
+                    {tOptional(selectedActivity.tipKey)}
                   </p>
                 </div>
               )}
@@ -546,7 +552,7 @@ export function TripActivitiesPage() {
                     <circle cx="24" cy="36" r="2.5" fill="white" />
                   </svg>
                   <p style={{ fontSize: 13, color: '#EA9940', lineHeight: 1.5, fontWeight: 600 }}>
-                    {t(selectedActivity.alertKey, '')}
+                    {tOptional(selectedActivity.alertKey)}
                   </p>
                 </div>
               )}

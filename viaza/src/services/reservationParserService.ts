@@ -1,6 +1,5 @@
 import type { ItineraryEventType } from '../types/itinerary';
-
-const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string;
+import { supabase } from './supabaseClient';
 
 export interface ParsedReservation {
   type: ItineraryEventType;
@@ -26,32 +25,14 @@ Extrae la información y devuelve SOLO un JSON válido con estos campos:
 No incluyas nada más que el JSON.`;
 
 export async function parseReservation(text: string): Promise<ParsedReservation> {
-  if (!OPENAI_KEY) throw new Error('No VITE_OPENAI_API_KEY configurada');
-
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_KEY}`,
+  const { data, error } = await supabase.functions.invoke('ai-orchestrator', {
+    body: {
+      task_type: 'reservation_parse',
+      payload: { text: text.slice(0, 4000), system_prompt: SYSTEM_PROMPT },
     },
-    body: JSON.stringify({
-      model: 'gpt-4.1-mini',
-      temperature: 0,
-      max_tokens: 400,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: text.slice(0, 4000) },
-      ],
-    }),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenAI error: ${err}`);
-  }
-
-  const data = await res.json();
-  const raw: string = data.choices?.[0]?.message?.content ?? '{}';
+  if (error) throw error;
+  const raw: string = (data as { result?: { raw?: string } } | null)?.result?.raw ?? '{}';
 
   try {
     const jsonStr = raw.replace(/```json|```/g, '').trim();

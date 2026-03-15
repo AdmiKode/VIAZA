@@ -90,43 +90,44 @@ const GROUPS: Array<{ value: TravelerGroup; labelKey: string; descKey: string; i
 ];
 
 function Stepper({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+  const safe = Number.isFinite(value) ? value : min;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <button
         type="button"
-        onClick={() => onChange(Math.max(min, value - 1))}
-        disabled={value <= min}
+        onClick={() => onChange(Math.max(min, safe - 1))}
+        disabled={safe <= min}
         style={{
           width: 36, height: 36, borderRadius: '50%',
           border: '1.5px solid rgba(18,33,46,0.18)',
-          background: value <= min ? 'rgba(18,33,46,0.06)' : '#ECE7DC',
-          boxShadow: value <= min ? 'none' : '3px 3px 8px rgba(18,33,46,0.12), -2px -2px 6px rgba(255,255,255,0.80)',
+          background: safe <= min ? 'rgba(18,33,46,0.06)' : '#ECE7DC',
+          boxShadow: safe <= min ? 'none' : '3px 3px 8px rgba(18,33,46,0.12), -2px -2px 6px rgba(255,255,255,0.80)',
           color: '#12212E',
           fontSize: 20,
           fontWeight: 700,
-          cursor: value <= min ? 'not-allowed' : 'pointer',
+          cursor: safe <= min ? 'not-allowed' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          opacity: value <= min ? 0.35 : 1,
+          opacity: safe <= min ? 0.35 : 1,
         }}
       >−</button>
       <span style={{ fontSize: 22, fontWeight: 700, color: '#12212E', minWidth: 24, textAlign: 'center', fontFamily: 'Questrial, sans-serif' }}>
-        {value}
+        {safe}
       </span>
       <button
         type="button"
-        onClick={() => onChange(Math.min(max, value + 1))}
-        disabled={value >= max}
+        onClick={() => onChange(Math.min(max, safe + 1))}
+        disabled={safe >= max}
         style={{
           width: 36, height: 36, borderRadius: '50%',
           border: '1.5px solid rgba(18,33,46,0.18)',
-          background: value >= max ? 'rgba(18,33,46,0.06)' : '#ECE7DC',
-          boxShadow: value >= max ? 'none' : '3px 3px 8px rgba(18,33,46,0.12), -2px -2px 6px rgba(255,255,255,0.80)',
+          background: safe >= max ? 'rgba(18,33,46,0.06)' : '#ECE7DC',
+          boxShadow: safe >= max ? 'none' : '3px 3px 8px rgba(18,33,46,0.12), -2px -2px 6px rgba(255,255,255,0.80)',
           color: '#12212E',
           fontSize: 20,
           fontWeight: 700,
-          cursor: value >= max ? 'not-allowed' : 'pointer',
+          cursor: safe >= max ? 'not-allowed' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          opacity: value >= max ? 0.35 : 1,
+          opacity: safe >= max ? 0.35 : 1,
         }}
       >+</button>
     </div>
@@ -139,9 +140,11 @@ export function TravelersPage() {
   const selected = useAppStore((s) => s.onboardingDraft.travelerGroup);
   const numberOfAdults = useAppStore((s) => s.onboardingDraft.numberOfAdults);
   const numberOfKids = useAppStore((s) => s.onboardingDraft.numberOfKids);
+  const numberOfBabies = useAppStore((s) => s.onboardingDraft.numberOfBabies);
   const setDraft = useAppStore((s) => s.setOnboardingDraft);
 
   const needsCount = selected === 'family' || selected === 'family_baby' || selected === 'friends';
+  const hasBabies = selected === 'family_baby';
 
   return (
     <motion.div
@@ -158,14 +161,14 @@ export function TravelersPage() {
           style={{ background: 'rgba(234,153,64,0.12)' }}
         >
           <span style={{ color: '#EA9940', fontSize: 12, fontWeight: 700 }}>
-            {t('onboarding.step', { current: 2, total: 8 })}
+            {t('onboarding.step', { current: 6, total: 8 })}
           </span>
         </div>
         <h1 style={{ color: '#12212E', fontSize: 26, fontWeight: 700, lineHeight: 1.15 }}>
-          {t('onboarding.travelers.title', '¿Con quién viajas?')}
+          {t('onboarding.travelers.title')}
         </h1>
         <p style={{ color: 'rgba(18,33,46,0.55)', fontSize: 14, marginTop: 6 }}>
-          {t('onboarding.travelers.prompt', 'Esto personaliza tu lista de equipaje')}
+          {t('onboarding.travelers.prompt')}
         </p>
       </div>
 
@@ -225,17 +228,17 @@ export function TravelersPage() {
           }}
         >
           <p style={{ color: '#12212E', fontSize: 14, fontWeight: 700, marginBottom: 16 }}>
-            {t('travelers.howMany', '¿Cuántos viajan?')}
+            {t('travelers.howMany')}
           </p>
 
           {/* Adultos */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <div style={{ color: '#12212E', fontSize: 15, fontWeight: 600 }}>
-                {t('travelers.adults', 'Adultos')}
+                {t('travelers.adults')}
               </div>
               <div style={{ color: 'rgba(18,33,46,0.45)', fontSize: 12 }}>
-                {t('travelers.adults.hint', 'Mayores de 12 años')}
+                {t('travelers.adults.hint')}
               </div>
             </div>
             <Stepper
@@ -253,10 +256,10 @@ export function TravelersPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ color: '#12212E', fontSize: 15, fontWeight: 600 }}>
-                {t('travelers.kids', 'Niños')}
+                {t('travelers.kids')}
               </div>
               <div style={{ color: 'rgba(18,33,46,0.45)', fontSize: 12 }}>
-                {t('travelers.kids.hint', 'Menores de 12 años')}
+                {t('travelers.kids.hint')}
               </div>
             </div>
             <Stepper
@@ -267,8 +270,31 @@ export function TravelersPage() {
             />
           </div>
 
+          {/* Bebés (solo family_baby) */}
+          {hasBabies && (
+            <>
+              <div style={{ height: 1, background: 'rgba(18,33,46,0.07)', margin: '16px 0' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ color: '#12212E', fontSize: 15, fontWeight: 600 }}>
+                    {t('travelers.babies')}
+                  </div>
+                  <div style={{ color: 'rgba(18,33,46,0.45)', fontSize: 12 }}>
+                    {t('travelers.babies.hint')}
+                  </div>
+                </div>
+                <Stepper
+                  value={numberOfBabies}
+                  min={0}
+                  max={4}
+                  onChange={(v) => setDraft({ numberOfBabies: v })}
+                />
+              </div>
+            </>
+          )}
+
           {/* Resumen */}
-          {(numberOfAdults + numberOfKids) > 0 && (
+          {(numberOfAdults + numberOfKids + numberOfBabies) > 0 && (
             <div
               style={{
                 marginTop: 16,
@@ -286,7 +312,7 @@ export function TravelersPage() {
                 <path d="M18 12v-4a6 6 0 0 1 12 0v4" stroke="#EA9940" strokeWidth="3.5" strokeLinecap="round" fill="none" />
               </svg>
               <span style={{ color: '#EA9940', fontSize: 13, fontWeight: 600 }}>
-                {t('travelers.summary', 'Lista para {{total}} personas', { total: numberOfAdults + numberOfKids })}
+                {t('travelers.summary', { total: numberOfAdults + numberOfKids + numberOfBabies })}
               </span>
             </div>
           )}
@@ -297,7 +323,7 @@ export function TravelersPage() {
       <div className="mt-auto flex gap-3 px-5 pt-6">
         <button
           type="button"
-          onClick={() => navigate('/onboarding/travel-type')}
+          onClick={() => navigate('/onboarding/smart-detection')}
           style={{
             flex: 1, height: 54, borderRadius: 16,
             border: '1.5px solid rgba(18,33,46,0.15)',

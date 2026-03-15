@@ -5,7 +5,7 @@ import { useAppStore } from '../../../app/store/useAppStore';
 import type { PlaceCategory, PlaceStatus } from '../../../types/itinerary';
 
 const CAT_LABEL: Record<PlaceCategory, string> = {
-  restaurant: 'Restaurante', museum: 'Museo', hotel: 'Hotel', beach: 'Playa',
+  restaurant: 'Restaurante', cafe: 'Café', museum: 'Museo', hotel: 'Hotel', beach: 'Playa',
   park: 'Parque', shopping: 'Compras', transport: 'Transporte', attraction: 'Atracción', other: 'Otro',
 };
 
@@ -137,7 +137,7 @@ export function PlacesPage() {
                     <svg width="13" height="13" viewBox="0 0 48 48" fill="none"><path d="M10 24l10 10 18-18" stroke={statusMeta.color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                   <button type="button" onClick={() => deleteSavedPlace(place.id)} className="flex items-center justify-center rounded-full" style={{ width: 32, height: 32, background: 'rgba(192,57,43,0.07)', border: 'none', cursor: 'pointer' }}>
-                    <svg width="13" height="13" viewBox="0 0 48 48" fill="none"><path d="M14 14l20 20M34 14L14 34" stroke="#c0392b" strokeWidth="3.5" strokeLinecap="round"/></svg>
+                    <svg width="13" height="13" viewBox="0 0 48 48" fill="none"><path d="M14 14l20 20M34 14L14 34" stroke="var(--viaza-accent)" strokeWidth="3.5" strokeLinecap="round"/></svg>
                   </button>
                 </div>
               </motion.div>

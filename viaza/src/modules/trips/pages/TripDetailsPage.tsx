@@ -79,7 +79,7 @@ export function TripDetailsPage() {
 
         <button type="button" onClick={() => navigate(-1)} className="relative mb-6 flex items-center gap-2" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M30 10L14 24l16 14" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
-          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 600, fontFamily: 'Questrial, sans-serif' }}>{t('home.activeTrip.label', 'Viajes')}</span>
+          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 600, fontFamily: 'Questrial, sans-serif' }}>{t('home.activeTrip.label')}</span>
         </button>
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} className="relative">
@@ -117,7 +117,7 @@ export function TripDetailsPage() {
                 <div style={{ color: '#12212E', fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{trip.weatherForecast.avgTemp}°C</div>
                 <div style={{ color: 'rgba(18,33,46,0.55)', fontSize: 13, marginTop: 2 }}>{trip.weatherForecast.description}</div>
                 <div style={{ color: 'rgba(18,33,46,0.40)', fontSize: 12, marginTop: 1 }}>
-                  {trip.weatherForecast.minTemp}° / {trip.weatherForecast.maxTemp}° · {trip.weatherForecast.rainProbability}% lluvia
+                  {trip.weatherForecast.minTemp}° / {trip.weatherForecast.maxTemp}° · {t('weather.forecast.rain', { pct: trip.weatherForecast.rainProbability })}
                 </div>
               </div>
             </div>
@@ -129,7 +129,7 @@ export function TripDetailsPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
             className="rounded-3xl p-5" style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(18,33,46,0.40)', marginBottom: 10 }}>
-              {t('transport.title', 'Transporte')}
+              {t('transport.title')}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center rounded-2xl" style={{ width: 48, height: 48, background: '#12212E' }}>
@@ -149,19 +149,19 @@ export function TripDetailsPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.10 }}
             className="rounded-3xl p-5" style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(18,33,46,0.40)', marginBottom: 10 }}>
-              {t('trip.travelers', 'Viajeros')}
+              {t('trip.travelers')}
             </div>
             <div className="flex flex-wrap gap-3">
               {(trip.numberOfAdults ?? 0) > 0 && (
                 <div className="flex items-center gap-2 rounded-2xl px-4 py-2" style={{ background: 'rgba(18,33,46,0.05)' }}>
                   <svg width="16" height="16" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="16" r="9" fill="#12212E" fillOpacity="0.7"/><path d="M8 42c0-8.84 7.16-16 16-16s16 7.16 16 16" fill="#12212E" fillOpacity="0.5"/></svg>
-                  <span style={{ color: '#12212E', fontSize: 14, fontWeight: 700 }}>{trip.numberOfAdults} {t('travelers.adults', 'adultos')}</span>
+                  <span style={{ color: '#12212E', fontSize: 14, fontWeight: 700 }}>{trip.numberOfAdults} {t('travelers.adults')}</span>
                 </div>
               )}
               {(trip.numberOfKids ?? 0) > 0 && (
                 <div className="flex items-center gap-2 rounded-2xl px-4 py-2" style={{ background: 'rgba(234,153,64,0.10)' }}>
                   <svg width="16" height="16" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="16" r="7" fill="#EA9940" fillOpacity="0.8"/><path d="M10 42c0-7.73 6.27-14 14-14s14 6.27 14 14" fill="#EA9940" fillOpacity="0.5"/></svg>
-                  <span style={{ color: '#EA9940', fontSize: 14, fontWeight: 700 }}>{trip.numberOfKids} {t('travelers.kids', 'niños')}</span>
+                  <span style={{ color: '#EA9940', fontSize: 14, fontWeight: 700 }}>{trip.numberOfKids} {t('travelers.kids')}</span>
                 </div>
               )}
               {trip.travelerGroup && (
@@ -178,7 +178,7 @@ export function TripDetailsPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
             className="rounded-3xl p-5" style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(18,33,46,0.40)', marginBottom: 10 }}>
-              {t('trip.activities', 'Actividades')}
+              {t('trip.activities')}
             </div>
             <div className="flex flex-wrap gap-2">
               {trip.activities.map((act) => (
@@ -197,7 +197,7 @@ export function TripDetailsPage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(18,33,46,0.40)', marginBottom: 4 }}>{t('packing.title')}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#12212E' }}>
-                {packedCount} / {totalCount} {t('packing.items', 'ítems')}
+                {packedCount} / {totalCount} {t('packing.items')}
                 {trip.packingStyle && <span style={{ marginLeft: 8, fontSize: 12, color: '#EA9940', fontWeight: 600 }}>· {t(`packingStyle.${trip.packingStyle}`, trip.packingStyle)}</span>}
               </div>
             </div>
@@ -215,7 +215,7 @@ export function TripDetailsPage() {
 
         {/* ── Accesos a módulos ── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#12212E', marginBottom: 12 }}>{t('trip.modules', 'Herramientas del viaje')}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#12212E', marginBottom: 12 }}>{t('trip.modules')}</div>
           <div className="grid grid-cols-3 gap-3">
             {MODULE_LINKS.map((mod) => (
               <Link key={mod.to} to={mod.to} onClick={() => setCurrentTrip(trip.id)}

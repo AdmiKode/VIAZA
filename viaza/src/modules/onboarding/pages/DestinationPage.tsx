@@ -2,9 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '../../../app/store/useAppStore';
-import { searchDestinations, countryFlag } from '../../../engines/destinationSearch';
-import type { DestinationResult } from '../../../engines/destinationSearch';
+import { inferDestinationMeta, useAppStore } from '../../../app/store/useAppStore';
+import { SUPABASE_URL, supabase } from '../../../services/supabaseClient';
+
+type PlacesPrediction = {
+  place_id: string;
+  description: string;
+  structured_formatting: { main_text: string; secondary_text?: string };
+};
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -20,19 +25,21 @@ export function DestinationPage() {
   const navigate = useNavigate();
   const draftDestination = useAppStore((s) => s.onboardingDraft.destination);
   const setDraft = useAppStore((s) => s.setOnboardingDraft);
+  const lang = useAppStore((s) => s.currentLanguage);
 
   const [inputValue, setInputValue] = useState(draftDestination);
-  const [results, setResults] = useState<DestinationResult[]>([]);
+  const [results, setResults] = useState<PlacesPrediction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<DestinationResult | null>(null);
+  const [selected, setSelected] = useState<PlacesPrediction | null>(null);
   const [error, setError] = useState(false);
+  const [errorText, setErrorText] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const debouncedQuery = useDebounce(inputValue, 420);
 
   // Clear selection if user edits after picking
   useEffect(() => {
-    if (selected && inputValue !== selected.name) {
+    if (selected && inputValue !== selected.structured_formatting.main_text) {
       setSelected(null);
     }
   }, [inputValue, selected]);
@@ -46,34 +53,87 @@ export function DestinationPage() {
     }
     setLoading(true);
     setError(false);
-    searchDestinations(debouncedQuery)
-      .then((r) => {
-        setResults(r);
+    setErrorText('');
+    supabase.functions
+      .invoke('places-autocomplete', { body: { input: debouncedQuery, language: lang } })
+      .then(({ data, error: fnErr }) => {
+        if (fnErr) throw fnErr;
+        const payload = data as { ok?: boolean; error?: string; predictions?: PlacesPrediction[] } | null;
+        if (payload && payload.ok === false) throw new Error(payload.error ?? 'Places error');
+        setResults((payload?.predictions ?? []).slice(0, 6));
         setLoading(false);
       })
-      .catch(() => {
+      .catch((e: unknown) => {
         setError(true);
+        setErrorText((e as Error)?.message ?? '');
         setLoading(false);
       });
-  }, [debouncedQuery, selected]);
+  }, [debouncedQuery, selected, lang]);
 
-  function handleSelect(result: DestinationResult) {
+  async function handleSelect(result: PlacesPrediction) {
     setSelected(result);
-    setInputValue(result.name);
+    setInputValue(result.structured_formatting.main_text);
     setResults([]);
-    setDraft({
-      destination: result.name,
-      lat: result.lat,
-      lon: result.lon,
-      inferredCountryCode: result.countryCode,
-      inferredCurrency: result.currencyCode,
-      inferredLanguage: result.languageCode,
-    });
+    setError(false);
+    setErrorText('');
+
+    try {
+      setLoading(true);
+      const { data, error: fnErr } = await supabase.functions.invoke('destination-resolve', {
+        body: { place_id: result.place_id, language: lang },
+      });
+      if (fnErr) throw fnErr;
+
+      const dest = (data as {
+        ok?: boolean;
+        error?: string;
+        destination?: {
+          destination_place_id: string;
+          destination_name: string;
+          destination_country: string | null;
+          destination_country_code: string | null;
+          destination_timezone: string | null;
+          destination_currency: string | null;
+          destination_language: string | null;
+          lat: number;
+          lon: number;
+        };
+      } | null)?.destination;
+
+      if (!dest) throw new Error('Missing destination meta');
+
+      setDraft({
+        destination: dest.destination_name,
+        destinationCountry: dest.destination_country ?? undefined,
+        destinationPlaceId: dest.destination_place_id,
+        destinationTimezone: dest.destination_timezone ?? '',
+        lat: dest.lat,
+        lon: dest.lon,
+        inferredCountryCode: dest.destination_country_code ?? undefined,
+        inferredCurrency: dest.destination_currency ?? undefined,
+        inferredLanguage: dest.destination_language ?? undefined,
+      });
+    } catch (e: unknown) {
+      setError(true);
+      setErrorText((e as Error)?.message ?? '');
+      // Fallback: al menos persistir texto (sin meta) para no bloquear el flujo
+      setDraft({ destination: result.structured_formatting.main_text });
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleConfirm() {
     if (!selected && inputValue.trim().length >= 2) {
-      setDraft({ destination: inputValue.trim() });
+      const v = inputValue.trim();
+      const meta = inferDestinationMeta(v);
+      setDraft({
+        destination: v,
+        inferredCountryCode: meta.countryCode,
+        inferredCurrency: meta.currencyCode,
+        inferredLanguage: meta.languageCode,
+        inferredClimate: meta.climate,
+      });
     }
     navigate('/onboarding/dates');
   }
@@ -93,7 +153,7 @@ export function DestinationPage() {
       <div className="mb-8">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-accent-rgb)/0.12)] px-3 py-1">
           <span className="text-xs font-semibold text-[var(--viaza-accent)]">
-            {t('onboarding.step', { current: 1, total: 7 })}
+            {t('onboarding.step', { current: 2, total: 8 })}
           </span>
         </div>
         <h1 className="text-2xl font-semibold leading-tight text-[var(--viaza-primary)]">
@@ -117,7 +177,19 @@ export function DestinationPage() {
             ref={inputRef}
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setInputValue(v);
+              if (!selected && v.trim().length >= 2) {
+                const meta = inferDestinationMeta(v);
+                setDraft({
+                  inferredCountryCode: meta.countryCode,
+                  inferredCurrency: meta.currencyCode,
+                  inferredLanguage: meta.languageCode,
+                  inferredClimate: meta.climate,
+                });
+              }
+            }}
             onKeyDown={(e) => e.key === 'Enter' && canContinue && !showDropdown && handleConfirm()}
             placeholder={t('onboarding.destination.placeholder')}
             autoFocus
@@ -158,7 +230,7 @@ export function DestinationPage() {
             >
               {results.map((r, i) => (
                 <motion.button
-                  key={r.id}
+                  key={r.place_id}
                   type="button"
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -174,10 +246,12 @@ export function DestinationPage() {
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-[var(--viaza-primary)]">{r.shortName}</div>
-                    <div className="truncate text-xs text-[rgb(var(--viaza-primary-rgb)/0.50)]">{r.country}</div>
+                    <div className="truncate text-sm font-semibold text-[var(--viaza-primary)]">{r.structured_formatting.main_text}</div>
+                    <div className="truncate text-xs text-[rgb(var(--viaza-primary-rgb)/0.50)]">{r.structured_formatting.secondary_text || r.description}</div>
                   </div>
-                  <span className="text-xl leading-none">{countryFlag(r.countryCode)}</span>
+                  <span className="rounded-full bg-[rgb(var(--viaza-primary-rgb)/0.06)] px-2 py-1 text-[10px] font-semibold tracking-wider text-[rgb(var(--viaza-primary-rgb)/0.60)]">
+                    {t('common.confirm')}
+                  </span>
                 </motion.button>
               ))}
             </motion.div>
@@ -187,6 +261,16 @@ export function DestinationPage() {
         {error && (
           <p className="mt-2 text-xs text-[var(--viaza-accent)]">
             {t('onboarding.destination.searchError')}
+            {errorText ? (
+              <span className="block mt-1 text-[10px] text-[rgb(var(--viaza-primary-rgb)/0.55)]">
+                {errorText}
+                {SUPABASE_URL ? (
+                  <span className="block mt-1">
+                    {new URL('/functions/v1/places-autocomplete', SUPABASE_URL).toString()}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
           </p>
         )}
 
@@ -198,10 +282,9 @@ export function DestinationPage() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="mt-3 flex items-center gap-3 rounded-xl bg-[rgb(var(--viaza-secondary-rgb)/0.10)] px-4 py-3"
             >
-              <span className="text-xl leading-none">{countryFlag(selected.countryCode)}</span>
               <div className="flex-1">
-                <div className="text-sm font-semibold text-[var(--viaza-secondary)]">{selected.shortName}</div>
-                <div className="text-xs text-[rgb(var(--viaza-primary-rgb)/0.50)]">{selected.currencyCode} · {selected.languageCode.toUpperCase()}</div>
+                <div className="text-sm font-semibold text-[var(--viaza-secondary)]">{selected.structured_formatting.main_text}</div>
+                <div className="text-xs text-[rgb(var(--viaza-primary-rgb)/0.50)]">{selected.structured_formatting.secondary_text || selected.description}</div>
               </div>
               <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
                 <circle cx="24" cy="24" r="20" fill="var(--viaza-secondary)" opacity="0.15" />

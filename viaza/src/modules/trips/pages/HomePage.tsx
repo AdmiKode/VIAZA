@@ -4,19 +4,20 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { WeatherForecastModal } from '../../weather/components/WeatherForecastModal';
-import { fetchForecast, fetchCurrentConditions } from '../../../engines/weatherEngine';
+import { fetchWeatherCache } from '../../../services/weatherCacheService';
+import type { ActiveModuleId } from '../../../engines/activeModulesEngine';
 
 /* ─── Gradientes hero por tipo de viaje ─── */
 const HERO_GRADIENT: Record<string, string> = {
-  beach:     'linear-gradient(160deg, #0E4F6B 0%, #1A8FA0 45%, #EA9940 100%)',
-  mountain:  'linear-gradient(160deg, #1C2E1A 0%, #3B5E2B 55%, #7D9B4F 100%)',
-  city:      'linear-gradient(160deg, #12212E 0%, #223B52 55%, #307082 100%)',
-  camping:   'linear-gradient(160deg, #1A2E10 0%, #3A5C20 55%, #7A9B50 100%)',
-  work:      'linear-gradient(160deg, #1A2030 0%, #2A3A55 55%, #4A6080 100%)',
-  snow:      'linear-gradient(160deg, #1A2A3E 0%, #2A4A6E 55%, #5A8AAE 100%)',
-  roadtrip:  'linear-gradient(160deg, #1E2C1A 0%, #3A5028 55%, #6A8040 100%)',
-  adventure: 'linear-gradient(160deg, #2A1E10 0%, #5A3A20 55%, #EA9940 100%)',
-  default:   'linear-gradient(160deg, #12212E 0%, #307082 70%, #6CA3A2 100%)',
+  beach:     'linear-gradient(160deg, var(--viaza-secondary) 0%, var(--viaza-soft) 55%, var(--viaza-accent) 100%)',
+  mountain:  'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 65%, var(--viaza-soft) 100%)',
+  city:      'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 70%, var(--viaza-soft) 100%)',
+  camping:   'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 65%, var(--viaza-soft) 100%)',
+  work:      'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 70%, var(--viaza-soft) 100%)',
+  snow:      'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 70%, var(--viaza-soft) 100%)',
+  roadtrip:  'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 65%, var(--viaza-accent) 100%)',
+  adventure: 'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 55%, var(--viaza-accent) 100%)',
+  default:   'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 70%, var(--viaza-soft) 100%)',
 };
 
 /* ─── Icono clima grande ─── */
@@ -79,7 +80,35 @@ function TravelTypeIcon({ type }: { type: string }) {
 /* ─── Quick Tools ─── */
 const TOOLS = [
   {
+    to: '/wallet', labelKey: 'wallet.title', subtitleKey: 'tools.wallet.subtitle',
+    requiresModule: 'wallet' as ActiveModuleId,
+    color: '#12212E',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <rect x="6" y="10" width="36" height="30" rx="8" fill="#12212E" />
+        <rect x="6" y="10" width="36" height="14" rx="8" fill="white" opacity="0.18" />
+        <rect x="14" y="24" width="20" height="10" rx="5" fill="#EA9940" opacity="0.92" />
+        <rect x="18" y="27" width="12" height="2.6" rx="1.3" fill="white" opacity="0.55" />
+      </svg>
+    ),
+  },
+  {
+    to: '/recommendations', labelKey: 'recommendations.title', subtitleKey: 'tools.recommendations.subtitle',
+    requiresPremium: true,
+    requiresModule: 'recommendations' as ActiveModuleId,
+    color: '#EA9940',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4C16.27 4 10 10.27 10 18c0 10.5 14 26 14 26s14-15.5 14-26c0-7.73-6.27-14-14-14z" fill="#EA9940"/>
+        <circle cx="24" cy="18" r="6" fill="white" opacity="0.35"/>
+        <path d="M24 12l2.1 4.6 5 .5-3.8 3.3 1.2 4.9-4.5-2.6-4.5 2.6 1.2-4.9-3.8-3.3 5-.5L24 12z" fill="#12212E" opacity="0.75"/>
+      </svg>
+    ),
+  },
+  {
     to: '/translator', labelKey: 'translator.title', subtitleKey: 'tools.translator.subtitle',
+    requiresPremium: true,
+    requiresModule: 'translator' as ActiveModuleId,
     color: '#307082',
     icon: <svg width="32" height="32" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="24" height="18" rx="6" fill="#307082"/><rect x="4" y="8" width="24" height="9" rx="6" fill="white" opacity="0.35"/><rect x="20" y="20" width="24" height="18" rx="6" fill="#EA9940"/><rect x="20" y="20" width="24" height="9" rx="6" fill="white" opacity="0.30"/><path d="M13 17h8M17 13v8" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/><path d="M28 30l3 5 3-5" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>,
   },
@@ -100,10 +129,34 @@ const TOOLS = [
   },
 ];
 
-const BEFORE_YOU_GO = [
-  { to: '/airline-rules', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M8 38L22 24l-4-8 6-6 4 8 8-4 2 2-14 10 6 12-4 2-4-8-4 4z" fill="#307082"/><path d="M8 38L22 24l-4-8 6-6" fill="white" opacity="0.3"/></svg>, labelKey: 'airline.title', descKey: 'home.beforeYouGo.airline' },
-  { to: '/allowed-items', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect x="10" y="8" width="28" height="36" rx="6" fill="#EA9940"/><rect x="10" y="8" width="28" height="16" rx="6" fill="white" opacity="0.30"/><path d="M18 26l4 4 8-8" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>, labelKey: 'allowedItems.title', descKey: 'home.beforeYouGo.allowed' },
-  { to: '/departure', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" fill="#12212E"/><circle cx="24" cy="24" r="18" fill="white" opacity="0.12"/><path d="M24 14v10l6 6" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none"/></svg>, labelKey: 'departure.title', descKey: 'home.beforeYouGo.departure' },
+const BEFORE_YOU_GO: Array<{
+  to: string;
+  icon: JSX.Element;
+  labelKey: string;
+  descKey: string;
+  requiresTransport?: Array<'flight' | 'car' | 'bus' | 'cruise' | 'train'>;
+}> = [
+  {
+    to: '/airline-rules',
+    requiresTransport: ['flight'],
+    icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M8 38L22 24l-4-8 6-6 4 8 8-4 2 2-14 10 6 12-4 2-4-8-4 4z" fill="#307082"/><path d="M8 38L22 24l-4-8 6-6" fill="white" opacity="0.3"/></svg>,
+    labelKey: 'airline.title',
+    descKey: 'home.beforeYouGo.airline',
+  },
+  {
+    to: '/allowed-items',
+    requiresTransport: ['flight'],
+    icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect x="10" y="8" width="28" height="36" rx="6" fill="#EA9940"/><rect x="10" y="8" width="28" height="16" rx="6" fill="white" opacity="0.30"/><path d="M18 26l4 4 8-8" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>,
+    labelKey: 'allowedItems.title',
+    descKey: 'home.beforeYouGo.allowed',
+  },
+  {
+    to: '/departure',
+    requiresTransport: ['flight'],
+    icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" fill="#12212E"/><circle cx="24" cy="24" r="18" fill="white" opacity="0.12"/><path d="M24 14v10l6 6" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none"/></svg>,
+    labelKey: 'departure.title',
+    descKey: 'home.beforeYouGo.departure',
+  },
 ];
 
 export function HomePage() {
@@ -111,35 +164,101 @@ export function HomePage() {
   const navigate = useNavigate();
   const trip = useAppStore((s) => s.trips.find((x) => x.id === s.currentTripId) ?? null);
   const packingItems = useAppStore((s) => s.packingItems.filter((x) => x.tripId === s.currentTripId));
+  const isPremium = useAppStore((s) => s.isPremium);
+  const appLang = useAppStore((s) => s.currentLanguage);
   const [showForecast, setShowForecast] = useState(false);
+  const [forecastStatus, setForecastStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const updateTrip = useAppStore((s) => s.updateTrip);
 
-  /* Refresco automático del clima si el dato tiene más de 6 horas */
+  const activeModules = new Set<string>(trip?.activeModules ?? []);
+  const visibleTools = TOOLS.filter((tool) => {
+    if (tool.requiresPremium && !isPremium) return false;
+    if (tool.requiresModule && !activeModules.has(tool.requiresModule)) return false;
+    return true;
+  });
+
+  const beforeYouGoItems = trip
+    ? BEFORE_YOU_GO.filter((item) => {
+        if (!item.requiresTransport) return true;
+        if (!trip.transportType) return false;
+        return item.requiresTransport.includes(trip.transportType);
+      })
+    : [];
+
+  /* Weather V2 (Premium): cache diario desde Edge, no fetch por render */
   useEffect(() => {
-    if (!trip?.id || !trip.lat || !trip.lon) return;
-    const lastFetch = trip.weatherForecast?.fetchedAt;
-    const SIX_HOURS = 1000 * 60 * 60 * 6;
-    if (lastFetch && Date.now() - new Date(lastFetch).getTime() < SIX_HOURS) return;
-    // Refrescar en background sin bloquear la UI
-    Promise.all([
-      fetchForecast(trip.lat, trip.lon, trip.startDate ?? '', trip.endDate ?? ''),
-      fetchCurrentConditions(trip.lat, trip.lon),
-    ]).then(([forecast, current]) => {
-      if (!forecast) return;
-      updateTrip(trip.id, {
-        weatherForecast: {
-          ...forecast,
-          avgTemp: current?.temp ?? forecast.avgTemp,
-          description: current?.description ?? forecast.description,
-          fetchedAt: new Date().toISOString(),
-        },
-      });
-    }).catch(() => { /* silencioso — el dato viejo sigue mostrándose */ });
-  }, [trip?.id, trip?.lat, trip?.lon]);
+    if (!isPremium) return;
+    if (!trip?.id || !trip.lat || !trip.lon || !trip.startDate || !trip.endDate) return;
+    if (trip.weatherForecastDaily && trip.weatherForecastDaily.length > 0) return;
+    setForecastStatus('loading');
+    void fetchWeatherCache({
+      tripId: trip.id,
+      lat: trip.lat,
+      lon: trip.lon,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      timezone: trip.destinationTimezone,
+    })
+      .then((forecastDaily) => {
+        updateTrip(trip.id, { weatherForecastDaily: forecastDaily });
+        setForecastStatus('ready');
+      })
+      .catch(() => { setForecastStatus('error'); });
+  }, [isPremium, trip?.id, trip?.lat, trip?.lon, trip?.startDate, trip?.endDate, trip?.destinationTimezone, trip?.weatherForecastDaily?.length]);
+
+  useEffect(() => {
+    if (!trip) { setForecastStatus('idle'); return; }
+    if (trip.weatherForecastDaily && trip.weatherForecastDaily.length > 0) { setForecastStatus('ready'); return; }
+    if (!isPremium) { setForecastStatus('idle'); return; }
+    // si es premium y aún no hay datos, el effect de arriba lo manejará
+  }, [trip?.id, trip?.weatherForecastDaily?.length, isPremium]);
+
+  function formatDayLabel(dateIso: string) {
+    try {
+      const d = new Date(`${dateIso}T00:00:00`);
+      return d.toLocaleDateString(appLang || 'es', { weekday: 'short', day: 'numeric', month: 'short' });
+    } catch {
+      return dateIso;
+    }
+  }
 
   const packedCount = packingItems.filter((x) => x.checked).length;
   const totalCount = packingItems.length;
   const progressPct = totalCount === 0 ? 0 : Math.round((packedCount / totalCount) * 100);
+
+  const heroWeather = useMemo(() => {
+    if (!trip) return null;
+    const first = trip.weatherForecastDaily?.[0];
+    if (!first) return trip.weatherForecast ?? null;
+
+    const temps = [first.morning.temp_avg, first.afternoon.temp_avg, first.night.temp_avg].filter((x) => typeof x === 'number') as number[];
+    const avgTemp = temps.length ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length) : 0;
+    const maxTemp = temps.length ? Math.round(Math.max(...temps)) : avgTemp;
+    const minTemp = temps.length ? Math.round(Math.min(...temps)) : avgTemp;
+    const rainProbability = Math.round(
+      Math.max(
+        first.morning.rain_prob_max ?? 0,
+        first.afternoon.rain_prob_max ?? 0,
+        first.night.rain_prob_max ?? 0,
+      )
+    );
+
+    const weatherType =
+      rainProbability >= 60 ? 'rainy' :
+      avgTemp >= 28 ? 'hot' :
+      avgTemp >= 20 ? 'warm' :
+      avgTemp >= 10 ? 'mild' :
+      'cold';
+
+    return {
+      avgTemp,
+      minTemp,
+      maxTemp,
+      rainProbability,
+      weatherType,
+      description: t(`weather.${weatherType}`),
+    };
+  }, [trip, t]);
 
   /* Días restantes calculados en tiempo real */
   const daysLeft = useMemo(() => {
@@ -213,18 +332,25 @@ export function HomePage() {
               {daysLeft !== null && (
                 <div style={{
                   background: daysLeft <= 3 ? '#EA9940' : 'rgba(255,255,255,0.18)',
-                  borderRadius: 99,
-                  padding: '3px 10px',
+                  borderRadius: 12,
+                  padding: '5px 12px',
                   color: 'white',
                   fontFamily: 'Questrial, sans-serif',
-                  fontWeight: 700,
-                  fontSize: 12,
+                  textAlign: 'center',
+                  minWidth: 64,
                 }}>
-                  {daysLeft > 0
-                    ? `${daysLeft} días`
-                    : daysLeft === 0
-                      ? t('home.activeTrip.today', 'Hoy')
-                      : t('home.activeTrip.inProgress', 'En curso')}
+                  {daysLeft > 0 ? (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: 20, lineHeight: 1.1 }}>{daysLeft}</div>
+                      <div style={{ fontWeight: 500, fontSize: 10, opacity: 0.85, lineHeight: 1.2 }}>
+                        {t('home.activeTrip.daysLeftLabel')}
+                      </div>
+                    </>
+                  ) : daysLeft === 0 ? (
+                    <div style={{ fontWeight: 700, fontSize: 12 }}>{t('home.activeTrip.today')}</div>
+                  ) : (
+                    <div style={{ fontWeight: 700, fontSize: 12 }}>{t('home.activeTrip.inProgress')}</div>
+                  )}
                 </div>
               )}
             </div>
@@ -242,23 +368,23 @@ export function HomePage() {
             )}
 
             {/* CLIMA — protagonista */}
-            {trip.weatherForecast ? (
+            {heroWeather ? (
               <div
                 className="mt-5 flex items-center gap-4 rounded-2xl p-4"
                 style={{ background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(12px)' }}
               >
-                <WeatherIcon type={trip.weatherForecast.weatherType} />
+                <WeatherIcon type={heroWeather.weatherType} />
                 <div style={{ flex: 1 }}>
                   <div style={{ color: 'white', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>
-                    {trip.weatherForecast.avgTemp}°C
+                    {heroWeather.avgTemp}°C
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 2 }}>
-                    {trip.weatherForecast.description}
+                    {heroWeather.description}
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 1 }}>
-                    {trip.weatherForecast.minTemp}° / {trip.weatherForecast.maxTemp}° · {trip.weatherForecast.rainProbability}% {t('weather.forecast.rain', { pct: '' }).replace(' ', '')}
+                    {heroWeather.minTemp}° / {heroWeather.maxTemp}° · {t('weather.forecast.rain', { pct: heroWeather.rainProbability })}
                   </div>
-                  {trip.lat && trip.lon && trip.startDate && trip.endDate && (
+                  {isPremium && trip.lat && trip.lon && trip.startDate && trip.endDate && (
                     <button
                       type="button"
                       onClick={() => setShowForecast(true)}
@@ -329,9 +455,9 @@ export function HomePage() {
           >
             <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>{t('home.tagline')}</div>
             <div style={{ color: 'white', fontSize: 30, fontWeight: 700, marginTop: 6, lineHeight: 1.2 }}>
-              {t('home.noTrip.title', 'Planifica tu\npróximo viaje').split('\n').map((line, i) => (
-                <span key={i}>{line}{i === 0 && <br/>}</span>
-              ))}
+	              {t('home.noTrip.title').split('\n').map((line, i) => (
+	                <span key={i}>{line}{i === 0 && <br/>}</span>
+	              ))}
             </div>
             <button
               type="button"
@@ -346,6 +472,105 @@ export function HomePage() {
       </div>
 
       <div className="space-y-6 px-5 pt-6 pb-36">
+
+        {/* ═══════════════════════════════
+            CLIMA — carrusel por día
+        ══════════════════════════════ */}
+        {trip && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="overflow-hidden rounded-3xl border border-[rgb(var(--viaza-primary-rgb)/0.10)] bg-[rgb(var(--viaza-background-rgb)/0.60)] shadow-[var(--shadow-2)]"
+          >
+            <div className="flex items-start justify-between gap-3 p-5 pb-3">
+              <div>
+                <div className="text-sm font-semibold text-[var(--viaza-primary)]">
+                  {t('weather.forecast.title')}
+                </div>
+                <div className="mt-1 text-xs text-[rgb(var(--viaza-primary-rgb)/0.60)]">
+                  {t('weather.forecast.subtitle')}
+                </div>
+              </div>
+              {isPremium && (
+                <button
+                  type="button"
+                  onClick={() => setShowForecast(true)}
+                  className="rounded-full bg-[rgb(var(--viaza-primary-rgb)/0.08)] px-3 py-2 text-[11px] font-semibold text-[var(--viaza-primary)] transition active:scale-[0.98]"
+                >
+                  {t('common.view')}
+                </button>
+              )}
+            </div>
+
+            {!isPremium ? (
+              <div className="px-5 pb-5">
+                <div className="rounded-2xl border border-[rgb(var(--viaza-primary-rgb)/0.10)] bg-[rgb(var(--viaza-background-rgb)/0.70)] p-4">
+                  <div className="text-sm font-semibold text-[var(--viaza-primary)]">{t('premium.required.title')}</div>
+                  <div className="mt-1 text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">{t('premium.required.body')}</div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/premium')}
+                    className="mt-3 w-full rounded-2xl bg-[var(--viaza-accent)] py-3 text-sm font-semibold text-white shadow-[var(--shadow-1)] transition active:scale-[0.98]"
+                  >
+                    {t('premium.required.cta')}
+                  </button>
+                </div>
+              </div>
+            ) : forecastStatus === 'loading' ? (
+              <div className="px-5 pb-5">
+                <div className="flex items-center gap-3 rounded-2xl bg-[rgb(var(--viaza-primary-rgb)/0.06)] p-4">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 0.9, ease: 'linear' }}
+                    className="h-4 w-4 rounded-full border-2 border-[var(--viaza-accent)] border-t-transparent"
+                  />
+                  <div className="text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">
+                    {t('weather.forecast.loading')}
+                  </div>
+                </div>
+              </div>
+            ) : forecastStatus === 'error' ? (
+              <div className="px-5 pb-5">
+                <div className="rounded-2xl border border-[rgb(var(--viaza-accent-rgb)/0.25)] bg-[rgb(var(--viaza-accent-rgb)/0.08)] p-4 text-sm text-[rgb(var(--viaza-primary-rgb)/0.75)]">
+                  {t('weather.forecast.noData')}
+                </div>
+              </div>
+            ) : (
+              <div className="px-5 pb-5">
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {(trip.weatherForecastDaily ?? []).map((d) => (
+                    <div
+                      key={d.date}
+                      className="min-w-[170px] flex-shrink-0 rounded-2xl border border-[rgb(var(--viaza-primary-rgb)/0.10)] bg-[rgb(var(--viaza-background-rgb)/0.80)] p-4"
+                    >
+                      <div className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--viaza-primary-rgb)/0.55)]">
+                        {formatDayLabel(d.date)}
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {([
+                          ['morning', d.morning, 'weather.forecast.morning'],
+                          ['afternoon', d.afternoon, 'weather.forecast.afternoon'],
+                          ['night', d.night, 'weather.forecast.night'],
+                        ] as const).map(([k, seg, labelKey]) => (
+                          <div key={k} className="flex items-center justify-between gap-2">
+                            <div className="text-xs text-[rgb(var(--viaza-primary-rgb)/0.65)]">{t(labelKey)}</div>
+                            <div className="text-xs font-semibold text-[var(--viaza-primary)]">
+                              {seg.temp_avg == null ? '—' : `${Math.round(seg.temp_avg)}°`}
+                              <span className="ml-2 text-[rgb(var(--viaza-primary-rgb)/0.55)]">
+                                {seg.rain_prob_max == null ? '—' : t('weather.forecast.rain', { pct: Math.round(seg.rain_prob_max) })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* ═══════════════════════════════
             PACKING PROGRESS CARD
@@ -379,7 +604,7 @@ export function HomePage() {
                 animate={{ width: `${progressPct}%` }}
                 transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 className="h-2 rounded-full"
-                style={{ background: 'linear-gradient(90deg, #EA9940, #F0B060)' }}
+                style={{ background: 'linear-gradient(90deg, var(--viaza-accent), var(--viaza-soft))' }}
               />
             </div>
             <Link
@@ -401,9 +626,9 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.18 }}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#12212E', marginBottom: 12 }}>
-              {t('home.activities.title', 'Actividades planeadas')}
-            </div>
+	            <div style={{ fontSize: 16, fontWeight: 700, color: '#12212E', marginBottom: 12 }}>
+	              {t('home.activities.title')}
+	            </div>
             <div
               className="rounded-3xl p-4"
               style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}
@@ -425,8 +650,8 @@ export function HomePage() {
                 className="mt-3 w-full rounded-2xl py-2.5 text-sm font-bold transition active:scale-[0.98]"
                 style={{ background: 'rgba(18,33,46,0.05)', color: '#12212E', border: 'none', cursor: 'pointer' }}
               >
-                {t('home.activities.cta', 'Ver actividades')} →
-              </button>
+	                {t('home.activities.cta')} →
+	              </button>
             </div>
           </motion.div>
         )}
@@ -439,7 +664,7 @@ export function HomePage() {
             {t('home.quickTools.title')}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {TOOLS.map((tool, i) => (
+            {visibleTools.map((tool, i) => (
               <motion.div
                 key={tool.to}
                 initial={{ opacity: 0, y: 16 }}
@@ -470,17 +695,18 @@ export function HomePage() {
         {/* ═══════════════════════════════
             BEFORE YOU GO
         ══════════════════════════════ */}
+        {beforeYouGoItems.length > 0 && (
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#12212E', marginBottom: 12 }}>
             {t('home.beforeYouGo.title')}
           </div>
           <div className="overflow-hidden rounded-3xl" style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}>
-            {BEFORE_YOU_GO.map((item, i) => (
+            {beforeYouGoItems.map((item, i) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className="flex items-center gap-4 px-5 py-4 transition active:scale-[0.98]"
-                style={{ borderBottom: i < BEFORE_YOU_GO.length - 1 ? '1px solid rgba(18,33,46,0.06)' : 'none' }}
+                style={{ borderBottom: i < beforeYouGoItems.length - 1 ? '1px solid rgba(18,33,46,0.06)' : 'none' }}
               >
                 <div
                   className="flex items-center justify-center rounded-2xl flex-shrink-0"
@@ -499,6 +725,7 @@ export function HomePage() {
             ))}
           </div>
         </div>
+        )}
 
       </div>
 
@@ -507,11 +734,14 @@ export function HomePage() {
         <WeatherForecastModal
           open={showForecast}
           onClose={() => setShowForecast(false)}
+          tripId={trip.id}
           lat={trip.lat}
           lon={trip.lon}
           startDate={trip.startDate}
           endDate={trip.endDate}
+          timezone={trip.destinationTimezone}
           destination={trip.destination}
+          cachedDaily={trip.weatherForecastDaily}
         />
       )}
     </div>

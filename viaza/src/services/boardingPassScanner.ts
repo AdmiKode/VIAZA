@@ -8,6 +8,8 @@
  * Si la key no está configurada, lanza error claro.
  */
 
+import { supabase } from './supabaseClient';
+
 export interface BoardingPassData {
   passengerName?: string;
   flightNumber?: string;
@@ -56,46 +58,14 @@ export async function scanBoardingPass(
   imageBase64: string,
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'
 ): Promise<BoardingPassData> {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
-  if (!apiKey) {
-    throw new Error('VITE_OPENAI_API_KEY no configurada. Configura la key en tu archivo .env');
-  }
-
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+  const { data, error } = await supabase.functions.invoke('ai-orchestrator', {
+    body: {
+      task_type: 'boarding_pass_ocr',
+      payload: { imageDataUrl: `data:${mimeType};base64,${imageBase64}`, mimeType },
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      max_tokens: 800,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${imageBase64}`,
-                detail: 'high',
-              },
-            },
-            { type: 'text', text: 'Extrae todos los datos del pase de abordar.' },
-          ],
-        },
-      ],
-    }),
   });
-
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`OpenAI error ${res.status}: ${errData.error?.message ?? res.statusText}`);
-  }
-
-  const data = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = data.choices?.[0]?.message?.content ?? '';
+  if (error) throw error;
+  const content = (data as { result?: { raw?: string } } | null)?.result?.raw ?? '';
 
   // Extraer el JSON de la respuesta (puede venir con markdown ```json```)
   const jsonMatch = content.match(/\{[\s\S]*\}/);

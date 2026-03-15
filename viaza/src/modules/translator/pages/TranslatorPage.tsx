@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useAppStore } from '../../../app/store/useAppStore';
 import { AppHeader } from '../../../components/ui/AppHeader';
 import { AppCard } from '../../../components/ui/AppCard';
 import { AppInput } from '../../../components/ui/AppInput';
@@ -16,13 +17,47 @@ const languages = [
   { code: 'de', labelKey: 'language.de' }
 ];
 
+function normalizeLang(code: string): string {
+  const supported = new Set(['en', 'es', 'pt', 'fr', 'de']);
+  return supported.has(code) ? code : 'en';
+}
+
 export function TranslatorPage() {
   const { t } = useTranslation();
-  const [from, setFrom] = useState('es');
-  const [to, setTo] = useState('en');
+  const isPremium = useAppStore((s) => s.isPremium);
+  const currentLanguage = useAppStore((s) => s.currentLanguage);
+  const currentTripId = useAppStore((s) => s.currentTripId);
+  const trip = useAppStore((s) => s.trips.find((x) => x.id === currentTripId));
+
+  const defaultFrom = normalizeLang(currentLanguage);
+  const defaultTo = normalizeLang(trip?.languageCode ?? 'en');
+
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
   const [text, setText] = useState('');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  if (!isPremium) {
+    return (
+      <div className="px-4 pt-4 pb-24">
+        <AppHeader title={t('translator.title')} />
+        <AppCard className="mt-4">
+          <div className="text-sm font-semibold text-[var(--viaza-primary)]">
+            {t('premium.required.title')}
+          </div>
+          <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">
+            {t('premium.required.body')}
+          </div>
+          <Link to="/premium" className="mt-4 block">
+            <AppButton className="w-full" type="button">
+              {t('premium.required.cta')}
+            </AppButton>
+          </Link>
+        </AppCard>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-4 pb-24">
@@ -108,4 +143,3 @@ export function TranslatorPage() {
     </div>
   );
 }
-

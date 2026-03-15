@@ -8,7 +8,7 @@ interface AppChipProps {
 const VARIANTS = {
   default: { bg: 'rgba(18,33,46,0.08)', color: '#12212E' },
   active:  { bg: '#EA9940',             color: '#12212E' },
-  alert:   { bg: 'rgba(192,57,43,0.10)', color: '#C0392B' },
+  alert:   { bg: 'rgba(234,153,64,0.12)', color: '#EA9940' },
   success: { bg: 'rgba(48,112,130,0.12)', color: '#307082' },
 };
 

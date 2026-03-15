@@ -1,13 +1,10 @@
 /**
  * mapsService.ts
  * Centraliza toda la lógica de deep links y URLs de Google Maps / Waze.
- * Usa VITE_GOOGLE_MAPS_KEY para embeds estáticos y Directions API.
  * Para deep links nativos (Capacitor), usa los esquemas URI directos.
  */
 
 import type { TransportType } from '../../types/trip';
-
-const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string | undefined;
 
 // ─── Static Map URL (para thumbnails en tarjetas) ────────────────────────────
 
@@ -20,15 +17,11 @@ export function staticMapUrl(params: {
   height?: number;
   markers?: boolean;
 }): string | null {
-  if (!MAPS_KEY) return null;
-  const { lat, lon, zoom = 14, width = 400, height = 200, markers = true } = params;
-  const markerParam = markers ? `&markers=color:0xEA9940|${lat},${lon}` : '';
-  return (
-    `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lon}` +
-    `&zoom=${zoom}&size=${width}x${height}&scale=2&maptype=roadmap` +
-    `${markerParam}&style=feature:all|element:labels|visibility:simplified` +
-    `&key=${MAPS_KEY}`
-  );
+  void params;
+  // Regla de seguridad: no exponer API keys en frontend.
+  // Si se requiere thumbnail, debe renderizarse con assets locales por tipo de viaje
+  // o vía Edge Function que proxyee la imagen sin filtrar la key.
+  return null;
 }
 
 // ─── Deep Links ─────────────────────────────────────────────────────────────

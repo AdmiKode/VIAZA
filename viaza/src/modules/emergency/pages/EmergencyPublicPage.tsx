@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { getEmergencyPublicView } from '../../../services/emergencyService';
 import type { EmergencyPublicView } from '../../../types/emergency';
 
-const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', red: '#c0392b', muted: 'rgba(18,33,46,0.50)' };
+const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', soft: '#6CA3A2', muted: 'rgba(18,33,46,0.50)' };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -31,7 +31,7 @@ export default function EmergencyPublicPage() {
     return (
       <div style={{ background: C.cream, minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Questrial, sans-serif' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, border: `4px solid ${C.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', margin: '0 auto 16px' }}/>
+          <div style={{ width: 48, height: 48, border: `4px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', margin: '0 auto 16px' }}/>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div style={{ color: C.muted, fontSize: 14 }}>Cargando perfil de emergencia...</div>
         </div>
@@ -59,13 +59,41 @@ export default function EmergencyPublicPage() {
   return (
     <div style={{ background: C.cream, minHeight: '100dvh', fontFamily: 'Questrial, sans-serif' }}>
       {/* Top bar */}
-      <div style={{ background: `linear-gradient(160deg, ${C.red} 0%, #8B0000 100%)`, padding: '40px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, ${C.teal} 70%, ${C.accent} 100%)`, padding: '40px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <div style={{ background: 'rgba(255,255,255,0.20)', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ color: 'white', fontSize: 11, fontWeight: 800, letterSpacing: 0.8 }}>EMERGENCY TRAVEL CARD</span>
           </div>
         </div>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <div style={{
+              width: 86,
+              height: 86,
+              borderRadius: '50%',
+              overflow: 'hidden',
+              background: 'rgba(255,255,255,0.12)',
+              border: '2px solid rgba(234,153,64,0.55)',
+              boxShadow: '0 10px 28px rgba(18,33,46,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {data.photo_url ? (
+                <img
+                  src={data.photo_url}
+                  alt={data.full_name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
+                  <circle cx="24" cy="18" r="10" fill="white" opacity="0.35" />
+                  <path d="M10 44c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="white" opacity="0.28" />
+                  <circle cx="20" cy="14" r="5" fill={C.accent} opacity="0.35" />
+                </svg>
+              )}
+            </div>
+          </div>
           <div style={{ color: 'white', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{data.full_name}</div>
           {data.nationality && <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 14, marginTop: 5 }}>{data.nationality}</div>}
           {(data.primary_language || data.secondary_language) && (
@@ -80,7 +108,7 @@ export default function EmergencyPublicPage() {
         {/* Blood type badge */}
         {data.blood_type && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-            style={{ background: `linear-gradient(135deg, ${C.red}, #8B0000)`, borderRadius: 22, padding: '18px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 6px 24px rgba(192,57,43,0.30)' }}>
+            style={{ background: `linear-gradient(135deg, ${C.accent}, ${C.teal})`, borderRadius: 22, padding: '18px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 6px 24px rgba(18,33,46,0.20)' }}>
             <div style={{ color: 'white', fontSize: 28, fontWeight: 900, lineHeight: 1 }}>+</div>
             <div>
               <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Tipo de sangre</div>
@@ -131,7 +159,7 @@ export default function EmergencyPublicPage() {
                 </div>
                 {phone && (
                   <a href={`tel:${phone}`}
-                    style={{ background: `linear-gradient(135deg, ${C.teal}, #1a5060)`, color: 'white', borderRadius: 14, padding: '10px 18px', fontSize: 14, fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 14px rgba(48,112,130,0.30)' }}>
+                    style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.soft})`, color: 'white', borderRadius: 14, padding: '10px 18px', fontSize: 14, fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 14px rgba(48,112,130,0.30)' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.7A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                     Llamar
                   </a>

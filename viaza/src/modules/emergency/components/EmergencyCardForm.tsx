@@ -5,8 +5,9 @@ import type { EmergencyProfileForm } from '../../../types/emergency';
 import { BLOOD_TYPES, EMPTY_EMERGENCY_FORM } from '../../../types/emergency';
 import { saveEmergencyProfile } from '../../../services/emergencyService';
 import type { EmergencyProfile } from '../../../types/emergency';
+import { supabase } from '../../../services/supabaseClient';
 
-const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', red: '#c0392b', muted: 'rgba(18,33,46,0.50)' };
+const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', soft: '#6CA3A2', muted: 'rgba(18,33,46,0.50)' };
 
 interface Props {
   initial: EmergencyProfileForm;
@@ -79,9 +80,40 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
   const [form, setForm] = useState<EmergencyProfileForm>(initial ?? EMPTY_EMERGENCY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const set = <K extends keyof EmergencyProfileForm>(key: K, value: EmergencyProfileForm[K]) =>
     setForm(f => ({ ...f, [key]: value }));
+
+  const handlePhotoPicked = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Selecciona una imagen válida'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('La imagen debe ser menor a 5MB'); return; }
+
+    try {
+      setUploadingPhoto(true);
+      setError(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No autenticado');
+
+      const ext = (file.name.split('.').pop() ?? 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const path = `${user.id}/emergency/profile_${Date.now()}.${ext || 'jpg'}`;
+
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      if (!data?.publicUrl) throw new Error('No se pudo obtener la URL de la foto');
+
+      set('photo_url', data.publicUrl);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al subir la foto');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.full_name.trim()) { setError('El nombre completo es obligatorio'); return; }
@@ -100,7 +132,7 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
   return (
     <div style={{ background: C.cream, minHeight: '100dvh', fontFamily: 'Questrial, sans-serif', paddingBottom: 120 }}>
       {/* Header */}
-      <div style={{ background: `linear-gradient(160deg, ${C.red} 0%, #8B0000 100%)`, padding: '56px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, ${C.teal} 70%, ${C.accent} 100%)`, padding: '56px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <button type="button" onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, padding: 0 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>Volver</span>
@@ -113,6 +145,92 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
         {/* ── Datos personales ── */}
         <Section title="Datos personales" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.dark} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}>
           <Field label="Nombre completo *"><Input value={form.full_name} onChange={v => set('full_name', v)} placeholder="Como aparece en tu pasaporte"/></Field>
+          <Field label="Foto de perfil (opcional)">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                background: 'rgba(18,33,46,0.06)',
+                border: '2px solid rgba(234,153,64,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {form.photo_url ? (
+                  <img
+                    src={form.photo_url}
+                    alt="Foto de perfil"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+                    <circle cx="24" cy="18" r="10" fill={C.teal} opacity="0.35" />
+                    <path d="M10 44c0-7.7 6.3-14 14-14s14 6.3 14 14" fill={C.teal} opacity="0.35" />
+                    <circle cx="20" cy="14" r="5" fill="white" opacity="0.35" />
+                  </svg>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                <input
+                  id="emergency-photo"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => void handlePhotoPicked(e.target.files?.[0] ?? null)}
+                />
+                <label
+                  htmlFor="emergency-photo"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    height: 42,
+                    borderRadius: 12,
+                    background: uploadingPhoto ? 'rgba(18,33,46,0.10)' : 'rgba(48,112,130,0.10)',
+                    border: '1.5px solid rgba(48,112,130,0.22)',
+                    color: C.teal,
+                    fontSize: 14,
+                    fontWeight: 800,
+                    cursor: uploadingPhoto ? 'not-allowed' : 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+                    <rect x="9" y="14" width="30" height="22" rx="7" fill={C.teal} opacity="0.25" />
+                    <path d="M18 14l3-5h6l3 5" fill={C.teal} opacity="0.35" />
+                    <circle cx="24" cy="25" r="6.5" fill="none" stroke={C.teal} strokeWidth="3" />
+                    <circle cx="21" cy="22" r="2.5" fill="white" opacity="0.35" />
+                  </svg>
+                  {uploadingPhoto ? 'Subiendo…' : (form.photo_url ? 'Cambiar foto' : 'Subir foto')}
+                </label>
+
+                {form.photo_url && (
+                  <button
+                    type="button"
+                    onClick={() => set('photo_url', null)}
+                    style={{
+                      height: 38,
+                      borderRadius: 12,
+                      background: 'rgba(234,153,64,0.10)',
+                      border: '1.5px solid rgba(234,153,64,0.22)',
+                      color: C.dark,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      fontFamily: 'Questrial, sans-serif',
+                    }}
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+            </div>
+          </Field>
           <Field label="Fecha de nacimiento"><Input type="date" value={form.date_of_birth ?? ''} onChange={v => set('date_of_birth', v || null)}/></Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Nacionalidad"><Input value={form.nationality ?? ''} onChange={v => set('nationality', v || null)} placeholder="Mexicana"/></Field>
@@ -122,14 +240,14 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
         </Section>
 
         {/* ── Datos médicos ── */}
-        <Section title="Datos médicos críticos" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}>
+        <Section title="Datos médicos críticos" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}>
           <Field label="Tipo de sangre">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {BLOOD_TYPES.map(bt => (
                 <button key={bt} type="button" onClick={() => set('blood_type', form.blood_type === bt ? null : bt)}
                   style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid', cursor: 'pointer', fontWeight: 700, fontSize: 14, fontFamily: 'Questrial, sans-serif', transition: 'all 0.15s',
-                    background: form.blood_type === bt ? C.red : 'transparent',
-                    borderColor: form.blood_type === bt ? C.red : 'rgba(18,33,46,0.15)',
+                    background: form.blood_type === bt ? C.accent : 'transparent',
+                    borderColor: form.blood_type === bt ? C.accent : 'rgba(18,33,46,0.15)',
                     color: form.blood_type === bt ? 'white' : C.dark }}>
                   {bt}
                 </button>
@@ -187,7 +305,7 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
         </Section>
 
         {/* ── Control QR ── */}
-        <Section title="Control del QR" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>}>
+        <Section title="Control del QR" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>}>
           <Toggle
             label="Activar QR público"
             description="Cuando está activo, tu QR puede ser escaneado por cualquier persona"
@@ -201,7 +319,7 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
             onChange={v => set('consent_public_display', v)}
           />
           {form.qr_enabled && !form.consent_public_display && (
-            <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 12, padding: '10px 14px', color: C.red, fontSize: 12, fontWeight: 600 }}>
+            <div style={{ background: 'rgba(234,153,64,0.10)', border: '1px solid rgba(234,153,64,0.22)', borderRadius: 12, padding: '10px 14px', color: C.dark, fontSize: 12, fontWeight: 600 }}>
               Debes activar el consentimiento para que el QR sea visible públicamente.
             </div>
           )}
@@ -209,7 +327,7 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
 
         {/* Error */}
         {error && (
-          <div style={{ background: 'rgba(192,57,43,0.10)', border: '1px solid rgba(192,57,43,0.25)', borderRadius: 14, padding: '12px 16px', color: C.red, fontSize: 14, marginBottom: 14 }}>
+          <div style={{ background: 'rgba(234,153,64,0.10)', border: '1px solid rgba(234,153,64,0.22)', borderRadius: 14, padding: '12px 16px', color: C.dark, fontSize: 14, marginBottom: 14 }}>
             {error}
           </div>
         )}
@@ -220,7 +338,7 @@ export function EmergencyCardForm({ initial, onSaved }: Props) {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          style={{ width: '100%', background: `linear-gradient(135deg, ${C.red} 0%, #8B0000 100%)`, color: 'white', border: 'none', borderRadius: 18, padding: '17px', fontSize: 17, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 8px 28px rgba(192,57,43,0.35)', opacity: saving ? 0.7 : 1 }}
+          style={{ width: '100%', background: `linear-gradient(135deg, ${C.accent} 0%, ${C.teal} 100%)`, color: 'white', border: 'none', borderRadius: 18, padding: '17px', fontSize: 17, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 8px 28px rgba(18,33,46,0.18)', opacity: saving ? 0.7 : 1 }}
         >
           {saving ? 'Guardando...' : 'Guardar Emergency Card'}
         </motion.button>

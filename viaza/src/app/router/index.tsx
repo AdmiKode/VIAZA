@@ -51,6 +51,8 @@ import { AddEventPage } from '../../modules/itinerary/pages/AddEventPage';
 import { PlacesPage } from '../../modules/places/pages/PlacesPage';
 import { AddPlacePage } from '../../modules/places/pages/AddPlacePage';
 import { ImportReservationPage } from '../../modules/import-reservation/pages/ImportReservationPage';
+import { RecommendationsPage } from '../../modules/recommendations/pages/RecommendationsPage';
+import { WalletPage } from '../../modules/wallet/pages/WalletPage';
 import { LandingPage } from '../../modules/landing/pages/LandingPage';
 import { PrivacyPage } from '../../modules/landing/pages/PrivacyPage';
 import { TermsPage } from '../../modules/landing/pages/TermsPage';
@@ -171,6 +173,8 @@ export function AppRouter() {
           <Route path="/itinerary/add-event" element={<AddEventPage />} />
           <Route path="/places" element={<PlacesPage />} />
           <Route path="/places/add" element={<AddPlacePage />} />
+          <Route path="/recommendations" element={<RecommendationsPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
           <Route path="/import-reservation" element={<ImportReservationPage />} />
 
           {/* ── Emergency Travel Card (privada, requiere auth) ───── */}

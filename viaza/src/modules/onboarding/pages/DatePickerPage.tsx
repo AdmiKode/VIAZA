@@ -43,7 +43,7 @@ export function DatePickerPage() {
       <div className="mb-8">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-accent-rgb)/0.12)] px-3 py-1">
           <span className="text-xs font-semibold text-[var(--viaza-accent)]">
-            {t('onboarding.step', { current: 2, total: 6 })}
+            {t('onboarding.step', { current: 3, total: 8 })}
           </span>
         </div>
         <h1 className="text-2xl font-semibold leading-tight text-[var(--viaza-primary)]">

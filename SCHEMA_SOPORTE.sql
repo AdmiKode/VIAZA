@@ -844,3 +844,461 @@ create index payments_user_status_idx
 --   aislar archivos por usuario.
 --
 -- ============================================================
+
+
+-- ============================================================
+-- VIAZA — MIGRACIÓN A V2 (2026-03-13)
+--
+-- Esta sección está pensada para pegarla/ejecutarla en un proyecto
+-- que YA tiene un schema parcial (como el que compartiste) y dejarlo
+-- alineado a:
+-- - Manifiesto Operativo V2 (Trip Object core + módulos por contexto)
+-- - App actual (Vite) que espera: traveler_profile, travel_style,
+--   destination_place_id, active_modules, weather_forecast_daily, etc.
+--
+-- Principios:
+-- - `user_id` siempre es `auth.user.id` (uuid).
+-- - Plan premium: 149 MXN / mes (no "pro" anual).
+-- - Nada de dependencias a `email` como userId.
+--
+-- Nota:
+-- - Este patch NO elimina tablas legacy (para no romper datos).
+-- - Sí migra enums/valores para que el cliente/Edge funcionen.
+-- ============================================================
+
+-- ─────────────────────────────────────────────────────────────
+-- 0) ENUMS V2 (agregar valores / crear tipos faltantes)
+-- ─────────────────────────────────────────────────────────────
+
+-- IMPORTANTE (Supabase SQL Editor):
+-- Postgres NO permite usar valores nuevos de un enum en la misma ejecución
+-- donde se agregaron. Por eso este bloque de "ALTER TYPE ... ADD VALUE"
+-- debe correrse SOLO (Run), y después correr el resto del patch en una
+-- segunda ejecución.
+
+-- subscription_plan: free + premium (dejar 'pro' si ya existe, pero migrar a 'premium')
+do $$
+begin
+  alter type subscription_plan add value if not exists 'premium';
+exception when duplicate_object then null;
+end $$;
+
+-- traveler_role: debe soportar 'kid' (la app no usa 'child')
+do $$
+begin
+  alter type traveler_role add value if not exists 'kid';
+exception when duplicate_object then null;
+end $$;
+
+-- luggage_size: la app usa 'extra_large' (dejar 'xl' si existe, pero migrar a 'extra_large')
+do $$
+begin
+  alter type luggage_size add value if not exists 'extra_large';
+exception when duplicate_object then null;
+end $$;
+
+-- ─────────────────────────────────────────────────────────────
+-- (DESPUÉS DE CORRER SOLO LO DE ARRIBA)
+-- Ejecuta desde "1) MIGRACIÓN DE DATOS" hacia abajo en otra corrida.
+-- ─────────────────────────────────────────────────────────────
+
+-- traveler_profile (perfil de viajero / presupuesto)
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'traveler_profile') then
+    create type traveler_profile as enum ('economic','balanced','comfort','premium');
+  end if;
+end $$;
+
+-- travel_style (modo de viaje / estilo equipaje)
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'travel_style') then
+    create type travel_style as enum ('backpack_light','standard','comfort');
+  end if;
+end $$;
+
+-- ─────────────────────────────────────────────────────────────
+-- 1) MIGRACIÓN DE DATOS (normalizar valores legacy)
+-- ─────────────────────────────────────────────────────────────
+
+-- planes: 'pro' -> 'premium'
+update public.profiles set plan = 'premium' where plan::text = 'pro';
+update public.payments set plan_purchased = 'premium' where plan_purchased::text = 'pro';
+
+-- travelers.role: 'child' -> 'kid'
+update public.travelers set role = 'kid' where role::text = 'child';
+
+-- luggage_size: 'xl' -> 'extra_large'
+update public.luggage_photos set luggage_size = 'extra_large' where luggage_size::text = 'xl';
+
+-- ─────────────────────────────────────────────────────────────
+-- 2) TRIPS — Trip Object V2 (columnas obligatorias)
+-- ─────────────────────────────────────────────────────────────
+
+alter table public.trips
+  add column if not exists destination_place_id text,
+  add column if not exists destination_country text,
+  add column if not exists destination_timezone text,
+  add column if not exists traveler_profile traveler_profile not null default 'balanced',
+  add column if not exists travel_style travel_style not null default 'standard',
+  add column if not exists luggage_strategy text,
+  add column if not exists active_modules text[] not null default '{}'::text[],
+  add column if not exists health_context jsonb,
+  add column if not exists emergency_context jsonb,
+  add column if not exists weather_forecast_daily jsonb,
+  add column if not exists recommendations_state jsonb,
+  add column if not exists translator_state jsonb,
+  add column if not exists wallet_state jsonb,
+  add column if not exists agenda_state jsonb,
+  add column if not exists itinerary_state jsonb;
+
+create index if not exists trips_location_idx on public.trips(lat, lon);
+
+-- ─────────────────────────────────────────────────────────────
+-- 3) PACKING_ITEMS — required flag (Packing V2)
+-- ─────────────────────────────────────────────────────────────
+
+alter table public.packing_items
+  add column if not exists required boolean not null default false;
+
+-- ─────────────────────────────────────────────────────────────
+-- 4) EMERGENCY_PROFILES — vincular al viaje + QR público (RPC)
+-- ─────────────────────────────────────────────────────────────
+
+alter table public.emergency_profiles
+  add column if not exists trip_id uuid;
+
+-- Alinear FK: user_id debe referenciar profiles(id)
+alter table public.emergency_profiles
+  drop constraint if exists emergency_profiles_user_id_fkey;
+
+alter table public.emergency_profiles
+  add constraint emergency_profiles_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
+alter table public.emergency_profiles
+  drop constraint if exists emergency_profiles_trip_id_fkey;
+
+alter table public.emergency_profiles
+  add constraint emergency_profiles_trip_id_fkey
+  foreign key (trip_id) references public.trips(id) on delete set null;
+
+create index if not exists emergency_profiles_user_id_idx on public.emergency_profiles(user_id);
+create index if not exists emergency_profiles_trip_id_idx on public.emergency_profiles(trip_id);
+create index if not exists emergency_profiles_public_token_idx on public.emergency_profiles(public_token);
+
+-- RPC pública para QR: devuelve SOLO campos consentidos y solo si QR está activo
+create or replace function public.get_emergency_public_view(token text)
+returns table (
+  full_name text,
+  photo_url text,
+  nationality text,
+  primary_language text,
+  secondary_language text,
+  blood_type text,
+  allergies text,
+  current_conditions text,
+  medications text,
+  medical_notes text,
+  insurance_provider text,
+  insurance_policy_number text,
+  emergency_contact_1_name text,
+  emergency_contact_1_relation text,
+  emergency_contact_1_phone text,
+  emergency_contact_2_name text,
+  emergency_contact_2_relation text,
+  emergency_contact_2_phone text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    ep.full_name,
+    ep.photo_url,
+    ep.nationality,
+    ep.primary_language,
+    ep.secondary_language,
+    case when ep.show_blood_type  then ep.blood_type           else null end as blood_type,
+    case when ep.show_allergies   then ep.allergies            else null end as allergies,
+    case when ep.show_conditions  then ep.current_conditions   else null end as current_conditions,
+    case when ep.show_medications then ep.medications          else null end as medications,
+    case when ep.show_notes       then ep.medical_notes        else null end as medical_notes,
+    case when ep.show_insurance   then ep.insurance_provider   else null end as insurance_provider,
+    case when ep.show_insurance   then ep.insurance_policy_number else null end as insurance_policy_number,
+    case when ep.show_contacts    then ep.emergency_contact_1_name else null end as emergency_contact_1_name,
+    case when ep.show_contacts    then ep.emergency_contact_1_relation else null end as emergency_contact_1_relation,
+    case when ep.show_contacts    then ep.emergency_contact_1_phone else null end as emergency_contact_1_phone,
+    case when ep.show_contacts    then ep.emergency_contact_2_name else null end as emergency_contact_2_name,
+    case when ep.show_contacts    then ep.emergency_contact_2_relation else null end as emergency_contact_2_relation,
+    case when ep.show_contacts    then ep.emergency_contact_2_phone else null end as emergency_contact_2_phone
+  from public.emergency_profiles ep
+  where
+    ep.public_token = token
+    and ep.qr_enabled = true
+    and ep.consent_public_display = true
+  limit 1;
+$$;
+
+revoke all on function public.get_emergency_public_view(text) from public;
+grant execute on function public.get_emergency_public_view(text) to anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────
+-- 5) PAYMENTS + SUSCRIPCIÓN — Premium 149 MXN/mes + gating
+-- ─────────────────────────────────────────────────────────────
+
+alter table public.payments
+  alter column currency set default 'MXN',
+  alter column plan_duration_days set default 30;
+
+-- Default plan: premium (si tu columna sigue usando 'pro', ya migramos arriba)
+alter table public.payments
+  alter column plan_purchased set default 'premium';
+
+create or replace function public.handle_payment_completed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Caso INSERT: Stripe puede insertar directamente "completed"
+  if (tg_op = 'INSERT') then
+    if new.status = 'completed' then
+      update public.profiles
+      set
+        plan = new.plan_purchased,
+        plan_expires_at = now() + (new.plan_duration_days || ' days')::interval,
+        updated_at = now()
+      where id = new.user_id;
+    end if;
+    return new;
+  end if;
+
+  -- Caso UPDATE: transición a completed
+  if new.status = 'completed' and old.status is distinct from 'completed' then
+    update public.profiles
+    set
+      plan = new.plan_purchased,
+      plan_expires_at = now() + (new.plan_duration_days || ' days')::interval,
+      updated_at = now()
+    where id = new.user_id;
+  end if;
+
+  -- Caso refund: volver a free
+  if new.status = 'refunded' and old.status = 'completed' then
+    update public.profiles
+    set
+      plan = 'free',
+      plan_expires_at = null,
+      updated_at = now()
+    where id = new.user_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_payment_status_change on public.payments;
+drop trigger if exists on_payment_insert on public.payments;
+
+create trigger on_payment_status_change
+  after update of status on public.payments
+  for each row execute procedure public.handle_payment_completed();
+
+create trigger on_payment_insert
+  after insert on public.payments
+  for each row execute procedure public.handle_payment_completed();
+
+-- Si ya existía una vista previa (ej. con columna `is_active_pro`),
+-- `create or replace view` NO puede renombrar columnas. Hay que dropearla primero.
+drop view if exists public.user_subscription;
+
+create view public.user_subscription as
+select
+  p.id                                          as user_id,
+  p.plan,
+  p.plan_expires_at,
+  case
+    when p.plan = 'free'                         then false
+    when p.plan_expires_at is null               then true
+    when p.plan_expires_at > now()               then true
+    else false
+  end                                            as is_active_premium,
+  case
+    when p.plan_expires_at is not null
+     and p.plan_expires_at > now()
+    then extract(day from (p.plan_expires_at - now()))::int
+    else null
+  end                                            as days_remaining
+from public.profiles p;
+
+-- ─────────────────────────────────────────────────────────────
+-- 6) TABLAS V2 FALTANTES (Agenda / Itinerary / Wallet / Places)
+-- ─────────────────────────────────────────────────────────────
+
+create table if not exists public.trip_places (
+  id                uuid        primary key default uuid_generate_v4(),
+  trip_id            uuid        not null references public.trips(id) on delete cascade,
+  user_id            uuid        not null references public.profiles(id) on delete cascade,
+  name               text        not null,
+  address            text,
+  lat                double precision not null,
+  lon                double precision not null,
+  category           text        not null default 'other',
+  status             text        not null default 'want_to_go',
+  google_place_id    text,
+  photo_url          text,
+  assigned_day_index int,
+  notes              text,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+
+create index if not exists trip_places_trip_id_idx on public.trip_places(trip_id);
+create index if not exists trip_places_status_idx on public.trip_places(status);
+create index if not exists trip_places_google_place_id_idx on public.trip_places(google_place_id);
+
+do $$
+begin
+  execute 'create trigger trip_places_updated_at before update on public.trip_places for each row execute procedure public.set_updated_at()';
+exception when duplicate_object then null;
+end $$;
+
+alter table public.trip_places enable row level security;
+do $$ begin execute 'create policy "trip_places: usuario ve los suyos" on public.trip_places for select using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "trip_places: usuario crea lugares" on public.trip_places for insert with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "trip_places: usuario actualiza lugares" on public.trip_places for update using (auth.uid() = user_id) with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "trip_places: usuario elimina lugares" on public.trip_places for delete using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+
+create table if not exists public.itinerary_events (
+  id                uuid        primary key default uuid_generate_v4(),
+  trip_id            uuid        not null references public.trips(id) on delete cascade,
+  user_id            uuid        not null references public.profiles(id) on delete cascade,
+  day_index          int         not null default 0,
+  sort_order         int         not null default 0,
+  type               text        not null default 'activity',
+  title              text        not null,
+  description        text,
+  start_time         text,
+  end_time           text,
+  place_id           uuid        references public.trip_places(id) on delete set null,
+  confirmation_code  text,
+  source             text        not null default 'manual',
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+
+create index if not exists itinerary_events_trip_id_idx on public.itinerary_events(trip_id);
+create index if not exists itinerary_events_day_idx on public.itinerary_events(trip_id, day_index);
+
+do $$
+begin
+  execute 'create trigger itinerary_events_updated_at before update on public.itinerary_events for each row execute procedure public.set_updated_at()';
+exception when duplicate_object then null;
+end $$;
+
+alter table public.itinerary_events enable row level security;
+do $$ begin execute 'create policy "itinerary_events: usuario ve los suyos" on public.itinerary_events for select using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "itinerary_events: usuario crea eventos" on public.itinerary_events for insert with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "itinerary_events: usuario actualiza eventos" on public.itinerary_events for update using (auth.uid() = user_id) with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "itinerary_events: usuario elimina eventos" on public.itinerary_events for delete using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+
+create table if not exists public.agenda_items (
+  id               uuid        primary key default uuid_generate_v4(),
+  trip_id           uuid        not null references public.trips(id) on delete cascade,
+  user_id           uuid        not null references public.profiles(id) on delete cascade,
+  title             text        not null,
+  category          text        not null default 'custom',
+  date              date        not null,
+  time              text        not null default '09:00',
+  recurrence        text        not null default 'none',
+  notes             text,
+  notification_id   int,
+  completed         boolean     not null default false,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index if not exists agenda_items_trip_id_idx on public.agenda_items(trip_id);
+create index if not exists agenda_items_date_idx on public.agenda_items(trip_id, date);
+
+do $$
+begin
+  execute 'create trigger agenda_items_updated_at before update on public.agenda_items for each row execute procedure public.set_updated_at()';
+exception when duplicate_object then null;
+end $$;
+
+alter table public.agenda_items enable row level security;
+do $$ begin execute 'create policy "agenda_items: usuario ve los suyos" on public.agenda_items for select using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "agenda_items: usuario crea items" on public.agenda_items for insert with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "agenda_items: usuario actualiza items" on public.agenda_items for update using (auth.uid() = user_id) with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "agenda_items: usuario elimina items" on public.agenda_items for delete using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+
+create table if not exists public.wallet_docs (
+  id               uuid        primary key default uuid_generate_v4(),
+  trip_id           uuid        not null references public.trips(id) on delete cascade,
+  user_id           uuid        not null references public.profiles(id) on delete cascade,
+  doc_type          text        not null default 'document',
+  file_name         text,
+  mime_type         text,
+  storage_path      text        not null,
+  public_url        text,
+  parsed_data       jsonb,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index if not exists wallet_docs_trip_id_idx on public.wallet_docs(trip_id);
+
+do $$
+begin
+  execute 'create trigger wallet_docs_updated_at before update on public.wallet_docs for each row execute procedure public.set_updated_at()';
+exception when duplicate_object then null;
+end $$;
+
+alter table public.wallet_docs enable row level security;
+do $$ begin execute 'create policy "wallet_docs: usuario ve los suyos" on public.wallet_docs for select using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "wallet_docs: usuario crea docs" on public.wallet_docs for insert with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "wallet_docs: usuario actualiza docs" on public.wallet_docs for update using (auth.uid() = user_id) with check (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+do $$ begin execute 'create policy "wallet_docs: usuario elimina docs" on public.wallet_docs for delete using (auth.uid() = user_id)'; exception when duplicate_object then null; end $$;
+
+-- ─────────────────────────────────────────────────────────────
+-- 7) STORAGE BUCKETS V2 (si no existen)
+-- ─────────────────────────────────────────────────────────────
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'evidence',
+  'evidence',
+  false,
+  5242880,
+  array['image/jpeg','image/png','image/webp','image/heic']
+) on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'luggage',
+  'luggage',
+  false,
+  10485760,
+  array['image/jpeg','image/png','image/webp','image/heic']
+) on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'wallet_docs',
+  'wallet_docs',
+  false,
+  15728640,
+  array['application/pdf','image/jpeg','image/png','image/webp','image/heic']
+) on conflict (id) do nothing;
+
+-- ─────────────────────────────────────────────────────────────
+-- 8) LIMPIEZA (opcional, pero alineado al manifiesto visual)
+-- ─────────────────────────────────────────────────────────────
+
+-- La app NO debe usar emojis. Si tu tabla `travelers` tiene `avatar_emoji`,
+-- lo recomendable es eliminarla para evitar reintroducirlo.
+alter table public.travelers drop column if exists avatar_emoji;

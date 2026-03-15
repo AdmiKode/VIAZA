@@ -126,7 +126,7 @@ export function SmartTripDetectionPage() {
 
   const weatherType = draft.weatherForecast?.weatherType ?? (draft.inferredClimate === 'cold' ? 'cold' : draft.inferredClimate === 'rainy' ? 'rainy' : 'mild');
   const weatherLabel = draft.weatherForecast
-    ? `${draft.weatherForecast.avgTemp}°C · ${currentDesc ?? draft.weatherForecast.description}${draft.weatherForecast.rainProbability > 30 ? ` · ${draft.weatherForecast.rainProbability}% lluvia` : ''}`
+    ? `${draft.weatherForecast.avgTemp}°C · ${currentDesc ?? draft.weatherForecast.description}${draft.weatherForecast.rainProbability > 30 ? ` · ${t('weather.forecast.rain', { pct: draft.weatherForecast.rainProbability })}` : ''}`
     : t(`climate.${draft.inferredClimate ?? 'mild'}`);
 
   const items: DetectionItem[] = [
@@ -175,6 +175,11 @@ export function SmartTripDetectionPage() {
     >
       {/* Header */}
       <div className="mb-8">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-accent-rgb)/0.12)] px-3 py-1">
+          <span className="text-xs font-semibold text-[var(--viaza-accent)]">
+            {t('onboarding.step', { current: 5, total: 8 })}
+          </span>
+        </div>
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--viaza-secondary-rgb)/0.12)] px-3 py-1">
           <motion.span
             animate={{ opacity: [1, 0.4, 1] }}
@@ -285,14 +290,14 @@ export function SmartTripDetectionPage() {
           >
             <button
               type="button"
-              onClick={() => navigate('/onboarding/dates')}
+              onClick={() => navigate('/onboarding/transport')}
               className="flex-1 rounded-2xl border border-[rgb(var(--viaza-primary-rgb)/0.12)] py-4 text-base font-semibold text-[var(--viaza-primary)] transition-all active:scale-[0.98]"
             >
               {t('common.back')}
             </button>
             <button
               type="button"
-              onClick={() => navigate('/onboarding/travel-type')}
+              onClick={() => navigate('/onboarding/travelers')}
               className="flex-1 rounded-2xl bg-[var(--viaza-primary)] py-4 text-base font-semibold text-[var(--viaza-background)] shadow-[var(--shadow-2)] transition-all active:scale-[0.98]"
             >
               {t('smart.looksGood')}

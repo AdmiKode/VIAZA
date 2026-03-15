@@ -1,3 +1,5 @@
+import { supabase } from '../../../services/supabaseClient';
+
 export type CurrencyCode =
   | 'USD' | 'EUR' | 'MXN' | 'JPY' | 'CAD' | 'GBP'
   | 'COP' | 'BRL' | 'ARS' | 'THB' | 'IDR' | 'INR'
@@ -35,22 +37,10 @@ export async function fetchRates(): Promise<Record<CurrencyCode, number>> {
   const now = Date.now();
   if (_cachedRates && now - _cacheTime < CACHE_TTL_MS) return _cachedRates;
 
-  const key = import.meta.env.VITE_EXCHANGE_RATE_KEY as string | undefined;
-
-  if (!key) {
-    console.warn('[currencyService] No VITE_EXCHANGE_RATE_KEY — usando tasas fallback');
-    return FALLBACK_RATES;
-  }
-
   try {
-    const url = `https://v6.exchangerate-api.com/v6/${key}/latest/USD`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`ExchangeRate API ${res.status}`);
-    const data = await res.json();
-
-    if (data.result !== 'success') throw new Error(data['error-type'] ?? 'unknown');
-
-    const raw: Record<string, number> = data.conversion_rates;
+    const { data, error } = await supabase.functions.invoke('exchange-rates', { body: { base: 'USD' } });
+    if (error) throw error;
+    const raw: Record<string, number> = (data as { conversion_rates?: Record<string, number> } | null)?.conversion_rates ?? {};
     const rates = {} as Record<CurrencyCode, number>;
 
     // Convierte a ratios relativos al USD (1 USD = X unidades → ratio = 1/X)
@@ -84,4 +74,3 @@ export function convertAmount(params: {
   const usd = amount * fromToUsd;
   return usd / toToUsd;
 }
-

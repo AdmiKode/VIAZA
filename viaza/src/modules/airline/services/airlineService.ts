@@ -1,11 +1,14 @@
 /**
  * airlineService.ts
  * Consulta AviationStack API para obtener info de vuelo en tiempo real.
- * Si VITE_AVIATIONSTACK_KEY está vacía, devuelve null y el UI usa datos
- * ingresados manualmente por el usuario en el onboarding.
+ * Seguridad:
+ * - No se consume Aviationstack desde frontend (cero API keys en cliente).
+ * - El frontend llama a una Supabase Edge Function (`flight-info`).
  *
- * Docs: https://aviationstack.com/documentation
+ * Nota: el backend debe tener `AVIATIONSTACK_API_KEY` configurada.
  */
+
+import { supabase } from '../../../services/supabaseClient';
 
 export interface FlightInfo {
   flightNumber: string;
@@ -43,13 +46,6 @@ const CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutos
 export async function fetchFlightInfo(
   flightNumber: string
 ): Promise<FlightInfo | null> {
-  const key = import.meta.env.VITE_AVIATIONSTACK_KEY as string | undefined;
-
-  if (!key) {
-    console.info('[airlineService] VITE_AVIATIONSTACK_KEY no configurada — modo manual');
-    return null;
-  }
-
   const cacheKey = flightNumber.toUpperCase();
   const cached = _cache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
@@ -57,43 +53,13 @@ export async function fetchFlightInfo(
   }
 
   try {
-    const url = `https://api.aviationstack.com/v1/flights?access_key=${key}&flight_iata=${encodeURIComponent(cacheKey)}&limit=1`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`AviationStack ${res.status}`);
-    const json = await res.json();
+    const { data, error } = await supabase.functions.invoke('flight-info', {
+      body: { flightNumber: cacheKey },
+    });
+    if (error) throw error;
 
-    if (json.error) {
-      console.warn('[airlineService] API error:', json.error.message);
-      return null;
-    }
-
-    const raw = json.data?.[0];
-    if (!raw) return null;
-
-    const info: FlightInfo = {
-      flightNumber: raw.flight?.iata ?? flightNumber,
-      airline: raw.airline?.name ?? '',
-      status: normalizeStatus(raw.flight_status),
-      departure: {
-        airport: raw.departure?.airport ?? '',
-        iata: raw.departure?.iata ?? '',
-        terminal: raw.departure?.terminal ?? undefined,
-        gate: raw.departure?.gate ?? undefined,
-        scheduledLocal: raw.departure?.scheduled ?? '',
-        estimatedLocal: raw.departure?.estimated ?? undefined,
-        delayMinutes: raw.departure?.delay ?? undefined,
-      },
-      arrival: {
-        airport: raw.arrival?.airport ?? '',
-        iata: raw.arrival?.iata ?? '',
-        terminal: raw.arrival?.terminal ?? undefined,
-        gate: raw.arrival?.gate ?? undefined,
-        scheduledLocal: raw.arrival?.scheduled ?? '',
-        estimatedLocal: raw.arrival?.estimated ?? undefined,
-        delayMinutes: raw.arrival?.delay ?? undefined,
-      },
-      aircraft: raw.aircraft?.registration ?? undefined,
-    };
+    const info = (data as { result?: FlightInfo | null } | null)?.result ?? null;
+    if (!info) return null;
 
     _cache.set(cacheKey, { data: info, fetchedAt: Date.now() });
     return info;
@@ -117,12 +83,12 @@ function normalizeStatus(raw: string): FlightInfo['status'] {
 /** Badge de color por status para UI */
 export function flightStatusColor(status: FlightInfo['status']): string {
   switch (status) {
-    case 'scheduled': return '#307082';
-    case 'active':    return '#6CA3A2';
-    case 'landed':    return '#12212E';
-    case 'cancelled': return '#C0392B';
-    case 'diverted':  return '#EA9940';
-    default:          return '#999';
+    case 'scheduled': return 'var(--viaza-secondary)';
+    case 'active':    return 'var(--viaza-soft)';
+    case 'landed':    return 'var(--viaza-primary)';
+    case 'cancelled': return 'var(--viaza-accent)';
+    case 'diverted':  return 'var(--viaza-accent)';
+    default:          return 'rgb(var(--viaza-primary-rgb)/0.45)';
   }
 }
 

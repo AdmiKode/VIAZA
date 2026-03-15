@@ -82,35 +82,9 @@ export async function regenerateEmergencyToken(): Promise<string> {
 // ─── Vista pública (sin autenticación) ──────────────────────────────────────
 
 export async function getEmergencyPublicView(publicToken: string): Promise<EmergencyPublicView | null> {
-  const { data, error } = await supabase
-    .from('emergency_profiles')
-    .select('*')
-    .eq('public_token', publicToken)
-    .eq('qr_enabled', true)
-    .eq('consent_public_display', true)
-    .maybeSingle();
-
+  const { data, error } = await supabase.rpc('get_emergency_public_view', { token: publicToken });
   if (error || !data) return null;
-
-  // Solo devolver los campos que el usuario autorizó
-  return {
-    full_name: data.full_name,
-    photo_url: data.photo_url,
-    nationality: data.nationality,
-    primary_language: data.primary_language,
-    secondary_language: data.secondary_language,
-    blood_type:             data.show_blood_type  ? data.blood_type             : null,
-    allergies:              data.show_allergies   ? data.allergies              : null,
-    current_conditions:     data.show_conditions  ? data.current_conditions     : null,
-    medications:            data.show_medications ? data.medications            : null,
-    medical_notes:          data.show_notes       ? data.medical_notes          : null,
-    insurance_provider:     data.show_insurance   ? data.insurance_provider     : null,
-    insurance_policy_number:data.show_insurance   ? data.insurance_policy_number: null,
-    emergency_contact_1_name:     data.show_contacts ? data.emergency_contact_1_name     : null,
-    emergency_contact_1_relation: data.show_contacts ? data.emergency_contact_1_relation : null,
-    emergency_contact_1_phone:    data.show_contacts ? data.emergency_contact_1_phone    : null,
-    emergency_contact_2_name:     data.show_contacts ? data.emergency_contact_2_name     : null,
-    emergency_contact_2_relation: data.show_contacts ? data.emergency_contact_2_relation : null,
-    emergency_contact_2_phone:    data.show_contacts ? data.emergency_contact_2_phone    : null,
-  };
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return row as EmergencyPublicView;
 }

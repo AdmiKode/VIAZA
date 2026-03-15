@@ -10,10 +10,14 @@ import type { PackingItem } from '../types/packing';
 export async function savePackingItems(items: PackingItem[]): Promise<void> {
   if (items.length === 0) return;
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
   const rows = items.map((item) => ({
     id: item.id,
     trip_id: item.tripId,
     traveler_id: item.travelerId ?? null,
+    user_id: user.id,
     category: item.category,
     label: item.label,
     label_key: item.labelKey ?? null,

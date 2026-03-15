@@ -1,16 +1,26 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Trip, TravelType, ClimateType, TravelerGroup, LaundryMode, PackingStyle, WeatherForecast, TransportType } from '../../types/trip';
+import type { Trip, TravelType, ClimateType, TravelerGroup, TravelerProfile, TravelStyle, LaundryMode, PackingStyle, WeatherForecast, TransportType } from '../../types/trip';
 import type { PackingItem } from '../../types/packing';
 import type { Traveler, PackingEvidence, LuggagePhoto } from '../../types/traveler';
 import type { AgendaItem } from '../../types/agenda';
 import type { ItineraryEvent, SavedPlace } from '../../types/itinerary';
+import type { WalletDoc } from '../../types/wallet';
 import { generatePackingItemsForTrip } from '../../modules/packing/utils/packingGenerator';
 import { weatherTypeToClimate } from '../../engines/weatherEngine';
+import { computeActiveModules } from '../../engines/activeModulesEngine';
 import { signOut } from '../../services/authService';
 import type { AuthUser } from '../../services/authService';
-import { saveTrip } from '../../services/tripsService';
-import { savePackingItems, togglePackingItemRemote } from '../../services/packingService';
+import { fetchTrips, saveTrip, updateTripRemote } from '../../services/tripsService';
+import { fetchPackingItems, savePackingItems, togglePackingItemRemote } from '../../services/packingService';
+import { deleteTravelerRemote, fetchTravelers, saveTravelers, upsertTraveler } from '../../services/travelersService';
+import { upsertAgendaItem, deleteAgendaItemRemote } from '../../services/agendaService';
+import { upsertItineraryEvent, deleteItineraryEventRemote } from '../../services/itineraryService';
+import { upsertTripPlace, deleteTripPlaceRemote } from '../../services/tripPlacesService';
+import { fetchAgendaItems } from '../../services/agendaService';
+import { fetchItineraryEvents } from '../../services/itineraryService';
+import { fetchTripPlaces } from '../../services/tripPlacesService';
+import { fetchWalletDocs, upsertWalletDoc, deleteWalletDocRemote } from '../../services/walletDocsService';
 
 type OnboardingDraft = {
   destination: string;
@@ -19,6 +29,9 @@ type OnboardingDraft = {
   durationDays: number;
   lat: number;
   lon: number;
+  destinationPlaceId: string;
+  destinationTimezone: string;
+  destinationCountry: string;
   inferredClimate: ClimateType | null;
   inferredCurrency: string;
   inferredLanguage: string;
@@ -26,6 +39,9 @@ type OnboardingDraft = {
   weatherForecast: WeatherForecast | null;
   travelType: TravelType | null;
   travelerGroup: TravelerGroup | null;
+  travelerProfile: TravelerProfile;
+  travelStyle: TravelStyle;
+  luggageStrategy: string;
   activities: string[];
   laundryMode: LaundryMode;
   packingStyle: PackingStyle;
@@ -65,7 +81,9 @@ type AppState = {
   itineraryEvents: ItineraryEvent[];
   /** Lugares guardados por trip */
   savedPlaces: SavedPlace[];
-  user: { name: string; email: string } | null;
+  /** Documentos del Travel Wallet */
+  walletDocs: WalletDoc[];
+  user: { id: string; name: string; email: string } | null;
   isAuthenticated: boolean;
   isPremium: boolean;
   onboardingCompleted: boolean;
@@ -75,10 +93,11 @@ type AppState = {
   /** Usado por LoginPage y RegisterPage después de autenticar con Supabase */
   setSupabaseUser: (user: AuthUser) => void;
   setIsPremium: (value: boolean) => void;
+  hydrateFromSupabase: () => Promise<void>;
   logout: () => Promise<void>;
   setOnboardingDraft: (patch: Partial<OnboardingDraft>) => void;
   resetOnboardingDraft: () => void;
-  createTripFromDraft: () => string;
+  createTripFromDraft: (override?: { destination?: string }) => string;
   setCurrentTrip: (tripId: string | null) => void;
   updateTripStatus: (tripId: string, status: Trip['tripStatus']) => void;
   updateTrip: (tripId: string, patch: Partial<Omit<Trip, 'id' | 'createdAt'>>) => void;
@@ -118,6 +137,11 @@ type AppState = {
   addSavedPlace: (place: Omit<SavedPlace, 'id' | 'createdAt'>) => string;
   updateSavedPlace: (id: string, patch: Partial<Omit<SavedPlace, 'id' | 'createdAt'>>) => void;
   deleteSavedPlace: (id: string) => void;
+
+  /** Travel Wallet */
+  addWalletDoc: (doc: WalletDoc) => void;
+  updateWalletDoc: (id: string, patch: Partial<Omit<WalletDoc, 'id'>>) => void;
+  deleteWalletDoc: (id: string) => void;
 };
 
 const emptyDraft: OnboardingDraft = {
@@ -127,13 +151,19 @@ const emptyDraft: OnboardingDraft = {
   durationDays: 7,
   lat: 0,
   lon: 0,
+  destinationPlaceId: '',
+  destinationTimezone: '',
+  destinationCountry: '',
   inferredClimate: null,
-  inferredCurrency: 'USD',
-  inferredLanguage: 'en',
-  inferredCountryCode: 'US',
+  inferredCurrency: '',
+  inferredLanguage: '',
+  inferredCountryCode: '',
   weatherForecast: null,
   travelType: null,
   travelerGroup: null,
+  travelerProfile: 'balanced',
+  travelStyle: 'standard',
+  luggageStrategy: 'individual',
   activities: [],
   laundryMode: 'none',
   packingStyle: 'normal',
@@ -163,7 +193,7 @@ function uid() {
   return crypto.randomUUID();
 }
 
-function inferDestinationMeta(destination: string): {
+export function inferDestinationMeta(destination: string): {
   countryCode: string;
   currencyCode: string;
   languageCode: string;
@@ -260,6 +290,7 @@ export const useAppStore = create<AppState>()(
       agendaItems: [],
       itineraryEvents: [],
       savedPlaces: [],
+      walletDocs: [],
       user: null,
       isAuthenticated: false,
       isPremium: false,
@@ -270,11 +301,57 @@ export const useAppStore = create<AppState>()(
 
       setSupabaseUser: (authUser: AuthUser) =>
         set({
-          user: { name: authUser.name, email: authUser.email },
+          user: { id: authUser.id, name: authUser.name, email: authUser.email },
           isAuthenticated: true,
         }),
 
-      setIsPremium: (value: boolean) => set({ isPremium: value }),
+      setIsPremium: (value: boolean) =>
+        set((state) => ({
+          isPremium: value,
+          trips: state.trips.map((trip) => ({
+            ...trip,
+            activeModules: computeActiveModules({ trip, isPremium: value }),
+          })),
+        })),
+
+      hydrateFromSupabase: async () => {
+        const userId = get().user?.id;
+        if (!userId) return;
+
+        const remoteTripsRaw = await fetchTrips(userId);
+        const remoteTrips = remoteTripsRaw.map((trip) => {
+          if (trip.activeModules && trip.activeModules.length > 0) return trip;
+          return { ...trip, activeModules: computeActiveModules({ trip, isPremium: get().isPremium }) };
+        });
+        if (remoteTrips.length === 0) return;
+
+        const existingCurrent = get().currentTripId;
+        const currentTripId =
+          existingCurrent && remoteTrips.some((t) => t.id === existingCurrent)
+            ? existingCurrent
+            : remoteTrips[0].id;
+
+        const [remotePacking, remoteTravelers, remoteAgenda, remoteItinerary, remotePlaces, remoteWalletDocs] = await Promise.all([
+          fetchPackingItems(currentTripId),
+          fetchTravelers(currentTripId),
+          fetchAgendaItems(currentTripId),
+          fetchItineraryEvents(currentTripId),
+          fetchTripPlaces(currentTripId),
+          fetchWalletDocs(currentTripId),
+        ]);
+
+        set({
+          trips: remoteTrips,
+          currentTripId,
+          onboardingCompleted: true,
+          packingItems: remotePacking,
+          travelers: remoteTravelers,
+          agendaItems: remoteAgenda,
+          itineraryEvents: remoteItinerary,
+          savedPlaces: remotePlaces,
+          walletDocs: remoteWalletDocs,
+        });
+      },
 
       logout: async () => {
         try { await signOut(); } catch { /* ignora errores de red */ }
@@ -294,10 +371,10 @@ export const useAppStore = create<AppState>()(
 
       resetOnboardingDraft: () => set({ onboardingDraft: emptyDraft }),
 
-      createTripFromDraft: () => {
-        const draft = get().onboardingDraft;
-        const destination = draft.destination.trim();
-        if (!draft.travelType || !draft.travelerGroup || !destination) {
+      createTripFromDraft: (override) => {
+        const draft = { ...get().onboardingDraft, ...(override ?? {}) };
+        const destination = (override?.destination ?? draft.destination).trim();
+        if (!draft.travelType || !draft.travelerGroup || !draft.transportType || !destination) {
           throw new Error('Onboarding draft incomplete');
         }
 
@@ -306,14 +383,22 @@ export const useAppStore = create<AppState>()(
           ? weatherTypeToClimate(draft.weatherForecast.weatherType)
           : draft.inferredClimate ?? meta.climate;
 
-        const packingStyle = draft.travelLight ? 'light' : draft.packingStyle;
+        const packingStyle =
+          draft.travelStyle === 'backpack_light'
+            ? 'light'
+            : draft.travelStyle === 'comfort'
+              ? 'heavy'
+              : (draft.travelLight ? 'light' : draft.packingStyle);
         const tripId = uid();
 
         const trip: Trip = {
           id: tripId,
           title: destination,
           destination,
+          destinationPlaceId: draft.destinationPlaceId || undefined,
+          destinationCountry: draft.destinationCountry || undefined,
           countryCode: draft.inferredCountryCode || meta.countryCode,
+          destinationTimezone: draft.destinationTimezone || undefined,
           lat: draft.lat || undefined,
           lon: draft.lon || undefined,
           startDate: draft.startDate || undefined,
@@ -322,6 +407,10 @@ export const useAppStore = create<AppState>()(
           travelType: draft.travelType,
           climate,
           travelerGroup: draft.travelerGroup,
+          travelerProfile: draft.travelerProfile,
+          travelStyle: draft.travelStyle,
+          luggageStrategy: draft.luggageStrategy,
+          activeModules: [],
           activities: draft.activities,
           laundryMode: draft.laundryMode,
           packingStyle,
@@ -329,7 +418,7 @@ export const useAppStore = create<AppState>()(
           tripStatus: 'planning',
           currencyCode: draft.inferredCurrency || meta.currencyCode,
           languageCode: draft.inferredLanguage || meta.languageCode,
-          transportType: draft.transportType ?? undefined,
+          transportType: draft.transportType,
           originCity: draft.originCity || undefined,
           originLat: draft.originLat || undefined,
           originLon: draft.originLon || undefined,
@@ -341,9 +430,13 @@ export const useAppStore = create<AppState>()(
           cruisePort: draft.cruisePort || undefined,
           numberOfAdults: draft.numberOfAdults ?? 1,
           numberOfKids: draft.numberOfKids ?? 0,
+          numberOfBabies: draft.numberOfBabies ?? 0,
           createdAt: nowIso(),
           updatedAt: nowIso()
         };
+
+        // Recalcular módulos ya con el Trip completo
+        trip.activeModules = computeActiveModules({ trip, isPremium: get().isPremium });
 
         // Generar integrantes automáticamente desde el draft
         const newTravelers: Traveler[] = [];
@@ -389,28 +482,53 @@ export const useAppStore = create<AppState>()(
         }));
 
         // Sincronizar en background con Supabase
-        const userId = get().user?.email; // usamos email como ID local hasta conectar UUID de Supabase
+        const userId = get().user?.id;
         const packingGenerated = generatePackingItemsForTrip(trip);
         if (userId) {
           void saveTrip(trip, userId);
           void savePackingItems(packingGenerated);
+          void saveTravelers(newTravelers);
         }
 
         return tripId;
       },
 
-       setCurrentTrip: (tripId) => set({ currentTripId: tripId }),
+       setCurrentTrip: (tripId) => {
+        set({ currentTripId: tripId });
+        if (!tripId) return;
+        void Promise.all([
+          fetchPackingItems(tripId),
+          fetchTravelers(tripId),
+          fetchAgendaItems(tripId),
+          fetchItineraryEvents(tripId),
+          fetchTripPlaces(tripId),
+          fetchWalletDocs(tripId),
+        ]).then(([remotePacking, remoteTravelers, remoteAgenda, remoteItinerary, remotePlaces, remoteWalletDocs]) => {
+          set({
+            packingItems: remotePacking,
+            travelers: remoteTravelers,
+            agendaItems: remoteAgenda,
+            itineraryEvents: remoteItinerary,
+            savedPlaces: remotePlaces,
+            walletDocs: remoteWalletDocs,
+          });
+        }).catch(() => { /* silencioso */ });
+      },
       updateTrip: (tripId, patch) =>
         set((state) => ({
-          trips: state.trips.map((t) =>
-            t.id === tripId ? { ...t, ...patch, updatedAt: nowIso() } : t
-          )
+          trips: state.trips.map((t) => {
+            if (t.id !== tripId) return t;
+            void updateTripRemote(tripId, patch);
+            return { ...t, ...patch, updatedAt: nowIso() };
+          })
         })),
       updateTripStatus: (tripId, status) =>
         set((state) => ({
-          trips: state.trips.map((t) =>
-            t.id === tripId ? { ...t, tripStatus: status, updatedAt: nowIso() } : t
-          )
+          trips: state.trips.map((t) => {
+            if (t.id !== tripId) return t;
+            void updateTripRemote(tripId, { tripStatus: status });
+            return { ...t, tripStatus: status, updatedAt: nowIso() };
+          })
         })),
 
       togglePackingItem: (itemId) => {
@@ -454,20 +572,25 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           travelers: [...state.travelers, { ...traveler, id }]
         }));
+        void upsertTraveler({ ...traveler, id });
         return id;
       },
 
       updateTraveler: (id, patch) =>
         set((state) => ({
-          travelers: state.travelers.map((t) =>
-            t.id === id ? { ...t, ...patch } : t
-          )
+          travelers: state.travelers.map((t) => {
+            if (t.id !== id) return t;
+            const updated = { ...t, ...patch };
+            void upsertTraveler(updated);
+            return updated;
+          })
         })),
 
       removeTraveler: (id) =>
-        set((state) => ({
-          travelers: state.travelers.filter((t) => t.id !== id)
-        })),
+        set((state) => {
+          void deleteTravelerRemote(id);
+          return { travelers: state.travelers.filter((t) => t.id !== id) };
+        }),
 
       initTravelersFromTrip: (tripId) => {
         const trip = get().trips.find((t) => t.id === tripId);
@@ -501,6 +624,8 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           travelers: [...state.travelers, ...newTravelers]
         }));
+
+        void saveTravelers(newTravelers);
       },
 
       // ── Fotos de evidencia ───────────────────────────────────────────
@@ -548,27 +673,31 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           agendaItems: [...state.agendaItems, { ...item, id, createdAt: nowIso() }]
         }));
+        void upsertAgendaItem({ ...item, id, createdAt: nowIso() });
         return id;
       },
 
       updateAgendaItem: (id, patch) =>
-        set((state) => ({
-          agendaItems: state.agendaItems.map((a) =>
-            a.id === id ? { ...a, ...patch } : a
-          )
-        })),
+        set((state) => {
+          const updated = state.agendaItems.map((a) => (a.id === id ? { ...a, ...patch } : a));
+          const item = updated.find((a) => a.id === id);
+          if (item) void upsertAgendaItem(item);
+          return { agendaItems: updated };
+        }),
 
       deleteAgendaItem: (id) =>
-        set((state) => ({
-          agendaItems: state.agendaItems.filter((a) => a.id !== id)
-        })),
+        set((state) => {
+          void deleteAgendaItemRemote(id);
+          return { agendaItems: state.agendaItems.filter((a) => a.id !== id) };
+        }),
 
       toggleAgendaItem: (id) =>
-        set((state) => ({
-          agendaItems: state.agendaItems.map((a) =>
-            a.id === id ? { ...a, completed: !a.completed } : a
-          )
-        })),
+        set((state) => {
+          const updated = state.agendaItems.map((a) => (a.id === id ? { ...a, completed: !a.completed } : a));
+          const item = updated.find((a) => a.id === id);
+          if (item) void upsertAgendaItem(item);
+          return { agendaItems: updated };
+        }),
 
       // ── Itinerario ───────────────────────────────────────────────────
       addItineraryEvent: (event) => {
@@ -576,29 +705,36 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           itineraryEvents: [...state.itineraryEvents, { ...event, id, createdAt: nowIso() }]
         }));
+        void upsertItineraryEvent({ ...event, id, createdAt: nowIso() });
         return id;
       },
 
       updateItineraryEvent: (id, patch) =>
-        set((state) => ({
-          itineraryEvents: state.itineraryEvents.map((e) =>
-            e.id === id ? { ...e, ...patch } : e
-          )
-        })),
+        set((state) => {
+          const updated = state.itineraryEvents.map((e) => (e.id === id ? { ...e, ...patch } : e));
+          const ev = updated.find((e) => e.id === id);
+          if (ev) void upsertItineraryEvent(ev);
+          return { itineraryEvents: updated };
+        }),
 
       deleteItineraryEvent: (id) =>
-        set((state) => ({
-          itineraryEvents: state.itineraryEvents.filter((e) => e.id !== id)
-        })),
+        set((state) => {
+          void deleteItineraryEventRemote(id);
+          return { itineraryEvents: state.itineraryEvents.filter((e) => e.id !== id) };
+        }),
 
       reorderItineraryEvents: (tripId, dayIndex, orderedIds) =>
-        set((state) => ({
-          itineraryEvents: state.itineraryEvents.map((e) => {
+        set((state) => {
+          const updated = state.itineraryEvents.map((e) => {
             if (e.tripId !== tripId || e.dayIndex !== dayIndex) return e;
             const newOrder = orderedIds.indexOf(e.id);
             return newOrder === -1 ? e : { ...e, order: newOrder };
-          })
-        })),
+          });
+          for (const ev of updated) {
+            if (ev.tripId === tripId && ev.dayIndex === dayIndex) void upsertItineraryEvent(ev);
+          }
+          return { itineraryEvents: updated };
+        }),
 
       // ── Lugares guardados ────────────────────────────────────────────
       addSavedPlace: (place) => {
@@ -606,23 +742,69 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           savedPlaces: [...state.savedPlaces, { ...place, id, createdAt: nowIso() }]
         }));
+        void upsertTripPlace({ ...place, id, createdAt: nowIso() });
         return id;
       },
 
       updateSavedPlace: (id, patch) =>
-        set((state) => ({
-          savedPlaces: state.savedPlaces.map((p) =>
-            p.id === id ? { ...p, ...patch } : p
-          )
-        })),
+        set((state) => {
+          const updated = state.savedPlaces.map((p) => (p.id === id ? { ...p, ...patch } : p));
+          const pl = updated.find((p) => p.id === id);
+          if (pl) void upsertTripPlace(pl);
+          return { savedPlaces: updated };
+        }),
 
       deleteSavedPlace: (id) =>
-        set((state) => ({
-          savedPlaces: state.savedPlaces.filter((p) => p.id !== id)
-        })),
+        set((state) => {
+          void deleteTripPlaceRemote(id);
+          return { savedPlaces: state.savedPlaces.filter((p) => p.id !== id) };
+        }),
+
+      // ── Travel Wallet ────────────────────────────────────────────────
+      addWalletDoc: (doc) =>
+        set((state) => {
+          void upsertWalletDoc(doc);
+          return { walletDocs: [doc, ...state.walletDocs] };
+        }),
+
+      updateWalletDoc: (id, patch) =>
+        set((state) => {
+          const updated = state.walletDocs.map((d) => (d.id === id ? { ...d, ...patch } : d));
+          const doc = updated.find((d) => d.id === id);
+          if (doc) void upsertWalletDoc(doc);
+          return { walletDocs: updated };
+        }),
+
+      deleteWalletDoc: (id) =>
+        set((state) => {
+          void deleteWalletDocRemote(id);
+          return { walletDocs: state.walletDocs.filter((d) => d.id !== id) };
+        }),
     }),
     {
       name: 'viaza-app-state',
+      merge: (persistedState, currentState) => {
+        const p = (persistedState as Partial<AppState> | undefined) ?? {};
+        const merged: AppState = { ...(currentState as AppState), ...(p as AppState) };
+
+        // Asegurar que onboardingDraft siempre tenga defaults (evita NaN/undefined en steppers)
+        const draft = { ...emptyDraft, ...(p.onboardingDraft ?? {}) } as OnboardingDraft;
+        const toFinite = (v: unknown, fallback: number) => {
+          const n = typeof v === 'number' ? v : Number(v);
+          return Number.isFinite(n) ? n : fallback;
+        };
+        draft.durationDays = toFinite(draft.durationDays, emptyDraft.durationDays);
+        draft.lat = toFinite(draft.lat, emptyDraft.lat);
+        draft.lon = toFinite(draft.lon, emptyDraft.lon);
+        draft.originLat = toFinite(draft.originLat, emptyDraft.originLat);
+        draft.originLon = toFinite(draft.originLon, emptyDraft.originLon);
+        draft.numberOfAdults = Math.max(1, toFinite(draft.numberOfAdults, 1));
+        draft.numberOfKids = Math.max(0, toFinite(draft.numberOfKids, 0));
+        draft.numberOfBabies = Math.max(0, toFinite(draft.numberOfBabies, 0));
+        merged.onboardingDraft = draft;
+
+        return merged;
+      },
       partialize: (state) => ({
         currentLanguage: state.currentLanguage,
         currentTripId: state.currentTripId,
@@ -634,6 +816,7 @@ export const useAppStore = create<AppState>()(
         agendaItems: state.agendaItems,
         itineraryEvents: state.itineraryEvents,
         savedPlaces: state.savedPlaces,
+        walletDocs: state.walletDocs,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         isPremium: state.isPremium,

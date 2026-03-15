@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { supabase } from '../../../services/supabaseClient';
 import {
   getTransportDeepLinks,
   googleMapsNavUrl,
@@ -24,6 +25,31 @@ import {
 interface RouteInfo {
   distanceKm: number;
   durationMinutes: number;
+}
+
+interface TransitRoute {
+  summary: string | null;
+  distance_meters: number | null;
+  duration_seconds: number | null;
+  departure_time_text: string | null;
+  arrival_time_text: string | null;
+  steps: Array<{
+    type: 'walk' | 'transit';
+    instruction: string;
+    distance_meters: number | null;
+    duration_seconds: number | null;
+    transit?: {
+      line_name?: string | null;
+      line_short_name?: string | null;
+      vehicle_type?: string | null;
+      headsign?: string | null;
+      num_stops?: number | null;
+      departure_stop?: string | null;
+      arrival_stop?: string | null;
+      departure_time_text?: string | null;
+      arrival_time_text?: string | null;
+    };
+  }>;
 }
 
 /** Calcula distancia y tiempo usando OSRM (OpenStreetMap Routing Machine, sin key) */
@@ -50,6 +76,15 @@ async function fetchRouteInfo(
 }
 
 function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+
+function formatSeconds(seconds: number | null): string {
+  if (!seconds || seconds <= 0) return '';
+  const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -90,9 +125,12 @@ export function TripRoutePage() {
   const currentTripId = useAppStore((s) => s.currentTripId);
   const trips = useAppStore((s) => s.trips);
   const trip = trips.find((tr) => tr.id === currentTripId);
+  const lang = useAppStore((s) => s.currentLanguage);
 
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [transitRoute, setTransitRoute] = useState<TransitRoute | null>(null);
+  const [transitLoading, setTransitLoading] = useState(false);
 
   useEffect(() => {
     if (!trip?.originLat || !trip?.originLon || !trip?.lat || !trip?.lon) return;
@@ -102,6 +140,21 @@ export function TripRoutePage() {
       .then(setRouteInfo)
       .finally(() => setRouteLoading(false));
   }, [trip]);
+
+  useEffect(() => {
+    if (!trip) return;
+    if (trip.transportType !== 'bus' && trip.transportType !== 'train') { setTransitRoute(null); return; }
+    if (!trip.originCity || !trip.destination) { setTransitRoute(null); return; }
+    setTransitLoading(true);
+    supabase.functions
+      .invoke('routes-transit', { body: { origin: trip.originCity, destination: trip.destination, language: lang } })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        setTransitRoute((data as { route?: TransitRoute } | null)?.route ?? null);
+      })
+      .catch(() => setTransitRoute(null))
+      .finally(() => setTransitLoading(false));
+  }, [trip?.id, trip?.originCity, trip?.destination, trip?.transportType, lang]);
 
   if (!trip) {
     return (
@@ -274,6 +327,52 @@ export function TripRoutePage() {
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)' }}>
                   {t('route.routeUnavailable')}
                 </p>
+              </div>
+            )}
+
+            {/* Transporte público (bus/train) */}
+            {(trip.transportType === 'bus' || trip.transportType === 'train') && (
+              <div style={{ marginTop: 14 }}>
+                {transitLoading && (
+                  <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13 }}>
+                    {t('common.loading')}
+                  </div>
+                )}
+                {transitRoute && !transitLoading && (
+                  <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
+                      <div style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>
+                        {transitRoute.departure_time_text && transitRoute.arrival_time_text
+                          ? `${transitRoute.departure_time_text} → ${transitRoute.arrival_time_text}`
+                          : t('route.title')}
+                      </div>
+                      <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 700 }}>
+                        {formatSeconds(transitRoute.duration_seconds)}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {transitRoute.steps.slice(0, 10).map((s, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: 10 }}>
+                          <div style={{ width: 10, marginTop: 5 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: 99, background: s.type === 'transit' ? '#EA9940' : 'rgba(255,255,255,0.35)' }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>
+                              {s.type === 'transit'
+                                ? `${s.transit?.line_short_name ?? s.transit?.line_name ?? ''} ${s.transit?.vehicle_type ?? ''}`.trim() || s.instruction
+                                : s.instruction}
+                            </div>
+                            <div style={{ color: 'rgba(255,255,255,0.60)', fontSize: 12, marginTop: 2 }}>
+                              {s.type === 'transit'
+                                ? `${s.transit?.departure_stop ?? ''} → ${s.transit?.arrival_stop ?? ''}`.trim()
+                                : formatSeconds(s.duration_seconds)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

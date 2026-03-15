@@ -161,7 +161,7 @@ export function LoginPage() {
                     <path d="M24 45c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 36 26.9 37 24 37c-5.6 0-10.3-3.4-11.8-8.2l-7 5.4C8.2 41.1 15.5 45 24 45z" fill="#4CAF50"/>
                     <path d="M44.5 20H24v8.5h11.8c-.7 2.1-2 3.9-3.8 5.1l6.6 5.4C42.1 36 45 30.5 45 24c0-1.4-.1-2.7-.5-4z" fill="#1976D2"/>
                   </svg>
-                  {t('auth.login.continueWithGoogle', 'Continuar con Google')}
+                  {t('auth.login.continueWithGoogle')}
                 </>
               )}
             </button>
@@ -199,7 +199,7 @@ export function LoginPage() {
                   <svg width="18" height="22" viewBox="0 0 814 1000" fill="white">
                     <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-42.3-150.3-109.8c-62.3-90.4-112.4-230.5-112.4-363.5 0-230.3 149.8-352.1 297.1-352.1 78.3 0 143.4 51.6 192.3 51.6 46.4 0 119.1-54.7 208.6-54.7zm-167.5-157.8c-10.3 47.3-37.4 93.3-73.9 124.1-36.1 30.8-79.7 51.2-123.9 51.2-5.6 0-11.1-.4-16.7-1.4.4-48.6 20.6-96.5 55.4-131.7 36.1-37 96.4-64.5 158.5-71.1.6 9.7.6 19.4.6 28.9z"/>
                   </svg>
-                  {t('auth.login.continueWithApple', 'Continuar con Apple')}
+                  {t('auth.login.continueWithApple')}
                 </>
               )}
             </button>
@@ -209,7 +209,7 @@ export function LoginPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(18,33,46,0.12)' }} />
             <span style={{ fontSize: 12, color: 'rgba(18,33,46,0.35)', fontFamily: 'Questrial, sans-serif', fontWeight: 600, letterSpacing: 1 }}>
-              {t('auth.login.orWithEmail', 'O CON EMAIL')}
+              {t('auth.login.orWithEmail')}
             </span>
             <div style={{ flex: 1, height: 1, background: 'rgba(18,33,46,0.12)' }} />
           </div>
@@ -380,7 +380,7 @@ export function LoginPage() {
                 fontWeight: 600,
               }}
             >
-              {t('auth.login.forgotPassword', '¿Olvidaste tu contraseña?')}
+              {t('auth.login.forgotPassword')}
             </button>
           </div>
         </div>
@@ -388,7 +388,7 @@ export function LoginPage() {
         {/* ── Crear cuenta — fuera de la card ── */}
         <div className="mt-6 text-center">
           <span style={{ color: 'rgba(18,33,46,0.50)', fontSize: 14, fontFamily: 'Questrial, sans-serif' }}>
-            {t('auth.login.noAccount', '¿No tienes cuenta?')}{' '}
+            {t('auth.login.noAccount')}{' '}
           </span>
           <Link
             to="/auth/register"

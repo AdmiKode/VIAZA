@@ -77,7 +77,7 @@ export function ImportReservationPage() {
     <div className="min-h-dvh pb-32" style={{ background: '#ECE7DC', fontFamily: 'Questrial, sans-serif' }}>
 
       {/* Header */}
-      <div className="relative overflow-hidden px-6 pt-14 pb-8" style={{ background: 'linear-gradient(160deg, #12212E 0%, #EA9940 70%, #f0b66d 100%)', borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
+      <div className="relative overflow-hidden px-6 pt-14 pb-8" style={{ background: 'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 70%, var(--viaza-accent) 100%)', borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
         <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}/>
         <button type="button" onClick={() => navigate(-1)} className="relative mb-5 flex items-center gap-2" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M30 10L14 24l16 14" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
@@ -125,7 +125,7 @@ export function ImportReservationPage() {
               </div>
             </div>
 
-            {error && <div className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(192,57,43,0.08)', color: '#c0392b' }}>{error}</div>}
+            {error && <div className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(234,153,64,0.12)', color: 'var(--viaza-primary)' }}>{error}</div>}
 
             <motion.button
               whileTap={{ scale: 0.97 }}
@@ -133,7 +133,7 @@ export function ImportReservationPage() {
               onClick={handleAnalyze}
               disabled={loading}
               className="w-full rounded-3xl py-4 font-extrabold text-base flex items-center justify-center gap-3"
-              style={{ background: loading ? 'rgba(18,33,46,0.15)' : 'linear-gradient(135deg, #EA9940 0%, #f0b66d 100%)', color: loading ? 'rgba(18,33,46,0.45)' : 'white', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: loading ? 'none' : '0 8px 24px rgba(234,153,64,0.40)' }}
+              style={{ background: loading ? 'rgba(18,33,46,0.15)' : 'linear-gradient(135deg, var(--viaza-accent) 0%, var(--viaza-soft) 100%)', color: loading ? 'rgba(18,33,46,0.45)' : 'white', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: loading ? 'none' : '0 8px 24px rgba(234,153,64,0.40)' }}
             >
               {loading ? (
                 <>

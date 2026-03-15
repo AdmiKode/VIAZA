@@ -7,7 +7,7 @@ import { EmergencyCardForm } from '../components/EmergencyCardForm';
 import type { EmergencyProfile } from '../../../types/emergency';
 import { EMPTY_EMERGENCY_FORM } from '../../../types/emergency';
 
-const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', red: '#c0392b', muted: 'rgba(18,33,46,0.50)' };
+const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', soft: '#6CA3A2', muted: 'rgba(18,33,46,0.50)' };
 
 type View = 'loading' | 'onboarding' | 'overview' | 'edit';
 
@@ -28,7 +28,7 @@ export default function EmergencyCardPage() {
     return (
       <div style={{ background: C.cream, minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Questrial, sans-serif' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, border: `4px solid ${C.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', margin: '0 auto 16px' }}/>
+          <div style={{ width: 48, height: 48, border: `4px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', margin: '0 auto 16px' }}/>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div style={{ color: C.muted, fontSize: 14 }}>Cargando tu Emergency Card...</div>
         </div>
@@ -83,7 +83,7 @@ export default function EmergencyCardPage() {
     return (
       <div style={{ background: C.cream, minHeight: '100dvh', fontFamily: 'Questrial, sans-serif' }}>
         {/* Header */}
-        <div style={{ background: `linear-gradient(160deg, ${C.red} 0%, #8B0000 100%)`, padding: '56px 24px 36px', borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
+        <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, ${C.teal} 70%, ${C.accent} 100%)`, padding: '56px 24px 36px', borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, padding: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>Perfil</span>
@@ -121,7 +121,7 @@ export default function EmergencyCardPage() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setView('edit')}
-            style={{ width: '100%', background: `linear-gradient(135deg, ${C.red} 0%, #8B0000 100%)`, color: 'white', border: 'none', borderRadius: 18, padding: '17px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 8px 28px rgba(192,57,43,0.35)', marginTop: 8 }}
+            style={{ width: '100%', background: `linear-gradient(135deg, ${C.accent} 0%, ${C.teal} 100%)`, color: 'white', border: 'none', borderRadius: 18, padding: '17px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 8px 28px rgba(18,33,46,0.18)', marginTop: 8 }}
           >
             Crear mi Emergency Card →
           </motion.button>
@@ -134,7 +134,7 @@ export default function EmergencyCardPage() {
   return (
     <div style={{ background: C.cream, minHeight: '100dvh', fontFamily: 'Questrial, sans-serif', paddingBottom: 100 }}>
       {/* Header */}
-      <div style={{ background: `linear-gradient(160deg, ${C.red} 0%, #8B0000 100%)`, padding: '56px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, ${C.teal} 70%, ${C.accent} 100%)`, padding: '56px 24px 28px', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, padding: 0 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600 }}>Perfil</span>
@@ -145,7 +145,7 @@ export default function EmergencyCardPage() {
             <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, marginTop: 4 }}>{profile!.full_name}</div>
           </div>
           <div style={{ background: profile!.qr_enabled && profile!.consent_public_display ? 'rgba(46,213,115,0.25)' : 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: profile!.qr_enabled && profile!.consent_public_display ? '#2ed573' : 'rgba(255,255,255,0.5)' }}/>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: profile!.qr_enabled && profile!.consent_public_display ? C.soft : 'rgba(255,255,255,0.5)' }}/>
             <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>{profile!.qr_enabled && profile!.consent_public_display ? 'QR Activo' : 'QR Inactivo'}</span>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function EmergencyCardPage() {
         {/* Acciones principales */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           <motion.button whileTap={{ scale: 0.96 }} onClick={() => setShowQR(true)}
-            style={{ background: `linear-gradient(135deg, ${C.red}, #8B0000)`, color: 'white', border: 'none', borderRadius: 18, padding: '18px 14px', cursor: 'pointer', fontFamily: 'Questrial, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, boxShadow: '0 6px 20px rgba(192,57,43,0.30)' }}>
+            style={{ background: `linear-gradient(135deg, ${C.accent}, ${C.teal})`, color: 'white', border: 'none', borderRadius: 18, padding: '18px 14px', cursor: 'pointer', fontFamily: 'Questrial, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, boxShadow: '0 6px 20px rgba(18,33,46,0.18)' }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
               <path d="M14 14h3v3M17 20h3M20 17v3"/>
@@ -177,7 +177,7 @@ export default function EmergencyCardPage() {
           <div style={{ color: C.dark, fontSize: 15, fontWeight: 800, marginBottom: 16 }}>Resumen médico</div>
           {profile!.blood_type && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `rgba(192,57,43,0.10)`, borderRadius: 20, padding: '6px 14px', marginBottom: 12, marginRight: 8 }}>
-              <span style={{ color: C.red, fontSize: 15, fontWeight: 900 }}>{profile!.blood_type}</span>
+              <span style={{ color: C.accent, fontSize: 15, fontWeight: 900 }}>{profile!.blood_type}</span>
             </div>
           )}
           {[
@@ -221,10 +221,10 @@ export default function EmergencyCardPage() {
 
         {/* Estado del QR */}
         {(!profile!.qr_enabled || !profile!.consent_public_display) && (
-          <div style={{ background: 'rgba(192,57,43,0.08)', border: '1.5px solid rgba(192,57,43,0.20)', borderRadius: 18, padding: '16px 18px', marginBottom: 14 }}>
-            <div style={{ color: C.red, fontSize: 14, fontWeight: 800, marginBottom: 4 }}>QR desactivado</div>
-            <div style={{ color: C.red, fontSize: 13, opacity: 0.8, marginBottom: 12 }}>Para que tu QR sea escaneable debes activar "QR público" y dar tu consentimiento de visualización.</div>
-            <button onClick={() => setView('edit')} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Questrial, sans-serif' }}>
+          <div style={{ background: 'rgba(234,153,64,0.10)', border: '1.5px solid rgba(234,153,64,0.22)', borderRadius: 18, padding: '16px 18px', marginBottom: 14 }}>
+            <div style={{ color: C.dark, fontSize: 14, fontWeight: 800, marginBottom: 4 }}>QR desactivado</div>
+            <div style={{ color: C.muted, fontSize: 13, opacity: 0.9, marginBottom: 12 }}>Para que tu QR sea escaneable debes activar "QR público" y dar tu consentimiento de visualización.</div>
+            <button onClick={() => setView('edit')} style={{ background: C.accent, color: 'white', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Questrial, sans-serif' }}>
               Activar QR →
             </button>
           </div>

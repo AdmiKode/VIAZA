@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resetPassword } from '../../../services/authService';
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -18,7 +20,7 @@ export function ForgotPasswordPage() {
       await resetPassword(email.trim());
       setSent(true);
     } catch (e) {
-      setError((e as Error).message ?? 'Error al enviar el email');
+      setError((e as Error).message ?? t('auth.forgot.errorSend'));
     } finally {
       setLoading(false);
     }
@@ -55,10 +57,10 @@ export function ForgotPasswordPage() {
               </svg>
             </div>
             <div style={{ color: '#12212E', fontSize: 22, fontWeight: 800, fontFamily: 'Questrial, sans-serif', textAlign: 'center' }}>
-              Recuperar contraseña
+              {t('auth.forgot.title')}
             </div>
             <div style={{ color: 'rgba(18,33,46,0.45)', fontSize: 13, fontFamily: 'Questrial, sans-serif', textAlign: 'center', lineHeight: 1.5 }}>
-              Te enviamos un enlace a tu correo para crear una nueva contraseña
+              {t('auth.forgot.subtitle')}
             </div>
           </div>
 
@@ -78,20 +80,20 @@ export function ForgotPasswordPage() {
                   </svg>
                 </div>
                 <div style={{ color: '#12212E', fontSize: 17, fontWeight: 700, fontFamily: 'Questrial, sans-serif', textAlign: 'center' }}>
-                  ¡Email enviado!
+                  {t('auth.forgot.sent.title')}
                 </div>
                 <div style={{ color: 'rgba(18,33,46,0.50)', fontSize: 13, fontFamily: 'Questrial, sans-serif', textAlign: 'center', lineHeight: 1.55 }}>
-                  Revisa tu bandeja de entrada en <strong style={{ color: '#307082' }}>{email}</strong>. El enlace expira en 1 hora.
+                  {t('auth.forgot.sent.body', { email })}
                 </div>
                 <div style={{ color: 'rgba(18,33,46,0.35)', fontSize: 12, fontFamily: 'Questrial, sans-serif', textAlign: 'center' }}>
-                  ¿No lo ves? Revisa spam o correo no deseado.
+                  {t('auth.forgot.sent.hint')}
                 </div>
                 <button
                   type="button"
                   onClick={() => navigate('/auth/login')}
                   style={{ marginTop: 8, width: '100%', height: 54, borderRadius: 16, background: '#12212E', color: 'white', fontSize: 15, fontWeight: 700, fontFamily: 'Questrial, sans-serif', border: 'none', cursor: 'pointer', boxShadow: '0 6px 20px rgba(18,33,46,0.25)' }}
                 >
-                  Volver al inicio de sesión
+                  {t('auth.forgot.back')}
                 </button>
               </motion.div>
             ) : (
@@ -99,7 +101,7 @@ export function ForgotPasswordPage() {
                 {/* Campo email */}
                 <div>
                   <label style={{ display: 'block', color: 'rgba(18,33,46,0.55)', fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Questrial, sans-serif' }}>
-                    Email
+                    {t('auth.forgot.emailLabel')}
                   </label>
                   <div className="flex items-center gap-3 rounded-2xl px-4" style={{ height: 54, background: '#ECE7DC', boxShadow: 'inset 4px 4px 10px rgba(18,33,46,0.10), inset -3px -3px 8px rgba(255,255,255,0.75)' }}>
                     <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
@@ -114,7 +116,7 @@ export function ForgotPasswordPage() {
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setError(null); }}
                       onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="tu@correo.com"
+                      placeholder={t('auth.forgot.emailPlaceholder')}
                       style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 15, color: '#12212E', fontFamily: 'Questrial, sans-serif' }}
                     />
                   </div>
@@ -122,8 +124,8 @@ export function ForgotPasswordPage() {
 
                 {/* Error */}
                 {error && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl px-4 py-3" style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.20)' }}>
-                    <span style={{ color: '#c0392b', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>{error}</span>
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl px-4 py-3" style={{ background: 'rgba(234,153,64,0.12)', border: '1px solid rgba(234,153,64,0.30)' }}>
+                    <span style={{ color: '#12212E', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>{error}</span>
                   </motion.div>
                 )}
 
@@ -147,9 +149,9 @@ export function ForgotPasswordPage() {
                   {loading ? (
                     <>
                       <svg className="animate-spin" width="18" height="18" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" stroke="rgba(18,33,46,0.20)" strokeWidth="4"/><path d="M24 6a18 18 0 0 1 18 18" stroke="rgba(18,33,46,0.40)" strokeWidth="4" strokeLinecap="round"/></svg>
-                      Enviando…
+                      {t('auth.forgot.sending')}
                     </>
-                  ) : 'Enviar enlace de recuperación'}
+                  ) : t('auth.forgot.cta')}
                 </motion.button>
               </motion.div>
             )}
@@ -160,7 +162,7 @@ export function ForgotPasswordPage() {
         {!sent && (
           <div className="mt-5 text-center">
             <button type="button" onClick={() => navigate('/auth/login')} style={{ background: 'none', border: 'none', color: 'rgba(18,33,46,0.50)', fontSize: 14, fontFamily: 'Questrial, sans-serif', cursor: 'pointer' }}>
-              ← Volver al inicio de sesión
+              {t('auth.forgot.back')}
             </button>
           </div>
         )}

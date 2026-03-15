@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { useAppStore } from '../../../app/store/useAppStore';
 import { AppHeader } from '../../../components/ui/AppHeader';
 import { AppCard } from '../../../components/ui/AppCard';
 import { quickPhrases, type QuickPhraseCategory } from '../utils/quickPhrasesData';
@@ -9,14 +11,44 @@ const categories: Array<{ id: QuickPhraseCategory; titleKey: string }> = [
   { id: 'hotel', titleKey: 'quickPhrases.category.hotel' },
   { id: 'restaurant', titleKey: 'quickPhrases.category.restaurant' },
   { id: 'transport', titleKey: 'quickPhrases.category.transport' },
-  { id: 'emergency', titleKey: 'quickPhrases.category.emergency' }
+  { id: 'shopping', titleKey: 'quickPhrases.category.shopping' },
+  { id: 'directions', titleKey: 'quickPhrases.category.directions' },
+  { id: 'health', titleKey: 'quickPhrases.category.health' },
+  { id: 'emergency', titleKey: 'quickPhrases.category.emergency' },
+  { id: 'basic_conversation', titleKey: 'quickPhrases.category.basic' }
 ];
 
 export function QuickPhrasesPage() {
   const { t } = useTranslation();
+  const isPremium = useAppStore((s) => s.isPremium);
   const [category, setCategory] = useState<QuickPhraseCategory>('airport');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const items = useMemo(() => quickPhrases.filter((p) => p.category === category), [category]);
+
+  if (!isPremium) {
+    return (
+      <div className="px-4 pt-4 pb-24">
+        <AppHeader title={t('translator.quickPhrases')} />
+        <AppCard className="mt-4">
+          <div className="text-sm font-semibold text-[var(--viaza-primary)]">
+            {t('premium.required.title')}
+          </div>
+          <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">
+            {t('premium.required.body')}
+          </div>
+          <Link to="/premium" className="mt-4 block">
+            <button
+              type="button"
+              className="w-full rounded-2xl bg-[var(--viaza-accent)] py-3 text-sm font-semibold text-[var(--viaza-background)] shadow-[var(--shadow-2)] active:scale-[0.98]"
+            >
+              {t('premium.required.cta')}
+            </button>
+          </Link>
+        </AppCard>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-4 pb-24">
@@ -41,10 +73,28 @@ export function QuickPhrasesPage() {
 
       <div className="mt-4 space-y-3">
         {items.map((p) => (
-          <AppCard key={p.id}>
-            <div className="text-sm font-semibold">{t(p.phraseKey)}</div>
-            <div className="mt-2 text-xs text-[rgb(var(--viaza-primary-rgb)/0.60)]">{t('quickPhrases.tapHint')}</div>
-          </AppCard>
+          <button
+            key={p.id}
+            type="button"
+            className="w-full text-left"
+            onClick={async () => {
+              const phrase = t(p.phraseKey);
+              try {
+                await navigator.clipboard.writeText(phrase);
+                setCopiedId(p.id);
+                window.setTimeout(() => setCopiedId((prev) => (prev === p.id ? null : prev)), 1200);
+              } catch {
+                // Ignorar si el navegador no permite clipboard
+              }
+            }}
+          >
+            <AppCard>
+              <div className="text-sm font-semibold">{t(p.phraseKey)}</div>
+              <div className="mt-2 text-xs text-[rgb(var(--viaza-primary-rgb)/0.60)]">
+                {copiedId === p.id ? t('quickPhrases.copied') : t('quickPhrases.tapHint')}
+              </div>
+            </AppCard>
+          </button>
         ))}
       </div>
     </div>

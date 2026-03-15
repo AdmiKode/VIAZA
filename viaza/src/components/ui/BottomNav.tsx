@@ -54,6 +54,21 @@ function IconTips({ active }: { active: boolean }) {
   );
 }
 
+function IconProfile({ active }: { active: boolean }) {
+  return (
+    <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="16" r="9"
+        fill="white" fillOpacity={active ? 1 : 0.42} />
+      <circle cx="24" cy="16" r="5"
+        fill="white" fillOpacity={active ? 0.28 : 0.14} />
+      <path d="M6 42c0-9.94 8.06-18 18-18s18 8.06 18 18"
+        fill="white" fillOpacity={active ? 1 : 0.42} />
+      <path d="M6 42c0-9.94 8.06-18 18-18"
+        fill="white" fillOpacity={active ? 0.28 : 0.14} />
+    </svg>
+  );
+}
+
 function IconSettings({ active }: { active: boolean }) {
   return (
     <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
@@ -69,7 +84,7 @@ const ITEMS = [
   { to: '/packing',  labelKey: 'nav.packing',  Icon: IconPacking  },
   { to: '/tools',    labelKey: 'nav.tools',    Icon: IconTools    },
   { to: '/tips',     labelKey: 'nav.tips',     Icon: IconTips     },
-  { to: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
+  { to: '/profile',  labelKey: 'nav.profile',  Icon: IconProfile  },
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────

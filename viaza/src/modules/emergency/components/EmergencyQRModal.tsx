@@ -9,7 +9,6 @@ const C = {
   cream: '#ECE7DC',
   accent: '#EA9940',
   teal: '#307082',
-  red: '#c0392b',
 };
 
 interface Props {
@@ -84,7 +83,7 @@ export function EmergencyQRModal({ profile, onClose, onTokenRegenerated }: Props
 
           {/* Badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: C.red, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L13.09 8.26L19 7L15.45 12L19 17L13.09 15.74L12 22L10.91 15.74L5 17L8.55 12L5 7L10.91 8.26L12 2Z" fill="white"/>
               </svg>
@@ -100,7 +99,7 @@ export function EmergencyQRModal({ profile, onClose, onTokenRegenerated }: Props
             <div style={{
               padding: 20, background: 'white', borderRadius: 20,
               boxShadow: '0 8px 32px rgba(18,33,46,0.12)',
-              border: `3px solid ${C.red}`,
+              border: `3px solid ${C.accent}`,
             }}>
               <QRCodeSVG
                 value={publicUrl}
@@ -139,7 +138,7 @@ export function EmergencyQRModal({ profile, onClose, onTokenRegenerated }: Props
             <button
               onClick={handleRegenerate}
               disabled={regenerating}
-              style={btnStyle(confirmRegen ? C.red : 'rgba(18,33,46,0.08)', confirmRegen ? 'white' : C.dark)}
+              style={btnStyle(confirmRegen ? C.accent : 'rgba(18,33,46,0.08)', confirmRegen ? 'white' : C.dark)}
             >
               {regenerating ? 'Regenerando...' : confirmRegen ? 'Confirmar — el QR anterior quedará inválido' : 'Regenerar QR'}
             </button>
