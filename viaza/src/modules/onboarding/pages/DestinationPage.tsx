@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { inferDestinationMeta, useAppStore } from '../../../app/store/useAppStore';
-import { SUPABASE_URL, supabase } from '../../../services/supabaseClient';
+import { supabase } from '../../../services/supabaseClient';
 
 type PlacesPrediction = {
   place_id: string;
@@ -23,6 +23,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export function DestinationPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const showDebug = import.meta.env.DEV;
   const draftDestination = useAppStore((s) => s.onboardingDraft.destination);
   const setDraft = useAppStore((s) => s.setOnboardingDraft);
   const lang = useAppStore((s) => s.currentLanguage);
@@ -117,7 +118,14 @@ export function DestinationPage() {
       setError(true);
       setErrorText((e as Error)?.message ?? '');
       // Fallback: al menos persistir texto (sin meta) para no bloquear el flujo
-      setDraft({ destination: result.structured_formatting.main_text });
+      setDraft({
+        destination: result.structured_formatting.main_text,
+        destinationPlaceId: '',
+        destinationCountry: '',
+        destinationTimezone: '',
+        lat: null,
+        lon: null,
+      });
     } finally {
       setLoading(false);
     }
@@ -129,6 +137,11 @@ export function DestinationPage() {
       const meta = inferDestinationMeta(v);
       setDraft({
         destination: v,
+        destinationPlaceId: '',
+        destinationCountry: '',
+        destinationTimezone: '',
+        lat: null,
+        lon: null,
         inferredCountryCode: meta.countryCode,
         inferredCurrency: meta.currencyCode,
         inferredLanguage: meta.languageCode,
@@ -261,14 +274,9 @@ export function DestinationPage() {
         {error && (
           <p className="mt-2 text-xs text-[var(--viaza-accent)]">
             {t('onboarding.destination.searchError')}
-            {errorText ? (
+            {showDebug && errorText ? (
               <span className="block mt-1 text-[10px] text-[rgb(var(--viaza-primary-rgb)/0.55)]">
                 {errorText}
-                {SUPABASE_URL ? (
-                  <span className="block mt-1">
-                    {new URL('/functions/v1/places-autocomplete', SUPABASE_URL).toString()}
-                  </span>
-                ) : null}
               </span>
             ) : null}
           </p>

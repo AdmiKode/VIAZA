@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import type { TransportType } from '../../../types/trip';
-import { SUPABASE_URL, supabase } from '../../../services/supabaseClient';
+import { supabase } from '../../../services/supabaseClient';
 
 type PlacesPrediction = {
   place_id: string;
@@ -256,12 +256,11 @@ function NeuInput({
   );
 }
 
-/* ─── Airline autocomplete ───────────────────────────────────────── */
-const AVIATION_KEY = import.meta.env.VITE_AVIATIONSTACK_KEY as string;
-
+/* ─── Airline autocomplete (via Edge Function; no API keys en frontend) ───── */
 type AirlineSuggestion = { name: string; iata: string };
 
 function AirlineInput({ label, placeholder }: { label: string; placeholder: string }) {
+  const { t } = useTranslation();
   const setDraft = useAppStore((s) => s.setOnboardingDraft);
   const value = useAppStore((s) => s.onboardingDraft.airline ?? '');
   const [results, setResults] = useState<AirlineSuggestion[]>([]);
@@ -269,19 +268,26 @@ function AirlineInput({ label, placeholder }: { label: string; placeholder: stri
   const debouncedQ = useDebounce(value, 400);
 
   useEffect(() => {
-    if (debouncedQ.trim().length < 2) { setResults([]); return; }
-    void fetch(
-      `https://api.aviationstack.com/v1/airlines?access_key=${AVIATION_KEY}&airline_name=${encodeURIComponent(debouncedQ.trim())}&limit=6`
-    )
-      .then((r) => r.json())
-      .then((json: { data?: Array<{ airline_name: string; iata_code: string }> }) => {
-        const suggestions = (json.data ?? [])
-          .filter((a) => a.airline_name && a.iata_code)
-          .map((a) => ({ name: a.airline_name, iata: a.iata_code }));
+    const q = debouncedQ.trim();
+    if (q.length < 2) { setResults([]); setOpen(false); return; }
+
+    let cancelled = false;
+    supabase.functions
+      .invoke('airlines-autocomplete', { body: { query: q } })
+      .then(({ data, error: fnErr }) => {
+        if (cancelled) return;
+        if (fnErr) throw fnErr;
+        const payload = data as { ok?: boolean; error?: string; airlines?: AirlineSuggestion[] } | null;
+        if (payload && payload.ok === false) throw new Error(payload.error ?? 'Airlines error');
+        const suggestions = (payload?.airlines ?? []).slice(0, 6);
         setResults(suggestions);
         setOpen(suggestions.length > 0);
       })
-      .catch(() => setResults([]));
+      .catch(() => {
+        if (!cancelled) { setResults([]); setOpen(false); }
+      });
+
+    return () => { cancelled = true; };
   }, [debouncedQ]);
 
   return (
@@ -327,7 +333,12 @@ function AirlineInput({ label, placeholder }: { label: string; placeholder: stri
             type="button"
             onClick={() => { setDraft({ airline: '' }); setResults([]); setOpen(false); }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(18,33,46,0.35)' }}
-          >✕</button>
+            aria-label={t('common.remove')}
+          >
+            <svg width="14" height="14" viewBox="0 0 48 48" fill="none">
+              <path d="M14 14l20 20M34 14L14 34" stroke="rgba(18,33,46,0.45)" strokeWidth="5" strokeLinecap="round" />
+            </svg>
+          </button>
         )}
       </div>
       <AnimatePresence>
@@ -373,7 +384,7 @@ function AirlineInput({ label, placeholder }: { label: string; placeholder: stri
                 }}
               >
                 <span style={{
-                  background: '#307082',
+                  background: 'var(--viaza-secondary)',
                   color: 'white',
                   borderRadius: 6,
                   padding: '2px 7px',
@@ -405,6 +416,7 @@ function OriginCityInput({
   placeholder: string;
 }) {
   const { t } = useTranslation();
+  const showDebug = import.meta.env.DEV;
   const lang = useAppStore((s) => s.currentLanguage);
   const setDraft = useAppStore((s) => s.setOnboardingDraft);
   const draft = useAppStore((s) => s.onboardingDraft);
@@ -478,7 +490,7 @@ function OriginCityInput({
     } catch (e: unknown) {
       setError(true);
       setErrorText((e as Error)?.message ?? '');
-      setDraft({ originLat: 0, originLon: 0 });
+      setDraft({ originLat: null, originLon: null });
     } finally {
       setLoading(false);
     }
@@ -516,7 +528,7 @@ function OriginCityInput({
           onChange={(e) => {
             const v = e.target.value;
             setInputValue(v);
-            setDraft({ originCity: v, originLat: 0, originLon: 0 });
+            setDraft({ originCity: v, originLat: null, originLon: null });
           }}
           placeholder={placeholder}
           style={{
@@ -544,7 +556,7 @@ function OriginCityInput({
                   setInputValue('');
                   setResults([]);
                   setSelected(null);
-                  setDraft({ originCity: '', originLat: 0, originLon: 0 });
+                  setDraft({ originCity: '', originLat: null, originLon: null });
                   inputRef.current?.focus();
                 }}
                 style={{
@@ -615,14 +627,9 @@ function OriginCityInput({
       {error && (
         <div style={{ marginTop: 6, color: '#EA9940', fontSize: 12, fontWeight: 600 }}>
           {t('onboarding.destination.searchError')}
-          {errorText ? (
+          {showDebug && errorText ? (
             <div style={{ marginTop: 4, color: 'rgba(18,33,46,0.55)', fontSize: 10, fontWeight: 600 }}>
               {errorText}
-              {SUPABASE_URL ? (
-                <div style={{ marginTop: 4 }}>
-                  {new URL('/functions/v1/places-autocomplete', SUPABASE_URL).toString()}
-                </div>
-              ) : null}
             </div>
           ) : null}
         </div>

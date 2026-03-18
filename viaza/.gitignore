@@ -5,8 +5,13 @@ dist
 ios
 android
 
+# Android signing (NO subir al repo)
+android/keystore.properties
+android/keystore/
+*.jks
+*.keystore
+
 # Variables de entorno — NUNCA subir al repo
 .env
 .env.local
 .env.*.local
-

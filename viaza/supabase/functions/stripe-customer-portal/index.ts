@@ -11,6 +11,19 @@ function formEncode(obj: Record<string, string>) {
   return params.toString();
 }
 
+async function stripeGet(params: { path: string }) {
+  const stripeKey = requireEnv('STRIPE_SECRET_KEY');
+  const res = await fetch(`https://api.stripe.com/v1${params.path}`, {
+    headers: { Authorization: `Bearer ${stripeKey}` },
+  });
+  const json = await res.json().catch(() => ({})) as Record<string, unknown>;
+  if (!res.ok) {
+    const msg = (json['error'] as { message?: string } | undefined)?.message;
+    throw new Error(msg ?? `Stripe error ${res.status}`);
+  }
+  return json;
+}
+
 serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
@@ -35,7 +48,18 @@ serve(async (req) => {
 
     if (payErr) return jsonResponse({ ok: false, error: payErr.message }, { status: 400 });
 
-    const customerId = payments?.[0]?.provider_customer_id as string | undefined;
+    let customerId = payments?.[0]?.provider_customer_id as string | undefined;
+    // Fallback robusto: si no hay payments (webhook no corrió / datos viejos),
+    // buscar customer por email en Stripe.
+    if (!customerId) {
+      const email = auth.user.email;
+      if (email) {
+        const encoded = new URLSearchParams({ email, limit: '1' }).toString();
+        const customers = await stripeGet({ path: `/customers?${encoded}` });
+        const list = (customers['data'] as Array<{ id: string }> | undefined) ?? [];
+        customerId = list[0]?.id;
+      }
+    }
     if (!customerId) return jsonResponse({ ok: false, error: 'No stripe customer found' }, { status: 404 });
 
     const stripeKey = requireEnv('STRIPE_SECRET_KEY');
@@ -58,4 +82,3 @@ serve(async (req) => {
     return jsonResponse({ ok: false, error: (e as Error).message ?? 'Unknown error' }, { status: 500 });
   }
 });
-

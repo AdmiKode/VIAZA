@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
 import { createSupabaseClientForRequest } from '../_shared/supabase.ts';
-import { requirePremium } from '../_shared/premium.ts';
+import { requireAuth, requirePremium } from '../_shared/premium.ts';
 
 type Body = {
   trip_id: string;
@@ -24,13 +24,35 @@ function max(nums: number[]) {
   return Math.max(...nums);
 }
 
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function clampDateRange(params: { start: string; end: string }) {
+  const today = new Date();
+  const maxForecast = new Date(today.getTime() + 16 * 86400000);
+
+  const start = new Date(params.start + 'T12:00:00');
+  const end = new Date(params.end + 'T12:00:00');
+  const validStart = Number.isFinite(start.getTime()) ? start : today;
+  const validEnd = Number.isFinite(end.getTime()) ? end : new Date(today.getTime() + 7 * 86400000);
+
+  const clampedStart = validStart > maxForecast ? today : validStart;
+  const clampedEndRaw = validEnd > maxForecast ? maxForecast : validEnd;
+  const clampedEnd = clampedEndRaw < clampedStart ? clampedStart : clampedEndRaw;
+
+  return { start: isoDate(clampedStart), end: isoDate(clampedEnd) };
+}
+
 serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
 
   try {
+    const authed = await requireAuth(req);
+    if (authed instanceof Response) return authed;
     const premium = await requirePremium(req);
-    if (premium instanceof Response) return premium;
+    const canPersist = !(premium instanceof Response);
 
     const body = (await req.json()) as Body;
     const { trip_id, lat, lon, start_date, end_date, timezone } = body;
@@ -38,16 +60,29 @@ serve(async (req) => {
       return jsonResponse({ ok: false, error: 'trip_id, lat, lon, start_date, end_date are required' }, { status: 400 });
     }
 
+    // Open‑Meteo forecast only supports ~16 days ahead; if the trip is beyond that window
+    // we fallback to "next 7 days" so the user still sees something useful.
+    const clamped = clampDateRange({ start: start_date, end: end_date });
+
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.set('latitude', String(lat));
     url.searchParams.set('longitude', String(lon));
     url.searchParams.set('hourly', 'temperature_2m,precipitation_probability');
     url.searchParams.set('timezone', timezone ?? 'auto');
-    url.searchParams.set('start_date', start_date);
-    url.searchParams.set('end_date', end_date);
+    url.searchParams.set('start_date', clamped.start);
+    url.searchParams.set('end_date', clamped.end);
 
-    const res = await fetch(url);
-    if (!res.ok) return jsonResponse({ ok: false, error: `open-meteo ${res.status}` }, { status: 502 });
+    let res = await fetch(url);
+    if (!res.ok) {
+      const today = new Date();
+      const fallbackStart = isoDate(today);
+      const fallbackEnd = isoDate(new Date(today.getTime() + 7 * 86400000));
+      const fb = new URL(url);
+      fb.searchParams.set('start_date', fallbackStart);
+      fb.searchParams.set('end_date', fallbackEnd);
+      res = await fetch(fb);
+      if (!res.ok) return jsonResponse({ ok: false, error: `open-meteo ${res.status}` }, { status: 502 });
+    }
 
     const json = await res.json() as {
       hourly?: {
@@ -94,15 +129,17 @@ serve(async (req) => {
         return { date, morning, afternoon, night };
       });
 
-    // Persistir en trips.weather_forecast_daily (con RLS vía JWT del usuario)
-    const supabase = createSupabaseClientForRequest(req);
+    // Persistir en trips.weather_forecast_daily (best-effort). Si falla por RLS u otros,
+    // aún devolvemos el pronóstico para no romper la UI.
+    if (canPersist) {
+      const supabase = createSupabaseClientForRequest(req);
+      const { error: upErr } = await supabase
+        .from('trips')
+        .update({ weather_forecast_daily: forecast_daily, updated_at: new Date().toISOString() })
+        .eq('id', trip_id);
 
-    const { error: upErr } = await supabase
-      .from('trips')
-      .update({ weather_forecast_daily: forecast_daily, updated_at: new Date().toISOString() })
-      .eq('id', trip_id);
-
-    if (upErr) return jsonResponse({ ok: false, error: upErr.message }, { status: 400 });
+      if (upErr) console.warn('[weather-cache] persist failed:', upErr.message);
+    }
 
     return jsonResponse({ ok: true, forecast_daily });
   } catch (e) {

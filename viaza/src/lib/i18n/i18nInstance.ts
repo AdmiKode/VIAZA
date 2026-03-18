@@ -1,10 +1,18 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import en from './locales/en.json';
-import es from './locales/es.json';
-import pt from './locales/pt.json';
-import fr from './locales/fr.json';
-import de from './locales/de.json';
+import enRaw from './locales/en.json';
+import esRaw from './locales/es.json';
+import ptRaw from './locales/pt.json';
+import frRaw from './locales/fr.json';
+import deRaw from './locales/de.json';
+
+type TranslationDict = Record<string, string>;
+
+const en = enRaw as TranslationDict;
+const es = esRaw as TranslationDict;
+const pt = ptRaw as TranslationDict;
+const fr = frRaw as TranslationDict;
+const de = deRaw as TranslationDict;
 
 void i18n.use(initReactI18next).init({
   resources: {

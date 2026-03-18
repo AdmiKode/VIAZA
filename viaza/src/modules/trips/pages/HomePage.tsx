@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { WeatherForecastModal } from '../../weather/components/WeatherForecastModal';
 import { fetchWeatherCache } from '../../../services/weatherCacheService';
+import { supabase } from '../../../services/supabaseClient';
 import type { ActiveModuleId } from '../../../engines/activeModulesEngine';
 
 /* ─── Gradientes hero por tipo de viaje ─── */
@@ -171,6 +172,67 @@ export function HomePage() {
   const updateTrip = useAppStore((s) => s.updateTrip);
 
   const activeModules = new Set<string>(trip?.activeModules ?? []);
+  const hasCoords =
+    Boolean(trip) &&
+    Number.isFinite(trip?.lat) &&
+    Number.isFinite(trip?.lon) &&
+    !(Number(trip?.lat) === 0 && Number(trip?.lon) === 0);
+
+  // Auto-reparación: si el viaje no tiene coords, intentar resolver destino en background (Premium)
+  const autoResolveKeyRef = useRef<string>('');
+  useEffect(() => {
+    if (!isPremium) return;
+    if (!trip?.id) return;
+    if (hasCoords) return;
+    const q = (trip.destination ?? '').trim();
+    if (q.length < 2) return;
+
+    const key = `${trip.id}:${q.toLowerCase()}`;
+    if (autoResolveKeyRef.current === key) return;
+    autoResolveKeyRef.current = key;
+
+    void (async () => {
+      try {
+        const { data: ac, error: acErr } = await supabase.functions.invoke('places-autocomplete', {
+          body: { input: q, language: appLang },
+        });
+        if (acErr) throw acErr;
+        const first = (ac as { predictions?: Array<{ place_id: string }> } | null)?.predictions?.[0];
+        if (!first?.place_id) return;
+
+        const { data: resolved, error: resErr } = await supabase.functions.invoke('destination-resolve', {
+          body: { place_id: first.place_id, language: appLang },
+        });
+        if (resErr) throw resErr;
+        const dest = (resolved as { destination?: {
+          destination_place_id: string;
+          destination_name: string;
+          destination_country: string | null;
+          destination_country_code: string | null;
+          destination_timezone: string | null;
+          destination_currency: string | null;
+          destination_language: string | null;
+          lat: number;
+          lon: number;
+        } } | null)?.destination;
+        if (!dest || !Number.isFinite(dest.lat) || !Number.isFinite(dest.lon)) return;
+
+        updateTrip(trip.id, {
+          destination: dest.destination_name || trip.destination,
+          destinationPlaceId: dest.destination_place_id,
+          destinationCountry: dest.destination_country ?? undefined,
+          countryCode: dest.destination_country_code ?? trip.countryCode,
+          destinationTimezone: dest.destination_timezone ?? trip.destinationTimezone,
+          currencyCode: dest.destination_currency ?? trip.currencyCode,
+          languageCode: dest.destination_language ?? trip.languageCode,
+          lat: dest.lat,
+          lon: dest.lon,
+        });
+      } catch {
+        // silencioso (MVP): si falla, el usuario puede continuar sin bloquear la app
+      }
+    })();
+  }, [isPremium, trip?.id, trip?.destination, hasCoords, appLang, updateTrip, trip?.countryCode, trip?.destinationTimezone, trip?.currencyCode, trip?.languageCode]);
   const visibleTools = TOOLS.filter((tool) => {
     if (tool.requiresPremium && !isPremium) return false;
     if (tool.requiresModule && !activeModules.has(tool.requiresModule)) return false;
@@ -188,13 +250,13 @@ export function HomePage() {
   /* Weather V2 (Premium): cache diario desde Edge, no fetch por render */
   useEffect(() => {
     if (!isPremium) return;
-    if (!trip?.id || !trip.lat || !trip.lon || !trip.startDate || !trip.endDate) return;
+    if (!trip?.id || !hasCoords || !trip.startDate || !trip.endDate) return;
     if (trip.weatherForecastDaily && trip.weatherForecastDaily.length > 0) return;
     setForecastStatus('loading');
     void fetchWeatherCache({
       tripId: trip.id,
-      lat: trip.lat,
-      lon: trip.lon,
+      lat: Number(trip.lat),
+      lon: Number(trip.lon),
       startDate: trip.startDate,
       endDate: trip.endDate,
       timezone: trip.destinationTimezone,
@@ -384,7 +446,7 @@ export function HomePage() {
                   <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 1 }}>
                     {heroWeather.minTemp}° / {heroWeather.maxTemp}° · {t('weather.forecast.rain', { pct: heroWeather.rainProbability })}
                   </div>
-                  {isPremium && trip.lat && trip.lon && trip.startDate && trip.endDate && (
+                  {isPremium && hasCoords && trip.startDate && trip.endDate && (
                     <button
                       type="button"
                       onClick={() => setShowForecast(true)}
@@ -730,13 +792,13 @@ export function HomePage() {
       </div>
 
       {/* Modal pronóstico completo */}
-      {trip && trip.lat && trip.lon && trip.startDate && trip.endDate && (
+      {trip && hasCoords && trip.startDate && trip.endDate && (
         <WeatherForecastModal
           open={showForecast}
           onClose={() => setShowForecast(false)}
           tripId={trip.id}
-          lat={trip.lat}
-          lon={trip.lon}
+          lat={Number(trip.lat)}
+          lon={Number(trip.lon)}
           startDate={trip.startDate}
           endDate={trip.endDate}
           timezone={trip.destinationTimezone}

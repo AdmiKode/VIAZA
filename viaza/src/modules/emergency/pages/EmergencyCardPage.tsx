@@ -104,13 +104,29 @@ export default function EmergencyCardPage() {
         <div style={{ padding: '28px 20px' }}>
           {/* Beneficios */}
           {[
-            ['Datos medicos', 'Datos médicos accesibles al instante', 'Tipo de sangre, alergias y medicamentos siempre disponibles'],
-            ['Contactos', 'Contactos de emergencia', 'Quienes te cuidan, a un toque de distancia'],
-            ['Privacidad', 'Privacidad total', 'Tú decides exactamente qué información es pública'],
-            ['Sin app', 'Sin app necesaria', 'Cualquier persona puede escanear tu QR, sin descargar nada'],
+            ['🩺', 'Datos médicos accesibles al instante', 'Tipo de sangre, alergias y medicamentos siempre disponibles'],
+            ['☎️', 'Contactos de emergencia', 'Quienes te cuidan, a un toque de distancia'],
+            ['🔒', 'Privacidad total', 'Tú decides exactamente qué información es pública'],
+            ['📱', 'Sin app necesaria', 'Cualquier persona puede escanear tu QR, sin descargar nada'],
           ].map(([icon, title, desc]) => (
             <div key={title} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(192,57,43,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  background: 'rgba(234,153,64,0.14)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20,
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  lineHeight: 1,
+                }}
+              >
+                {icon}
+              </div>
               <div>
                 <div style={{ color: C.dark, fontSize: 15, fontWeight: 700 }}>{title}</div>
                 <div style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>{desc}</div>

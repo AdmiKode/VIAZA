@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { useAppStore } from '../../../app/store/useAppStore';
 import { AppHeader } from '../../../components/ui/AppHeader';
 import { AppCard } from '../../../components/ui/AppCard';
 import { quickPhrases, type QuickPhraseCategory } from '../utils/quickPhrasesData';
@@ -20,35 +18,10 @@ const categories: Array<{ id: QuickPhraseCategory; titleKey: string }> = [
 
 export function QuickPhrasesPage() {
   const { t } = useTranslation();
-  const isPremium = useAppStore((s) => s.isPremium);
   const [category, setCategory] = useState<QuickPhraseCategory>('airport');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const items = useMemo(() => quickPhrases.filter((p) => p.category === category), [category]);
-
-  if (!isPremium) {
-    return (
-      <div className="px-4 pt-4 pb-24">
-        <AppHeader title={t('translator.quickPhrases')} />
-        <AppCard className="mt-4">
-          <div className="text-sm font-semibold text-[var(--viaza-primary)]">
-            {t('premium.required.title')}
-          </div>
-          <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">
-            {t('premium.required.body')}
-          </div>
-          <Link to="/premium" className="mt-4 block">
-            <button
-              type="button"
-              className="w-full rounded-2xl bg-[var(--viaza-accent)] py-3 text-sm font-semibold text-[var(--viaza-background)] shadow-[var(--shadow-2)] active:scale-[0.98]"
-            >
-              {t('premium.required.cta')}
-            </button>
-          </Link>
-        </AppCard>
-      </div>
-    );
-  }
 
   return (
     <div className="px-4 pt-4 pb-24">

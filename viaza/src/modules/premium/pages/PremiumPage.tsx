@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../app/store/useAppStore';
-import { openCustomerPortal, purchasePremium } from '../../../services/premiumService';
-import { supabase } from '../../../services/supabaseClient';
+import { checkPremiumStatus, openCustomerPortal, purchasePremium, syncPremiumFromStripe } from '../../../services/premiumService';
 
 /* ─── Beneficios del plan premium ─── */
 const BENEFITS = [
@@ -120,9 +118,11 @@ const BENEFITS = [
 
 export function PremiumPage() {
   const { t } = useTranslation();
+  const setIsPremium = useAppStore((s) => s.setIsPremium);
   const isPremium = useAppStore((s) => s.isPremium);
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
+  const [loadingSync, setLoadingSync] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string>('');
 
   async function handleCheckout() {
@@ -146,6 +146,23 @@ export function PremiumPage() {
       await openCustomerPortal();
     } finally {
       setLoadingPortal(false);
+    }
+  }
+
+  async function handleSync() {
+    setLoadingSync(true);
+    setCheckoutError('');
+    try {
+      const res = await syncPremiumFromStripe();
+      if (!res.ok) {
+        setCheckoutError(res.error ?? t('common.error'));
+        return;
+      }
+      const active = await checkPremiumStatus().catch(() => false);
+      setIsPremium(active);
+      if (!active) setCheckoutError(t('premium.sync.notActive'));
+    } finally {
+      setLoadingSync(false);
     }
   }
 
@@ -248,6 +265,22 @@ export function PremiumPage() {
                   {checkoutError}
                 </div>
               )}
+
+              <button
+                type="button"
+                onClick={handleSync}
+                disabled={loadingSync}
+                className="mt-3 w-full rounded-2xl py-3 text-sm font-bold transition"
+                style={{
+                  background: 'rgb(255 255 255 / 0.14)',
+                  color: 'white',
+                  border: '1px solid rgb(255 255 255 / 0.22)',
+                  cursor: loadingSync ? 'default' : 'pointer',
+                  opacity: loadingSync ? 0.7 : 1,
+                }}
+              >
+                {loadingSync ? t('premium.sync.loading') : t('premium.sync.cta')}
+              </button>
             </>
           )}
 

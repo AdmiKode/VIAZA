@@ -24,7 +24,6 @@ function normalizeLang(code: string): string {
 
 export function TranslatorPage() {
   const { t } = useTranslation();
-  const isPremium = useAppStore((s) => s.isPremium);
   const currentLanguage = useAppStore((s) => s.currentLanguage);
   const currentTripId = useAppStore((s) => s.currentTripId);
   const trip = useAppStore((s) => s.trips.find((x) => x.id === currentTripId));
@@ -37,27 +36,7 @@ export function TranslatorPage() {
   const [text, setText] = useState('');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  if (!isPremium) {
-    return (
-      <div className="px-4 pt-4 pb-24">
-        <AppHeader title={t('translator.title')} />
-        <AppCard className="mt-4">
-          <div className="text-sm font-semibold text-[var(--viaza-primary)]">
-            {t('premium.required.title')}
-          </div>
-          <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">
-            {t('premium.required.body')}
-          </div>
-          <Link to="/premium" className="mt-4 block">
-            <AppButton className="w-full" type="button">
-              {t('premium.required.cta')}
-            </AppButton>
-          </Link>
-        </AppCard>
-      </div>
-    );
-  }
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="px-4 pt-4 pb-24">
@@ -112,9 +91,13 @@ export function TranslatorPage() {
               disabled={!text.trim() || isLoading}
               onClick={async () => {
                 setIsLoading(true);
+                setError(null);
                 try {
                   const translated = await translateText({ text, from, to });
                   setResult(translated);
+                  if (!translated) setError(t('translator.error.empty'));
+                } catch (e) {
+                  setError((e as Error)?.message ?? t('translator.error.generic'));
                 } finally {
                   setIsLoading(false);
                 }
@@ -131,6 +114,13 @@ export function TranslatorPage() {
             </Link>
           </div>
         </AppCard>
+
+        {error && (
+          <AppCard>
+            <div className="text-sm font-semibold text-[var(--viaza-primary)]">{t('translator.error.title')}</div>
+            <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.65)]">{error}</div>
+          </AppCard>
+        )}
 
         <AppCard>
           <div className="text-xs font-semibold text-[rgb(var(--viaza-primary-rgb)/0.60)]">

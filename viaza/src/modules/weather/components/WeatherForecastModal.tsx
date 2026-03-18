@@ -168,7 +168,7 @@ export function WeatherForecastModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !isPremium || !tripId || !lat || !lon || !startDate || !endDate) return;
+    if (!open || !isPremium || !tripId || !Number.isFinite(lat) || !Number.isFinite(lon) || !startDate || !endDate) return;
     if (cachedDaily && cachedDaily.length > 0) {
       setDays(toUiDays(cachedDaily));
       return;

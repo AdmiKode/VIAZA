@@ -1,12 +1,33 @@
 // @ts-ignore deno url
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
-import { requireEnv } from '../_shared/env.ts';
 
 type Body = {
   place_id: string;
   language?: string;
 };
+
+type OpenMeteoGet = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  country_code: string;
+  country?: string;
+  admin1?: string;
+  admin2?: string;
+  timezone?: string;
+};
+
+function isOpenMeteoPlaceId(placeId: string) {
+  return placeId.startsWith('om:');
+}
+
+function openMeteoIdFromPlaceId(placeId: string): number | null {
+  const raw = placeId.replace(/^om:/, '');
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
 
 async function fetchCountryMeta(countryCode: string): Promise<{ currency: string | null; language: string | null; countryName: string | null }> {
   try {
@@ -48,14 +69,48 @@ serve(async (req) => {
     const { place_id, language = 'es' } = (await req.json()) as Body;
     if (!place_id) return jsonResponse({ ok: false, error: 'place_id is required' }, { status: 400 });
 
-    const key = requireEnv('GOOGLE_MAPS_SERVER_API_KEY');
+    const googleKey = Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY');
+
+    // Fallback (no Google key): resolve via Open‑Meteo `get` endpoint when place_id is `om:<id>`.
+    if (!googleKey || isOpenMeteoPlaceId(place_id)) {
+      const id = openMeteoIdFromPlaceId(place_id);
+      if (!id) return jsonResponse({ ok: false, error: 'Invalid place_id' }, { status: 400 });
+
+      const url = new URL('https://geocoding-api.open-meteo.com/v1/get');
+      url.searchParams.set('id', String(id));
+      const res = await fetch(url);
+      if (!res.ok) return jsonResponse({ ok: false, error: `Geocoding error (${res.status})` }, { status: 502 });
+      const p = (await res.json()) as OpenMeteoGet;
+
+      const lat = p.latitude;
+      const lon = p.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return jsonResponse({ ok: false, error: 'Missing geometry' }, { status: 400 });
+
+      const countryCode = p.country_code ?? null;
+      const countryMeta = countryCode ? await fetchCountryMeta(countryCode) : { currency: null, language: null, countryName: null };
+
+      return jsonResponse({
+        ok: true,
+        destination: {
+          destination_place_id: place_id,
+          destination_name: p.name,
+          destination_country: countryMeta.countryName ?? p.country ?? null,
+          destination_country_code: countryCode,
+          destination_timezone: p.timezone ?? null,
+          destination_currency: countryMeta.currency,
+          destination_language: countryMeta.language,
+          lat,
+          lon,
+        },
+      });
+    }
 
     // Places API New — GET /v1/places/{place_id}
     const detailsRes = await fetch(
       `https://places.googleapis.com/v1/places/${encodeURIComponent(place_id)}?languageCode=${language}`,
       {
         headers: {
-          'X-Goog-Api-Key': key,
+          'X-Goog-Api-Key': googleKey,
           'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,addressComponents',
         },
       }
@@ -83,7 +138,7 @@ serve(async (req) => {
     const countryCode = countryComp?.shortText ?? null;
     const countryNameFromPlaces = countryComp?.longText ?? null;
 
-    const timezone = await fetchTimezone({ lat, lon, key });
+    const timezone = await fetchTimezone({ lat, lon, key: googleKey });
 
     const countryMeta = countryCode ? await fetchCountryMeta(countryCode) : { currency: null, language: null, countryName: null };
     const currency = countryMeta.currency;

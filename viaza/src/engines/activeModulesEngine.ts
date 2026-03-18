@@ -30,11 +30,18 @@ export function computeActiveModules(params: { trip: Trip; isPremium: boolean })
   const { trip, isPremium } = params;
   const ctx = buildTripContext(trip);
 
+  const hasCoords =
+    Number.isFinite(trip.lat) &&
+    Number.isFinite(trip.lon) &&
+    !(Number(trip.lat) === 0 && Number(trip.lon) === 0);
+
   const base: ActiveModuleId[] = [
     'packing',
     'wallet',
     'agenda',
     'emergency',
+    'translator',
+    'quick_phrases',
   ];
 
   if (trip.transportType === 'car' || trip.transportType === 'bus' || trip.transportType === 'train') {
@@ -43,10 +50,10 @@ export function computeActiveModules(params: { trip: Trip; isPremium: boolean })
 
   if (isPremium) {
     // Módulos que dependen de destino real (lat/lon)
-    if (trip.lat != null && trip.lon != null) {
+    if (hasCoords) {
       base.push('places', 'weather', 'recommendations');
     }
-    base.push('translator', 'quick_phrases', 'wallet_ocr', 'itinerary');
+    base.push('wallet_ocr', 'itinerary');
   }
 
   // Ajustes por fase
@@ -59,7 +66,7 @@ export function computeActiveModules(params: { trip: Trip; isPremium: boolean })
   if (ctx.tripPhase === 'in_trip') {
     // En viaje: priorizar lo operativo del día
     const inTrip: ActiveModuleId[] = [
-      ...(isPremium ? (['recommendations', 'translator', 'quick_phrases', 'weather', 'places'] as ActiveModuleId[]) : []),
+      ...(isPremium ? (['recommendations', 'weather', 'places'] as ActiveModuleId[]) : []),
       ...base,
     ];
     return uniqStable(inTrip) as ActiveModuleId[];

@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
 import { requireEnv } from '../_shared/env.ts';
-import { requirePremium } from '../_shared/premium.ts';
+import { requireAuth, requirePremium } from '../_shared/premium.ts';
 
 type TaskType =
   | 'translation'
@@ -66,6 +66,22 @@ function providerForTask(task: TaskType): Provider {
   if (hasEnv('GROQ_API_KEY')) return 'groq';
   if (hasEnv('ANTHROPIC_API_KEY')) return 'anthropic';
   return 'openai';
+}
+
+function canUseAnyLLM() {
+  return hasEnv('OPENAI_API_KEY') || hasEnv('ANTHROPIC_API_KEY') || hasEnv('GROQ_API_KEY');
+}
+
+async function myMemoryTranslate(params: { text: string; from: string; to: string }) {
+  const { text, from, to } = params;
+  const url = new URL('https://api.mymemory.translated.net/get');
+  url.searchParams.set('q', text);
+  url.searchParams.set('langpair', `${from}|${to}`);
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Translate error ${res.status}`);
+  const json = await res.json() as { responseData?: { translatedText?: string } };
+  return String(json.responseData?.translatedText ?? '').trim();
 }
 
 async function openaiChat(params: {
@@ -213,12 +229,15 @@ serve(async (req) => {
   if (opt) return opt;
 
   try {
-    const premium = await requirePremium(req);
-    if (premium instanceof Response) return premium;
+    const authed = await requireAuth(req);
+    if (authed instanceof Response) return authed;
 
     const body = (await req.json()) as Body;
     const { task_type, payload, trip_context, language_context } = body;
     if (!task_type) return jsonResponse({ ok: false, error: 'task_type is required' }, { status: 400 });
+
+    const premium = await requirePremium(req);
+    const isPremium = !(premium instanceof Response);
 
     const provider = providerForTask(task_type);
     const defaultOpenAIModel = Deno.env.get('OPENAI_MODEL_DEFAULT') ?? 'gpt-4.1-mini';
@@ -236,18 +255,29 @@ serve(async (req) => {
       const to = String(payload.to ?? '');
       if (!text || !from || !to) return jsonResponse({ ok: false, error: 'text/from/to required' }, { status: 400 });
 
-      const system = `You are a professional travel translator. Translate from ${langName(from)} to ${langName(to)}. Return ONLY the translated text.`;
-      const content = await runLLM({
-        provider,
-        model: defaultModel,
-        temperature: 0.2,
-        max_tokens: 500,
-        system,
-        userContent: text.slice(0, 4000),
-      });
+      // Translator debe funcionar incluso sin premium o sin keys.
+      // - Premium + keys: usa LLM
+      // - No premium o sin keys: fallback MyMemory (gratis)
+      let content = '';
+      if (isPremium && canUseAnyLLM()) {
+        const system = `You are a professional travel translator. Translate from ${langName(from)} to ${langName(to)}. Return ONLY the translated text.`;
+        content = await runLLM({
+          provider,
+          model: defaultModel,
+          temperature: 0.2,
+          max_tokens: 500,
+          system,
+          userContent: text.slice(0, 4000),
+        });
+      } else {
+        content = await myMemoryTranslate({ text: text.slice(0, 2000), from, to });
+      }
 
       return jsonResponse({ ok: true, result: { translatedText: content } });
     }
+
+    // Resto de tareas: premium requerido
+    if (!isPremium) return premium;
 
     if (task_type === 'reservation_parse') {
       const text = String(payload.text ?? '').trim();

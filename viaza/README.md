@@ -22,7 +22,7 @@ npm run cap:sync
 ```
 
 ## Iconos (Android + iOS)
-Genera los iconos desde el master `public/brand/logo-blue-bg.png` (y usa `public/brand/logo-blue.png` como foreground si existe):
+Genera los iconos desde el master `public/brand/icooviaza.png`:
 ```bash
 cd viaza
 ./scripts/generate-app-icons.sh

@@ -27,8 +27,8 @@ type OnboardingDraft = {
   startDate: string;
   endDate: string;
   durationDays: number;
-  lat: number;
-  lon: number;
+  lat: number | null;
+  lon: number | null;
   destinationPlaceId: string;
   destinationTimezone: string;
   destinationCountry: string;
@@ -49,8 +49,8 @@ type OnboardingDraft = {
   travelLight: boolean;
   transportType: TransportType | null;
   originCity: string;
-  originLat: number;
-  originLon: number;
+  originLat: number | null;
+  originLon: number | null;
   flightNumber: string;
   airline: string;
   airportCode: string;
@@ -149,8 +149,8 @@ const emptyDraft: OnboardingDraft = {
   startDate: '',
   endDate: '',
   durationDays: 7,
-  lat: 0,
-  lon: 0,
+  lat: null,
+  lon: null,
   destinationPlaceId: '',
   destinationTimezone: '',
   destinationCountry: '',
@@ -171,8 +171,8 @@ const emptyDraft: OnboardingDraft = {
   travelLight: false,
   transportType: null,
   originCity: '',
-  originLat: 0,
-  originLon: 0,
+  originLat: null,
+  originLon: null,
   flightNumber: '',
   airline: '',
   airportCode: '',
@@ -319,10 +319,14 @@ export const useAppStore = create<AppState>()(
         if (!userId) return;
 
         const remoteTripsRaw = await fetchTrips(userId);
-        const remoteTrips = remoteTripsRaw.map((trip) => {
-          if (trip.activeModules && trip.activeModules.length > 0) return trip;
-          return { ...trip, activeModules: computeActiveModules({ trip, isPremium: get().isPremium }) };
-        });
+        const isPremiumNow = get().isPremium;
+        // `activeModules` es derivado de `trip` + `isPremium`.
+        // No confiamos en `trips.active_modules` remoto porque puede quedar desfasado
+        // (por ejemplo: usuario compra Premium después de crear el viaje).
+        const remoteTrips = remoteTripsRaw.map((trip) => ({
+          ...trip,
+          activeModules: computeActiveModules({ trip, isPremium: isPremiumNow }),
+        }));
         if (remoteTrips.length === 0) return;
 
         const existingCurrent = get().currentTripId;
@@ -793,15 +797,25 @@ export const useAppStore = create<AppState>()(
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n : fallback;
         };
+        const toFiniteOrNull = (v: unknown): number | null => {
+          if (v == null) return null;
+          const n = typeof v === 'number' ? v : Number(v);
+          return Number.isFinite(n) ? n : null;
+        };
         draft.durationDays = toFinite(draft.durationDays, emptyDraft.durationDays);
-        draft.lat = toFinite(draft.lat, emptyDraft.lat);
-        draft.lon = toFinite(draft.lon, emptyDraft.lon);
-        draft.originLat = toFinite(draft.originLat, emptyDraft.originLat);
-        draft.originLon = toFinite(draft.originLon, emptyDraft.originLon);
+        draft.lat = toFiniteOrNull(draft.lat);
+        draft.lon = toFiniteOrNull(draft.lon);
+        draft.originLat = toFiniteOrNull(draft.originLat);
+        draft.originLon = toFiniteOrNull(draft.originLon);
         draft.numberOfAdults = Math.max(1, toFinite(draft.numberOfAdults, 1));
         draft.numberOfKids = Math.max(0, toFinite(draft.numberOfKids, 0));
         draft.numberOfBabies = Math.max(0, toFinite(draft.numberOfBabies, 0));
         merged.onboardingDraft = draft;
+
+        // Auth/premium se derivan de Supabase; no rehidratar valores stale.
+        merged.user = (currentState as AppState).user;
+        merged.isAuthenticated = (currentState as AppState).isAuthenticated;
+        merged.isPremium = (currentState as AppState).isPremium;
 
         return merged;
       },
@@ -817,9 +831,6 @@ export const useAppStore = create<AppState>()(
         itineraryEvents: state.itineraryEvents,
         savedPlaces: state.savedPlaces,
         walletDocs: state.walletDocs,
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        isPremium: state.isPremium,
         onboardingCompleted: state.onboardingCompleted,
         onboardingDraft: state.onboardingDraft
       })

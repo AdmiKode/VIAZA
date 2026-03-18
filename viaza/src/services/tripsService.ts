@@ -73,11 +73,49 @@ export async function updateTripRemote(
 ): Promise<void> {
   // Convertir solo los campos que cambiaron
   const row: Record<string, unknown> = {};
+  const coordOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
   if (patch.title !== undefined) row.title = patch.title;
-  if (patch.tripStatus !== undefined) row.trip_status = patch.tripStatus;
-  if (patch.weatherForecast !== undefined) row.weather_forecast = patch.weatherForecast;
-  if (patch.packingStyle !== undefined) row.packing_style = patch.packingStyle;
+  if (patch.destination !== undefined) row.destination = patch.destination;
+  if (patch.destinationPlaceId !== undefined) row.destination_place_id = patch.destinationPlaceId || null;
+  if (patch.destinationCountry !== undefined) row.destination_country = patch.destinationCountry || null;
+  if (patch.countryCode !== undefined) row.country_code = patch.countryCode || null;
+  if (patch.destinationTimezone !== undefined) row.destination_timezone = patch.destinationTimezone || null;
+  if (patch.lat !== undefined) row.lat = coordOrNull(patch.lat);
+  if (patch.lon !== undefined) row.lon = coordOrNull(patch.lon);
+  if (patch.startDate !== undefined) row.start_date = patch.startDate || null;
+  if (patch.endDate !== undefined) row.end_date = patch.endDate || null;
+  if (patch.durationDays !== undefined) row.duration_days = patch.durationDays;
+  if (patch.travelType !== undefined) row.travel_type = patch.travelType;
+  if (patch.climate !== undefined) row.climate = patch.climate;
+  if (patch.travelerGroup !== undefined) row.traveler_group = patch.travelerGroup;
+  if (patch.travelerProfile !== undefined) row.traveler_profile = patch.travelerProfile || null;
+  if (patch.travelStyle !== undefined) row.travel_style = patch.travelStyle || null;
+  if (patch.luggageStrategy !== undefined) row.luggage_strategy = patch.luggageStrategy || null;
+  if (patch.activeModules !== undefined) row.active_modules = patch.activeModules ?? [];
   if (patch.activities !== undefined) row.activities = patch.activities;
+  if (patch.laundryMode !== undefined) row.laundry_mode = patch.laundryMode;
+  if (patch.packingStyle !== undefined) row.packing_style = patch.packingStyle;
+  if (patch.tripStatus !== undefined) row.trip_status = patch.tripStatus;
+  if (patch.weatherForecast !== undefined) row.weather_forecast = patch.weatherForecast ?? null;
+  if (patch.weatherForecastDaily !== undefined) row.weather_forecast_daily = patch.weatherForecastDaily ?? null;
+
+  if (patch.transportType !== undefined) row.transport_type = patch.transportType || null;
+  if (patch.originCity !== undefined) row.origin_city = patch.originCity || null;
+  if (patch.originLat !== undefined) row.origin_lat = coordOrNull(patch.originLat);
+  if (patch.originLon !== undefined) row.origin_lon = coordOrNull(patch.originLon);
+  if (patch.flightNumber !== undefined) row.flight_number = patch.flightNumber || null;
+  if (patch.airline !== undefined) row.airline = patch.airline || null;
+  if (patch.airportCode !== undefined) row.airport_code = patch.airportCode || null;
+  if (patch.busTerminal !== undefined) row.bus_terminal = patch.busTerminal || null;
+  if (patch.trainStation !== undefined) row.train_station = patch.trainStation || null;
+  if (patch.cruisePort !== undefined) row.cruise_port = patch.cruisePort || null;
+
+  if (patch.currencyCode !== undefined) row.currency_code = patch.currencyCode || null;
+  if (patch.languageCode !== undefined) row.language_code = patch.languageCode || null;
+  if (patch.numberOfAdults !== undefined) row.number_of_adults = patch.numberOfAdults;
+  if (patch.numberOfKids !== undefined) row.number_of_kids = patch.numberOfKids;
+  if (patch.numberOfBabies !== undefined) row.number_of_babies = patch.numberOfBabies;
 
   if (Object.keys(row).length === 0) return;
   row.updated_at = new Date().toISOString();

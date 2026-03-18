@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
-import { requireEnv } from '../_shared/env.ts';
 import { requireAuth } from '../_shared/premium.ts';
 
 type Body = {
@@ -11,6 +10,33 @@ type Body = {
 function pickCountryCode(components: Array<{ short_name: string; types: string[] }>): string | null {
   const country = components.find((c) => c.types.includes('country'));
   return country?.short_name ?? null;
+}
+
+type OpenMeteoGet = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  country_code: string;
+  country?: string;
+  admin1?: string;
+  admin2?: string;
+  timezone?: string;
+};
+
+function isOpenMeteoPlaceId(placeId: string) {
+  return placeId.startsWith('om:');
+}
+
+function openMeteoIdFromPlaceId(placeId: string): number | null {
+  const raw = placeId.replace(/^om:/, '');
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatOpenMeteoAddress(p: OpenMeteoGet): string {
+  const parts = [p.name, p.admin1, p.country].filter(Boolean);
+  return parts.join(' · ');
 }
 
 serve(async (req) => {
@@ -24,10 +50,37 @@ serve(async (req) => {
     const { place_id, language = 'es' } = (await req.json()) as Body;
     if (!place_id) return jsonResponse({ ok: false, error: 'place_id is required' }, { status: 400 });
 
-    const key = requireEnv('GOOGLE_MAPS_API_KEY');
+    const googleKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+
+    // Fallback: Open‑Meteo place ids (`om:<id>`) when Google key isn't configured.
+    if (!googleKey || isOpenMeteoPlaceId(place_id)) {
+      const id = openMeteoIdFromPlaceId(place_id);
+      if (!id) return jsonResponse({ ok: false, error: 'Invalid place_id' }, { status: 400 });
+
+      const url = new URL('https://geocoding-api.open-meteo.com/v1/get');
+      url.searchParams.set('id', String(id));
+
+      const res = await fetch(url);
+      if (!res.ok) return jsonResponse({ ok: false, error: `Geocoding error (${res.status})` }, { status: 502 });
+      const p = (await res.json()) as OpenMeteoGet;
+
+      return jsonResponse({
+        ok: true,
+        place: {
+          place_id,
+          name: p.name,
+          formatted_address: formatOpenMeteoAddress(p),
+          lat: p.latitude,
+          lon: p.longitude,
+          country_code: p.country_code ?? null,
+          timezone: p.timezone ?? null,
+        },
+      });
+    }
+
     const url = new URL('https://maps.googleapis.com/maps/api/place/details/json');
     url.searchParams.set('place_id', place_id);
-    url.searchParams.set('key', key);
+    url.searchParams.set('key', googleKey);
     url.searchParams.set('language', language);
     url.searchParams.set('fields', 'place_id,name,formatted_address,geometry,address_component');
 

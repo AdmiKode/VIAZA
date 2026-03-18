@@ -4,9 +4,8 @@ import { ThemeProvider } from '../theme/ThemeProvider';
 import i18n from '../../lib/i18n/i18nInstance';
 import { useAppStore } from '../store/useAppStore';
 import { useEffect } from 'react';
-import { onAuthStateChange } from '../../services/authService';
-import { checkPremiumStatus } from '../../services/premiumService';
-import { supabase } from '../../services/supabaseClient';
+import { getSession, onAuthStateChange } from '../../services/authService';
+import { checkPremiumStatus, consumePremiumCheckoutStarted, syncPremiumFromStripe } from '../../services/premiumService';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const currentLanguage = useAppStore((s) => s.currentLanguage);
@@ -17,10 +16,20 @@ export function AppProviders({ children }: PropsWithChildren) {
   // Check de sesión al montar — cubre el caso de redirect de Stripe a producción
   // donde la sesión ya existía y onAuthStateChange no vuelve a disparar SIGNED_IN
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        void checkPremiumStatus().then((active) => setIsPremium(active)).catch(() => setIsPremium(false));
+    void getSession().then((user) => {
+      if (user) {
+        setSupabaseUser(user);
+        void (async () => {
+          const active = await checkPremiumStatus().catch(() => false);
+          setIsPremium(active);
+          // Si el usuario intentó comprar recientemente pero no quedó activo (webhook falló o tardó),
+          // intentamos una sincronización directa contra Stripe.
+          if (!active && consumePremiumCheckoutStarted({ maxAgeMs: 48 * 60 * 60 * 1000 })) {
+            await syncPremiumFromStripe().catch(() => ({ ok: false }));
+            const refreshed = await checkPremiumStatus().catch(() => false);
+            setIsPremium(refreshed);
+          }
+        })();
         void hydrateFromSupabase();
       }
     });
@@ -45,12 +54,38 @@ export function AppProviders({ children }: PropsWithChildren) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('premium') !== 'success') return;
-    void checkPremiumStatus().then((active) => setIsPremium(active)).catch(() => setIsPremium(false));
+
+    let cancelled = false;
+    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+    // Stripe webhook puede tardar: hacemos polling corto para evitar falsos "free"
+    void (async () => {
+      const delays = [0, 1200, 2200, 3500, 5000, 8000];
+      for (const d of delays) {
+        if (cancelled) return;
+        if (d) await wait(d);
+        const active = await checkPremiumStatus().catch(() => false);
+        if (cancelled) return;
+        setIsPremium(active);
+        if (active) {
+          await hydrateFromSupabase().catch(() => {});
+          return;
+        }
+      }
+
+      // Último recurso: sincronizar contra Stripe (no depende del webhook).
+      await syncPremiumFromStripe().catch(() => ({ ok: false }));
+      const refreshed = await checkPremiumStatus().catch(() => false);
+      setIsPremium(refreshed);
+      if (refreshed) await hydrateFromSupabase().catch(() => {});
+    })();
+
     params.delete('premium');
     const next = params.toString();
     const newUrl = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
     window.history.replaceState({}, '', newUrl);
-  }, [setIsPremium]);
+    return () => { cancelled = true; };
+  }, [setIsPremium, hydrateFromSupabase]);
 
   useEffect(() => {
     if (i18n.language !== currentLanguage) {

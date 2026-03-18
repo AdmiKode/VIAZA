@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-SRC_BG="${ROOT_DIR}/public/brand/logo-blue-bg.png"
-SRC_FG="${ROOT_DIR}/public/brand/logo-blue.png"
+SRC_BG="${ROOT_DIR}/public/brand/icooviaza.png"
+SRC_FG="${ROOT_DIR}/public/brand/icooviaza.png"
 OUT_BASE="${ROOT_DIR}/public/brand/icons"
 
 if [[ ! -f "${SRC_BG}" ]]; then
