@@ -21,27 +21,113 @@ create extension if not exists "uuid-ossp";
 create extension if not exists "pgcrypto";
 
 -- ─── Enum types ──────────────────────────────────────────────────────────────
-create type travel_type      as enum ('beach','mountain','city','camping','work','snow','roadtrip','adventure');
-create type climate_type     as enum ('hot','cold','mild','rainy');
-create type traveler_group   as enum ('solo','couple','family','family_baby','friends');
-create type laundry_mode     as enum ('none','washer','laundry_service');
-create type packing_style    as enum ('light','normal','heavy');
-create type trip_status      as enum ('planning','active','completed');
-create type transport_type   as enum ('flight','car','bus','cruise','train');
-create type traveler_role    as enum ('adult','kid','baby');
-create type subscription_plan as enum ('free','premium');
-create type payment_status   as enum ('pending','completed','failed','refunded');
-create type payment_provider as enum ('stripe','apple_pay','google_pay','paypal');
-create type luggage_size     as enum ('cabin','medium','large','extra_large');
-create type traveler_profile as enum ('economic','balanced','comfort','premium');
-create type travel_style     as enum ('backpack_light','standard','comfort');
+create or replace function public.ensure_enum_value(enum_name text, enum_value text)
+returns void
+language plpgsql
+as $$
+declare
+  enum_exists boolean;
+begin
+  select exists (
+    select 1
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = enum_name
+      and t.typtype = 'e'
+      and n.nspname = 'public'
+  ) into enum_exists;
+
+  if not enum_exists then
+    execute format('create type public.%I as enum (%L)', enum_name, enum_value);
+  elsif not exists (
+    select 1
+    from pg_enum e
+    join pg_type t on t.oid = e.enumtypid
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = enum_name
+      and n.nspname = 'public'
+      and e.enumlabel = enum_value
+  ) then
+    execute format('alter type public.%I add value %L', enum_name, enum_value);
+  end if;
+end;
+$$;
+
+select public.ensure_enum_value('travel_type', 'beach');
+select public.ensure_enum_value('travel_type', 'mountain');
+select public.ensure_enum_value('travel_type', 'city');
+select public.ensure_enum_value('travel_type', 'camping');
+select public.ensure_enum_value('travel_type', 'work');
+select public.ensure_enum_value('travel_type', 'snow');
+select public.ensure_enum_value('travel_type', 'roadtrip');
+select public.ensure_enum_value('travel_type', 'adventure');
+
+select public.ensure_enum_value('climate_type', 'hot');
+select public.ensure_enum_value('climate_type', 'cold');
+select public.ensure_enum_value('climate_type', 'mild');
+select public.ensure_enum_value('climate_type', 'rainy');
+
+select public.ensure_enum_value('traveler_group', 'solo');
+select public.ensure_enum_value('traveler_group', 'couple');
+select public.ensure_enum_value('traveler_group', 'family');
+select public.ensure_enum_value('traveler_group', 'family_baby');
+select public.ensure_enum_value('traveler_group', 'friends');
+
+select public.ensure_enum_value('laundry_mode', 'none');
+select public.ensure_enum_value('laundry_mode', 'washer');
+select public.ensure_enum_value('laundry_mode', 'laundry_service');
+
+select public.ensure_enum_value('packing_style', 'light');
+select public.ensure_enum_value('packing_style', 'normal');
+select public.ensure_enum_value('packing_style', 'heavy');
+
+select public.ensure_enum_value('trip_status', 'planning');
+select public.ensure_enum_value('trip_status', 'active');
+select public.ensure_enum_value('trip_status', 'completed');
+
+select public.ensure_enum_value('transport_type', 'flight');
+select public.ensure_enum_value('transport_type', 'car');
+select public.ensure_enum_value('transport_type', 'bus');
+select public.ensure_enum_value('transport_type', 'cruise');
+select public.ensure_enum_value('transport_type', 'train');
+
+select public.ensure_enum_value('traveler_role', 'adult');
+select public.ensure_enum_value('traveler_role', 'kid');
+select public.ensure_enum_value('traveler_role', 'baby');
+
+select public.ensure_enum_value('subscription_plan', 'free');
+select public.ensure_enum_value('subscription_plan', 'premium');
+
+select public.ensure_enum_value('payment_status', 'pending');
+select public.ensure_enum_value('payment_status', 'completed');
+select public.ensure_enum_value('payment_status', 'failed');
+select public.ensure_enum_value('payment_status', 'refunded');
+
+select public.ensure_enum_value('payment_provider', 'stripe');
+select public.ensure_enum_value('payment_provider', 'apple_pay');
+select public.ensure_enum_value('payment_provider', 'google_pay');
+select public.ensure_enum_value('payment_provider', 'paypal');
+
+select public.ensure_enum_value('luggage_size', 'cabin');
+select public.ensure_enum_value('luggage_size', 'medium');
+select public.ensure_enum_value('luggage_size', 'large');
+select public.ensure_enum_value('luggage_size', 'extra_large');
+
+select public.ensure_enum_value('traveler_profile', 'economic');
+select public.ensure_enum_value('traveler_profile', 'balanced');
+select public.ensure_enum_value('traveler_profile', 'comfort');
+select public.ensure_enum_value('traveler_profile', 'premium');
+
+select public.ensure_enum_value('travel_style', 'backpack_light');
+select public.ensure_enum_value('travel_style', 'standard');
+select public.ensure_enum_value('travel_style', 'comfort');
 
 -- ============================================================
 -- 1. PROFILES
 --    Extiende auth.users de Supabase con datos de la app.
 --    Se crea automáticamente al registrarse vía trigger.
 -- ============================================================
-create table public.profiles (
+create table if not exists public.profiles (
   id              uuid        primary key references auth.users(id) on delete cascade,
   name            text        not null default '',
   avatar_url      text,
@@ -68,6 +154,7 @@ begin
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
@@ -81,6 +168,7 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at
   before update on public.profiles
   for each row execute procedure public.set_updated_at();
@@ -88,10 +176,12 @@ create trigger profiles_updated_at
 -- RLS
 alter table public.profiles enable row level security;
 
+drop policy if exists "profiles: usuario lee su propio perfil" on public.profiles;
 create policy "profiles: usuario lee su propio perfil"
   on public.profiles for select
   using (auth.uid() = id);
 
+drop policy if exists "profiles: usuario actualiza su propio perfil" on public.profiles;
 create policy "profiles: usuario actualiza su propio perfil"
   on public.profiles for update
   using (auth.uid() = id)
@@ -103,7 +193,7 @@ create policy "profiles: usuario actualiza su propio perfil"
 --    La vista pública NO debe leerse directo de la tabla desde el cliente:
 --    se expone vía RPC `get_emergency_public_view(token)`.
 -- ============================================================
-create table public.emergency_profiles (
+create table if not exists public.emergency_profiles (
   id                          uuid        primary key default uuid_generate_v4(),
   user_id                     uuid        not null references public.profiles(id) on delete cascade,
   trip_id                     uuid, -- FK se agrega después de crear public.trips
@@ -156,10 +246,11 @@ create table public.emergency_profiles (
   updated_at                  timestamptz not null default now()
 );
 
-create index emergency_profiles_user_id_idx on public.emergency_profiles(user_id);
-create index emergency_profiles_trip_id_idx on public.emergency_profiles(trip_id);
-create index emergency_profiles_public_token_idx on public.emergency_profiles(public_token);
+create index if not exists emergency_profiles_user_id_idx on public.emergency_profiles(user_id);
+create index if not exists emergency_profiles_trip_id_idx on public.emergency_profiles(trip_id);
+create index if not exists emergency_profiles_public_token_idx on public.emergency_profiles(public_token);
 
+drop trigger if exists emergency_profiles_updated_at on public.emergency_profiles;
 create trigger emergency_profiles_updated_at
   before update on public.emergency_profiles
   for each row execute procedure public.set_updated_at();
@@ -167,19 +258,23 @@ create trigger emergency_profiles_updated_at
 -- RLS
 alter table public.emergency_profiles enable row level security;
 
+drop policy if exists "emergency_profiles: usuario ve el suyo" on public.emergency_profiles;
 create policy "emergency_profiles: usuario ve el suyo"
   on public.emergency_profiles for select
   using (auth.uid() = user_id);
 
+drop policy if exists "emergency_profiles: usuario crea el suyo" on public.emergency_profiles;
 create policy "emergency_profiles: usuario crea el suyo"
   on public.emergency_profiles for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "emergency_profiles: usuario actualiza el suyo" on public.emergency_profiles;
 create policy "emergency_profiles: usuario actualiza el suyo"
   on public.emergency_profiles for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "emergency_profiles: usuario elimina el suyo" on public.emergency_profiles;
 create policy "emergency_profiles: usuario elimina el suyo"
   on public.emergency_profiles for delete
   using (auth.uid() = user_id);
@@ -240,12 +335,98 @@ $$;
 revoke all on function public.get_emergency_public_view(text) from public;
 grant execute on function public.get_emergency_public_view(text) to anon, authenticated;
 
+-- Logs de acceso público al QR (sin almacenar token plano)
+create table if not exists public.emergency_qr_access_logs (
+  id                  bigserial   primary key,
+  emergency_profile_id uuid       not null references public.emergency_profiles(id) on delete cascade,
+  access_type         text        not null default 'public_view' check (access_type in ('public_view')),
+  source              text,
+  client_info         text,
+  token_fingerprint   text        not null,
+  accessed_at         timestamptz not null default now(),
+  created_at          timestamptz not null default now()
+);
+
+create index if not exists emergency_qr_access_logs_profile_idx
+  on public.emergency_qr_access_logs(emergency_profile_id);
+
+create index if not exists emergency_qr_access_logs_accessed_at_idx
+  on public.emergency_qr_access_logs(accessed_at desc);
+
+alter table public.emergency_qr_access_logs enable row level security;
+
+drop policy if exists "emergency_qr_access_logs: owner reads" on public.emergency_qr_access_logs;
+create policy "emergency_qr_access_logs: owner reads"
+  on public.emergency_qr_access_logs for select
+  using (
+    exists (
+      select 1
+      from public.emergency_profiles ep
+      where ep.id = emergency_qr_access_logs.emergency_profile_id
+        and ep.user_id = auth.uid()
+    )
+  );
+
+create or replace function public.log_emergency_qr_access(
+  token text,
+  source text default null,
+  client_info text default null
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_profile_id uuid;
+begin
+  if token is null or length(trim(token)) = 0 then
+    return false;
+  end if;
+
+  select ep.id
+    into v_profile_id
+  from public.emergency_profiles ep
+  where ep.public_token = token
+    and ep.qr_enabled = true
+    and ep.consent_public_display = true
+  limit 1;
+
+  if v_profile_id is null then
+    return false;
+  end if;
+
+  insert into public.emergency_qr_access_logs (
+    emergency_profile_id,
+    access_type,
+    source,
+    client_info,
+    token_fingerprint
+  )
+  values (
+    v_profile_id,
+    'public_view',
+    nullif(left(coalesce(source, ''), 120), ''),
+    nullif(left(coalesce(client_info, ''), 500), ''),
+    encode(digest(token, 'sha256'), 'hex')
+  );
+
+  return true;
+exception
+  when others then
+    return false;
+end;
+$$;
+
+revoke all on function public.log_emergency_qr_access(text, text, text) from public;
+grant execute on function public.log_emergency_qr_access(text, text, text) to anon, authenticated;
+
 -- ============================================================
 -- 2. TRIPS
 --    Un viaje por usuario. Puede tener múltiples viajes
 --    (historial). Solo uno puede estar 'active' a la vez.
 -- ============================================================
-create table public.trips (
+create table if not exists public.trips (
   id                    uuid          primary key default uuid_generate_v4(),
   user_id               uuid          not null references public.profiles(id) on delete cascade,
   title                 text          not null,
@@ -296,6 +477,9 @@ create table public.trips (
   -- Clima guardado
   weather_forecast      jsonb,         -- WeatherForecast agregado (compat)
   weather_forecast_daily jsonb,        -- forecast por día (mañana/tarde/noche)
+  risk_level            text,          -- low|medium|high|critical|unknown
+  risk_summary          jsonb,         -- snapshot normalizado del proveedor de riesgo
+  risk_updated_at       timestamptz,
   recommendations_state jsonb,         -- cache/estado de recomendaciones por viaje
   translator_state      jsonb,         -- cache/estado del traductor por viaje
   wallet_state          jsonb,         -- estado del wallet (conteos, flags)
@@ -306,14 +490,23 @@ create table public.trips (
   updated_at            timestamptz   not null default now()
 );
 
-create index trips_user_id_idx on public.trips(user_id);
-create index trips_status_idx  on public.trips(trip_status);
+alter table public.trips add column if not exists risk_level text;
+alter table public.trips add column if not exists risk_summary jsonb;
+alter table public.trips add column if not exists risk_updated_at timestamptz;
 
+create index if not exists trips_user_id_idx on public.trips(user_id);
+create index if not exists trips_status_idx  on public.trips(trip_status);
+create index if not exists trips_risk_level_idx on public.trips(risk_level);
+
+drop trigger if exists trips_updated_at on public.trips;
 create trigger trips_updated_at
   before update on public.trips
   for each row execute procedure public.set_updated_at();
 
 -- FK opcional: vincular Emergency Card a un viaje específico
+alter table public.emergency_profiles
+  drop constraint if exists emergency_profiles_trip_id_fkey;
+
 alter table public.emergency_profiles
   add constraint emergency_profiles_trip_id_fkey
   foreign key (trip_id) references public.trips(id) on delete set null;
@@ -321,19 +514,23 @@ alter table public.emergency_profiles
 -- RLS
 alter table public.trips enable row level security;
 
+drop policy if exists "trips: usuario ve sus viajes" on public.trips;
 create policy "trips: usuario ve sus viajes"
   on public.trips for select
   using (auth.uid() = user_id);
 
+drop policy if exists "trips: usuario crea sus viajes" on public.trips;
 create policy "trips: usuario crea sus viajes"
   on public.trips for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "trips: usuario actualiza sus viajes" on public.trips;
 create policy "trips: usuario actualiza sus viajes"
   on public.trips for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "trips: usuario elimina sus viajes" on public.trips;
 create policy "trips: usuario elimina sus viajes"
   on public.trips for delete
   using (auth.uid() = user_id);
@@ -343,7 +540,7 @@ create policy "trips: usuario elimina sus viajes"
 --    Integrantes del viaje (adultos, niños, bebés).
 --    Cada ítem de maleta puede pertenecer a un integrante.
 -- ============================================================
-create table public.travelers (
+create table if not exists public.travelers (
   id           uuid          primary key default uuid_generate_v4(),
   trip_id      uuid          not null references public.trips(id) on delete cascade,
   user_id      uuid          not null references public.profiles(id) on delete cascade,
@@ -354,24 +551,28 @@ create table public.travelers (
   created_at   timestamptz   not null default now()
 );
 
-create index travelers_trip_id_idx on public.travelers(trip_id);
+create index if not exists travelers_trip_id_idx on public.travelers(trip_id);
 
 -- RLS
 alter table public.travelers enable row level security;
 
+drop policy if exists "travelers: usuario ve los de sus viajes" on public.travelers;
 create policy "travelers: usuario ve los de sus viajes"
   on public.travelers for select
   using (auth.uid() = user_id);
 
+drop policy if exists "travelers: usuario crea integrantes" on public.travelers;
 create policy "travelers: usuario crea integrantes"
   on public.travelers for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "travelers: usuario actualiza integrantes" on public.travelers;
 create policy "travelers: usuario actualiza integrantes"
   on public.travelers for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "travelers: usuario elimina integrantes" on public.travelers;
 create policy "travelers: usuario elimina integrantes"
   on public.travelers for delete
   using (auth.uid() = user_id);
@@ -381,7 +582,7 @@ create policy "travelers: usuario elimina integrantes"
 --    Ítems de la lista de maleta. Pueden pertenecer a un
 --    integrante específico (travelerId) o al viaje general.
 -- ============================================================
-create table public.packing_items (
+create table if not exists public.packing_items (
   id           uuid        primary key default uuid_generate_v4(),
   trip_id      uuid        not null references public.trips(id) on delete cascade,
   traveler_id  uuid        references public.travelers(id) on delete set null,
@@ -398,9 +599,10 @@ create table public.packing_items (
   updated_at   timestamptz not null default now()
 );
 
-create index packing_items_trip_id_idx     on public.packing_items(trip_id);
-create index packing_items_traveler_id_idx on public.packing_items(traveler_id);
+create index if not exists packing_items_trip_id_idx     on public.packing_items(trip_id);
+create index if not exists packing_items_traveler_id_idx on public.packing_items(traveler_id);
 
+drop trigger if exists packing_items_updated_at on public.packing_items;
 create trigger packing_items_updated_at
   before update on public.packing_items
   for each row execute procedure public.set_updated_at();
@@ -408,19 +610,23 @@ create trigger packing_items_updated_at
 -- RLS
 alter table public.packing_items enable row level security;
 
+drop policy if exists "packing_items: usuario ve los de sus viajes" on public.packing_items;
 create policy "packing_items: usuario ve los de sus viajes"
   on public.packing_items for select
   using (auth.uid() = user_id);
 
+drop policy if exists "packing_items: usuario crea ítems" on public.packing_items;
 create policy "packing_items: usuario crea ítems"
   on public.packing_items for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "packing_items: usuario actualiza ítems" on public.packing_items;
 create policy "packing_items: usuario actualiza ítems"
   on public.packing_items for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "packing_items: usuario elimina ítems" on public.packing_items;
 create policy "packing_items: usuario elimina ítems"
   on public.packing_items for delete
   using (auth.uid() = user_id);
@@ -430,7 +636,7 @@ create policy "packing_items: usuario elimina ítems"
 --    Fotos de evidencia de que un ítem ya está en la maleta.
 --    Las imágenes se guardan en Supabase Storage (bucket: evidence).
 -- ============================================================
-create table public.packing_evidence (
+create table if not exists public.packing_evidence (
   id           uuid        primary key default uuid_generate_v4(),
   item_id      uuid        not null references public.packing_items(id) on delete cascade,
   traveler_id  uuid        references public.travelers(id) on delete set null,
@@ -440,19 +646,22 @@ create table public.packing_evidence (
   taken_at     timestamptz not null default now()
 );
 
-create index packing_evidence_item_id_idx on public.packing_evidence(item_id);
+create index if not exists packing_evidence_item_id_idx on public.packing_evidence(item_id);
 
 -- RLS
 alter table public.packing_evidence enable row level security;
 
+drop policy if exists "packing_evidence: usuario ve sus fotos" on public.packing_evidence;
 create policy "packing_evidence: usuario ve sus fotos"
   on public.packing_evidence for select
   using (auth.uid() = user_id);
 
+drop policy if exists "packing_evidence: usuario sube fotos" on public.packing_evidence;
 create policy "packing_evidence: usuario sube fotos"
   on public.packing_evidence for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "packing_evidence: usuario elimina fotos" on public.packing_evidence;
 create policy "packing_evidence: usuario elimina fotos"
   on public.packing_evidence for delete
   using (auth.uid() = user_id);
@@ -462,7 +671,7 @@ create policy "packing_evidence: usuario elimina fotos"
 --    Fotos de la maleta completa para el asistente de acomodo.
 --    Incluye la recomendación de la IA y el análisis de zonas.
 -- ============================================================
-create table public.luggage_photos (
+create table if not exists public.luggage_photos (
   id              uuid          primary key default uuid_generate_v4(),
   trip_id         uuid          not null references public.trips(id) on delete cascade,
   traveler_id     uuid          references public.travelers(id) on delete set null,
@@ -476,26 +685,261 @@ create table public.luggage_photos (
   taken_at        timestamptz   not null default now()
 );
 
-create index luggage_photos_trip_id_idx on public.luggage_photos(trip_id);
+create index if not exists luggage_photos_trip_id_idx on public.luggage_photos(trip_id);
 
 -- RLS
 alter table public.luggage_photos enable row level security;
 
+drop policy if exists "luggage_photos: usuario ve sus fotos" on public.luggage_photos;
 create policy "luggage_photos: usuario ve sus fotos"
   on public.luggage_photos for select
   using (auth.uid() = user_id);
 
+drop policy if exists "luggage_photos: usuario sube fotos" on public.luggage_photos;
 create policy "luggage_photos: usuario sube fotos"
   on public.luggage_photos for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "luggage_photos: usuario actualiza fotos" on public.luggage_photos;
 create policy "luggage_photos: usuario actualiza fotos"
   on public.luggage_photos for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "luggage_photos: usuario elimina fotos" on public.luggage_photos;
 create policy "luggage_photos: usuario elimina fotos"
   on public.luggage_photos for delete
+  using (auth.uid() = user_id);
+
+-- ============================================================
+-- 7. SMART PACKING - SCAN/LAYOUT DATA MODEL
+--    Base de datos para validación de checklist por escaneo y
+--    propuestas estructuradas de acomodo de maleta.
+-- ============================================================
+create table if not exists public.suitcase_profiles (
+  id                uuid primary key default uuid_generate_v4(),
+  user_id           uuid not null references public.profiles(id) on delete cascade,
+  trip_id           uuid not null references public.trips(id) on delete cascade,
+  traveler_id       uuid references public.travelers(id) on delete set null,
+  name              text not null default 'Maleta principal',
+  luggage_type      text not null default 'checked' check (luggage_type in ('carry_on', 'checked', 'backpack', 'auto_trunk', 'other')),
+  height_cm         numeric(6,2),
+  width_cm          numeric(6,2),
+  depth_cm          numeric(6,2),
+  weight_limit_kg   numeric(6,2),
+  compartments      int not null default 1,
+  constraints       jsonb not null default '{}'::jsonb,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index if not exists suitcase_profiles_user_idx on public.suitcase_profiles(user_id);
+create index if not exists suitcase_profiles_trip_idx on public.suitcase_profiles(trip_id);
+create index if not exists suitcase_profiles_traveler_idx on public.suitcase_profiles(traveler_id);
+
+drop trigger if exists suitcase_profiles_updated_at on public.suitcase_profiles;
+create trigger suitcase_profiles_updated_at
+  before update on public.suitcase_profiles
+  for each row execute procedure public.set_updated_at();
+
+alter table public.suitcase_profiles enable row level security;
+
+drop policy if exists "suitcase_profiles: usuario ve los suyos" on public.suitcase_profiles;
+create policy "suitcase_profiles: usuario ve los suyos"
+  on public.suitcase_profiles for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "suitcase_profiles: usuario crea perfiles" on public.suitcase_profiles;
+create policy "suitcase_profiles: usuario crea perfiles"
+  on public.suitcase_profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "suitcase_profiles: usuario actualiza perfiles" on public.suitcase_profiles;
+create policy "suitcase_profiles: usuario actualiza perfiles"
+  on public.suitcase_profiles for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "suitcase_profiles: usuario elimina perfiles" on public.suitcase_profiles;
+create policy "suitcase_profiles: usuario elimina perfiles"
+  on public.suitcase_profiles for delete
+  using (auth.uid() = user_id);
+
+create table if not exists public.packing_scan_sessions (
+  id                  uuid primary key default uuid_generate_v4(),
+  user_id             uuid not null references public.profiles(id) on delete cascade,
+  trip_id             uuid not null references public.trips(id) on delete cascade,
+  traveler_id         uuid references public.travelers(id) on delete set null,
+  suitcase_profile_id uuid references public.suitcase_profiles(id) on delete set null,
+  status              text not null default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
+  confidence_avg      numeric(5,4),
+  completion_pct      numeric(5,2),
+  missing_count       int not null default 0,
+  duplicate_count     int not null default 0,
+  uncertain_count     int not null default 0,
+  started_at          timestamptz not null default now(),
+  completed_at        timestamptz,
+  metadata            jsonb not null default '{}'::jsonb,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create index if not exists packing_scan_sessions_user_idx on public.packing_scan_sessions(user_id);
+create index if not exists packing_scan_sessions_trip_idx on public.packing_scan_sessions(trip_id);
+create index if not exists packing_scan_sessions_traveler_idx on public.packing_scan_sessions(traveler_id);
+create index if not exists packing_scan_sessions_status_idx on public.packing_scan_sessions(status);
+
+drop trigger if exists packing_scan_sessions_updated_at on public.packing_scan_sessions;
+create trigger packing_scan_sessions_updated_at
+  before update on public.packing_scan_sessions
+  for each row execute procedure public.set_updated_at();
+
+alter table public.packing_scan_sessions enable row level security;
+
+drop policy if exists "packing_scan_sessions: usuario ve las suyas" on public.packing_scan_sessions;
+create policy "packing_scan_sessions: usuario ve las suyas"
+  on public.packing_scan_sessions for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "packing_scan_sessions: usuario crea sesiones" on public.packing_scan_sessions;
+create policy "packing_scan_sessions: usuario crea sesiones"
+  on public.packing_scan_sessions for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "packing_scan_sessions: usuario actualiza sesiones" on public.packing_scan_sessions;
+create policy "packing_scan_sessions: usuario actualiza sesiones"
+  on public.packing_scan_sessions for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "packing_scan_sessions: usuario elimina sesiones" on public.packing_scan_sessions;
+create policy "packing_scan_sessions: usuario elimina sesiones"
+  on public.packing_scan_sessions for delete
+  using (auth.uid() = user_id);
+
+create table if not exists public.packing_scan_detections (
+  id                bigserial primary key,
+  session_id        uuid not null references public.packing_scan_sessions(id) on delete cascade,
+  packing_item_id   uuid references public.packing_items(id) on delete set null,
+  detected_label    text not null,
+  normalized_label  text,
+  confidence        numeric(5,4),
+  match_status      text not null check (match_status in ('matched', 'missing', 'duplicate', 'uncertain', 'extra')),
+  quantity_detected int not null default 1,
+  source            text not null default 'vision',
+  bbox              jsonb,
+  raw_payload       jsonb,
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists packing_scan_detections_session_idx on public.packing_scan_detections(session_id);
+create index if not exists packing_scan_detections_item_idx on public.packing_scan_detections(packing_item_id);
+create index if not exists packing_scan_detections_status_idx on public.packing_scan_detections(match_status);
+
+alter table public.packing_scan_detections enable row level security;
+
+drop policy if exists "packing_scan_detections: usuario ve las suyas" on public.packing_scan_detections;
+create policy "packing_scan_detections: usuario ve las suyas"
+  on public.packing_scan_detections for select
+  using (
+    exists (
+      select 1
+      from public.packing_scan_sessions ps
+      where ps.id = packing_scan_detections.session_id
+        and ps.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "packing_scan_detections: usuario crea detecciones" on public.packing_scan_detections;
+create policy "packing_scan_detections: usuario crea detecciones"
+  on public.packing_scan_detections for insert
+  with check (
+    exists (
+      select 1
+      from public.packing_scan_sessions ps
+      where ps.id = packing_scan_detections.session_id
+        and ps.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "packing_scan_detections: usuario actualiza detecciones" on public.packing_scan_detections;
+create policy "packing_scan_detections: usuario actualiza detecciones"
+  on public.packing_scan_detections for update
+  using (
+    exists (
+      select 1
+      from public.packing_scan_sessions ps
+      where ps.id = packing_scan_detections.session_id
+        and ps.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.packing_scan_sessions ps
+      where ps.id = packing_scan_detections.session_id
+        and ps.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "packing_scan_detections: usuario elimina detecciones" on public.packing_scan_detections;
+create policy "packing_scan_detections: usuario elimina detecciones"
+  on public.packing_scan_detections for delete
+  using (
+    exists (
+      select 1
+      from public.packing_scan_sessions ps
+      where ps.id = packing_scan_detections.session_id
+        and ps.user_id = auth.uid()
+    )
+  );
+
+create table if not exists public.suitcase_layout_plans (
+  id                  uuid primary key default uuid_generate_v4(),
+  user_id             uuid not null references public.profiles(id) on delete cascade,
+  trip_id             uuid not null references public.trips(id) on delete cascade,
+  traveler_id         uuid references public.travelers(id) on delete set null,
+  suitcase_profile_id uuid not null references public.suitcase_profiles(id) on delete cascade,
+  strategy_version    text not null default 'v1',
+  layout              jsonb not null,
+  notes               text,
+  generated_by        text not null default 'ai_orchestrator',
+  status              text not null default 'draft' check (status in ('draft', 'approved', 'applied')),
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create index if not exists suitcase_layout_plans_user_idx on public.suitcase_layout_plans(user_id);
+create index if not exists suitcase_layout_plans_trip_idx on public.suitcase_layout_plans(trip_id);
+create index if not exists suitcase_layout_plans_profile_idx on public.suitcase_layout_plans(suitcase_profile_id);
+create index if not exists suitcase_layout_plans_status_idx on public.suitcase_layout_plans(status);
+
+drop trigger if exists suitcase_layout_plans_updated_at on public.suitcase_layout_plans;
+create trigger suitcase_layout_plans_updated_at
+  before update on public.suitcase_layout_plans
+  for each row execute procedure public.set_updated_at();
+
+alter table public.suitcase_layout_plans enable row level security;
+
+drop policy if exists "suitcase_layout_plans: usuario ve planes" on public.suitcase_layout_plans;
+create policy "suitcase_layout_plans: usuario ve planes"
+  on public.suitcase_layout_plans for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "suitcase_layout_plans: usuario crea planes" on public.suitcase_layout_plans;
+create policy "suitcase_layout_plans: usuario crea planes"
+  on public.suitcase_layout_plans for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "suitcase_layout_plans: usuario actualiza planes" on public.suitcase_layout_plans;
+create policy "suitcase_layout_plans: usuario actualiza planes"
+  on public.suitcase_layout_plans for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "suitcase_layout_plans: usuario elimina planes" on public.suitcase_layout_plans;
+create policy "suitcase_layout_plans: usuario elimina planes"
+  on public.suitcase_layout_plans for delete
   using (auth.uid() = user_id);
 
 -- ============================================================
@@ -503,7 +947,7 @@ create policy "luggage_photos: usuario elimina fotos"
 --    Actividades planificadas para un viaje con contexto real:
 --    costo, duración, tips, alertas de compra anticipada.
 -- ============================================================
-create table public.trip_activities (
+create table if not exists public.trip_activities (
   id              uuid        primary key default uuid_generate_v4(),
   trip_id         uuid        not null references public.trips(id) on delete cascade,
   user_id         uuid        not null references public.profiles(id) on delete cascade,
@@ -524,8 +968,9 @@ create table public.trip_activities (
   updated_at      timestamptz not null default now()
 );
 
-create index trip_activities_trip_id_idx on public.trip_activities(trip_id);
+create index if not exists trip_activities_trip_id_idx on public.trip_activities(trip_id);
 
+drop trigger if exists trip_activities_updated_at on public.trip_activities;
 create trigger trip_activities_updated_at
   before update on public.trip_activities
   for each row execute procedure public.set_updated_at();
@@ -533,19 +978,23 @@ create trigger trip_activities_updated_at
 -- RLS
 alter table public.trip_activities enable row level security;
 
+drop policy if exists "trip_activities: usuario ve las de sus viajes" on public.trip_activities;
 create policy "trip_activities: usuario ve las de sus viajes"
   on public.trip_activities for select
   using (auth.uid() = user_id);
 
+drop policy if exists "trip_activities: usuario crea actividades" on public.trip_activities;
 create policy "trip_activities: usuario crea actividades"
   on public.trip_activities for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "trip_activities: usuario actualiza actividades" on public.trip_activities;
 create policy "trip_activities: usuario actualiza actividades"
   on public.trip_activities for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "trip_activities: usuario elimina actividades" on public.trip_activities;
 create policy "trip_activities: usuario elimina actividades"
   on public.trip_activities for delete
   using (auth.uid() = user_id);
@@ -555,7 +1004,7 @@ create policy "trip_activities: usuario elimina actividades"
 --    Recordatorios de salida programados con Capacitor.
 --    Se guarda el estado para sincronizar entre dispositivos.
 -- ============================================================
-create table public.departure_reminders (
+create table if not exists public.departure_reminders (
   id              uuid        primary key default uuid_generate_v4(),
   trip_id         uuid        not null references public.trips(id) on delete cascade,
   user_id         uuid        not null references public.profiles(id) on delete cascade,
@@ -567,25 +1016,29 @@ create table public.departure_reminders (
   created_at      timestamptz not null default now()
 );
 
-create index departure_reminders_trip_id_idx on public.departure_reminders(trip_id);
-create index departure_reminders_remind_at_idx on public.departure_reminders(remind_at) where is_active = true;
+create index if not exists departure_reminders_trip_id_idx on public.departure_reminders(trip_id);
+create index if not exists departure_reminders_remind_at_idx on public.departure_reminders(remind_at) where is_active = true;
 
 -- RLS
 alter table public.departure_reminders enable row level security;
 
+drop policy if exists "departure_reminders: usuario ve los suyos" on public.departure_reminders;
 create policy "departure_reminders: usuario ve los suyos"
   on public.departure_reminders for select
   using (auth.uid() = user_id);
 
+drop policy if exists "departure_reminders: usuario crea recordatorios" on public.departure_reminders;
 create policy "departure_reminders: usuario crea recordatorios"
   on public.departure_reminders for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "departure_reminders: usuario actualiza recordatorios" on public.departure_reminders;
 create policy "departure_reminders: usuario actualiza recordatorios"
   on public.departure_reminders for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "departure_reminders: usuario elimina recordatorios" on public.departure_reminders;
 create policy "departure_reminders: usuario elimina recordatorios"
   on public.departure_reminders for delete
   using (auth.uid() = user_id);
@@ -594,7 +1047,7 @@ create policy "departure_reminders: usuario elimina recordatorios"
 -- 9. SPLIT_BILL_SESSIONS
 --    Sesiones de división de gastos entre viajeros.
 -- ============================================================
-create table public.split_bill_sessions (
+create table if not exists public.split_bill_sessions (
   id          uuid        primary key default uuid_generate_v4(),
   trip_id     uuid        references public.trips(id) on delete set null,
   user_id     uuid        not null references public.profiles(id) on delete cascade,
@@ -605,6 +1058,7 @@ create table public.split_bill_sessions (
   updated_at  timestamptz not null default now()
 );
 
+drop trigger if exists split_bill_sessions_updated_at on public.split_bill_sessions;
 create trigger split_bill_sessions_updated_at
   before update on public.split_bill_sessions
   for each row execute procedure public.set_updated_at();
@@ -612,19 +1066,23 @@ create trigger split_bill_sessions_updated_at
 -- RLS
 alter table public.split_bill_sessions enable row level security;
 
+drop policy if exists "split_bill_sessions: usuario ve las suyas" on public.split_bill_sessions;
 create policy "split_bill_sessions: usuario ve las suyas"
   on public.split_bill_sessions for select
   using (auth.uid() = user_id);
 
+drop policy if exists "split_bill_sessions: usuario crea sesiones" on public.split_bill_sessions;
 create policy "split_bill_sessions: usuario crea sesiones"
   on public.split_bill_sessions for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "split_bill_sessions: usuario actualiza sesiones" on public.split_bill_sessions;
 create policy "split_bill_sessions: usuario actualiza sesiones"
   on public.split_bill_sessions for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "split_bill_sessions: usuario elimina sesiones" on public.split_bill_sessions;
 create policy "split_bill_sessions: usuario elimina sesiones"
   on public.split_bill_sessions for delete
   using (auth.uid() = user_id);
@@ -633,7 +1091,7 @@ create policy "split_bill_sessions: usuario elimina sesiones"
 -- 10. SPLIT_BILL_EXPENSES
 --     Gastos individuales dentro de una sesión.
 -- ============================================================
-create table public.split_bill_expenses (
+create table if not exists public.split_bill_expenses (
   id           uuid        primary key default uuid_generate_v4(),
   session_id   uuid        not null references public.split_bill_sessions(id) on delete cascade,
   user_id      uuid        not null references public.profiles(id) on delete cascade,
@@ -644,24 +1102,28 @@ create table public.split_bill_expenses (
   created_at   timestamptz not null default now()
 );
 
-create index split_bill_expenses_session_id_idx on public.split_bill_expenses(session_id);
+create index if not exists split_bill_expenses_session_id_idx on public.split_bill_expenses(session_id);
 
 -- RLS
 alter table public.split_bill_expenses enable row level security;
 
+drop policy if exists "split_bill_expenses: usuario ve los suyos" on public.split_bill_expenses;
 create policy "split_bill_expenses: usuario ve los suyos"
   on public.split_bill_expenses for select
   using (auth.uid() = user_id);
 
+drop policy if exists "split_bill_expenses: usuario crea gastos" on public.split_bill_expenses;
 create policy "split_bill_expenses: usuario crea gastos"
   on public.split_bill_expenses for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "split_bill_expenses: usuario actualiza gastos" on public.split_bill_expenses;
 create policy "split_bill_expenses: usuario actualiza gastos"
   on public.split_bill_expenses for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "split_bill_expenses: usuario elimina gastos" on public.split_bill_expenses;
 create policy "split_bill_expenses: usuario elimina gastos"
   on public.split_bill_expenses for delete
   using (auth.uid() = user_id);
@@ -672,7 +1134,7 @@ create policy "split_bill_expenses: usuario elimina gastos"
 --     Soporta Stripe, Apple Pay, Google Pay y PayPal.
 --     NUNCA almacenes datos de tarjeta aquí — solo IDs externos.
 -- ============================================================
-create table public.payments (
+create table if not exists public.payments (
   id                  uuid             primary key default uuid_generate_v4(),
   user_id             uuid             not null references public.profiles(id) on delete cascade,
   provider            payment_provider not null,
@@ -690,10 +1152,11 @@ create table public.payments (
   updated_at          timestamptz      not null default now()
 );
 
-create index payments_user_id_idx on public.payments(user_id);
-create index payments_provider_payment_id_idx on public.payments(provider_payment_id);
-create index payments_status_idx on public.payments(status);
+create index if not exists payments_user_id_idx on public.payments(user_id);
+create index if not exists payments_provider_payment_id_idx on public.payments(provider_payment_id);
+create index if not exists payments_status_idx on public.payments(status);
 
+drop trigger if exists payments_updated_at on public.payments;
 create trigger payments_updated_at
   before update on public.payments
   for each row execute procedure public.set_updated_at();
@@ -737,10 +1200,12 @@ begin
 end;
 $$;
 
+drop trigger if exists on_payment_status_change on public.payments;
 create trigger on_payment_status_change
   after update of status on public.payments
   for each row execute procedure public.handle_payment_completed();
 
+drop trigger if exists on_payment_insert on public.payments;
 create trigger on_payment_insert
   after insert on public.payments
   for each row execute procedure public.handle_payment_completed();
@@ -749,6 +1214,7 @@ create trigger on_payment_insert
 -- (los pagos los inserta el backend/webhook de Stripe, no el cliente).
 alter table public.payments enable row level security;
 
+drop policy if exists "payments: usuario ve sus pagos" on public.payments;
 create policy "payments: usuario ve sus pagos"
   on public.payments for select
   using (auth.uid() = user_id);
@@ -831,6 +1297,7 @@ values (
 ) on conflict (id) do nothing;
 
 -- Políticas de Storage: cada usuario solo accede a su carpeta (user_id/...)
+drop policy if exists "evidence: usuario sube sus fotos" on storage.objects;
 create policy "evidence: usuario sube sus fotos"
   on storage.objects for insert
   with check (
@@ -838,6 +1305,7 @@ create policy "evidence: usuario sube sus fotos"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "evidence: usuario lee sus fotos" on storage.objects;
 create policy "evidence: usuario lee sus fotos"
   on storage.objects for select
   using (
@@ -845,6 +1313,7 @@ create policy "evidence: usuario lee sus fotos"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "evidence: usuario elimina sus fotos" on storage.objects;
 create policy "evidence: usuario elimina sus fotos"
   on storage.objects for delete
   using (
@@ -852,6 +1321,7 @@ create policy "evidence: usuario elimina sus fotos"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "luggage: usuario sube sus fotos" on storage.objects;
 create policy "luggage: usuario sube sus fotos"
   on storage.objects for insert
   with check (
@@ -859,6 +1329,7 @@ create policy "luggage: usuario sube sus fotos"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "luggage: usuario lee sus fotos" on storage.objects;
 create policy "luggage: usuario lee sus fotos"
   on storage.objects for select
   using (
@@ -866,6 +1337,7 @@ create policy "luggage: usuario lee sus fotos"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "luggage: usuario elimina sus fotos" on storage.objects;
 create policy "luggage: usuario elimina sus fotos"
   on storage.objects for delete
   using (
@@ -873,6 +1345,7 @@ create policy "luggage: usuario elimina sus fotos"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "wallet_docs: usuario sube sus docs" on storage.objects;
 create policy "wallet_docs: usuario sube sus docs"
   on storage.objects for insert
   with check (
@@ -880,6 +1353,7 @@ create policy "wallet_docs: usuario sube sus docs"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "wallet_docs: usuario lee sus docs" on storage.objects;
 create policy "wallet_docs: usuario lee sus docs"
   on storage.objects for select
   using (
@@ -887,6 +1361,7 @@ create policy "wallet_docs: usuario lee sus docs"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "wallet_docs: usuario elimina sus docs" on storage.objects;
 create policy "wallet_docs: usuario elimina sus docs"
   on storage.objects for delete
   using (
@@ -894,10 +1369,12 @@ create policy "wallet_docs: usuario elimina sus docs"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "avatars: cualquiera puede leer" on storage.objects;
 create policy "avatars: cualquiera puede leer"
   on storage.objects for select
   using (bucket_id = 'avatars');
 
+drop policy if exists "avatars: usuario sube su avatar" on storage.objects;
 create policy "avatars: usuario sube su avatar"
   on storage.objects for insert
   with check (
@@ -905,6 +1382,7 @@ create policy "avatars: usuario sube su avatar"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "avatars: usuario actualiza su avatar" on storage.objects;
 create policy "avatars: usuario actualiza su avatar"
   on storage.objects for update
   using (
@@ -934,13 +1412,13 @@ create policy "avatars: usuario actualiza su avatar"
 -- ============================================================
 -- 15. ÍNDICES ADICIONALES DE RENDIMIENTO
 -- ============================================================
-create index trips_user_status_idx
+create index if not exists trips_user_status_idx
   on public.trips(user_id, trip_status);
 
-create index packing_items_trip_checked_idx
+create index if not exists packing_items_trip_checked_idx
   on public.packing_items(trip_id, checked);
 
-create index payments_user_status_idx
+create index if not exists payments_user_status_idx
   on public.payments(user_id, status);
 
 -- ============================================================
@@ -1061,7 +1539,7 @@ create index payments_user_status_idx
 -- 12. PLACES_CACHE (por usuario)
 --     Cache privado de detalles Places para reducir costos.
 -- ============================================================
-create table public.places_cache (
+create table if not exists public.places_cache (
   id              uuid        primary key default gen_random_uuid(),
   user_id         uuid        not null references public.profiles(id) on delete cascade,
   place_id        text        not null unique,
@@ -1081,30 +1559,35 @@ create table public.places_cache (
   updated_at      timestamptz not null default now()
 );
 
-create index places_cache_user_id_idx on public.places_cache(user_id);
-create index places_cache_place_id_idx on public.places_cache(place_id);
-create index places_cache_location_idx on public.places_cache(lat, lon);
-create index places_cache_types_idx on public.places_cache using gin(types);
+create index if not exists places_cache_user_id_idx on public.places_cache(user_id);
+create index if not exists places_cache_place_id_idx on public.places_cache(place_id);
+create index if not exists places_cache_location_idx on public.places_cache(lat, lon);
+create index if not exists places_cache_types_idx on public.places_cache using gin(types);
 
+drop trigger if exists places_cache_updated_at on public.places_cache;
 create trigger places_cache_updated_at
   before update on public.places_cache
   for each row execute procedure public.set_updated_at();
 
 alter table public.places_cache enable row level security;
 
+drop policy if exists "places_cache: usuario ve su cache" on public.places_cache;
 create policy "places_cache: usuario ve su cache"
   on public.places_cache for select
   using (auth.uid() = user_id);
 
+drop policy if exists "places_cache: usuario escribe su cache" on public.places_cache;
 create policy "places_cache: usuario escribe su cache"
   on public.places_cache for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "places_cache: usuario actualiza su cache" on public.places_cache;
 create policy "places_cache: usuario actualiza su cache"
   on public.places_cache for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "places_cache: usuario elimina su cache" on public.places_cache;
 create policy "places_cache: usuario elimina su cache"
   on public.places_cache for delete
   using (auth.uid() = user_id);
@@ -1112,7 +1595,7 @@ create policy "places_cache: usuario elimina su cache"
 -- ============================================================
 -- 13. TRIP_PLACES (lugares guardados por viaje)
 -- ============================================================
-create table public.trip_places (
+create table if not exists public.trip_places (
   id                uuid        primary key default uuid_generate_v4(),
   trip_id            uuid        not null references public.trips(id) on delete cascade,
   user_id            uuid        not null references public.profiles(id) on delete cascade,
@@ -1130,29 +1613,34 @@ create table public.trip_places (
   updated_at         timestamptz not null default now()
 );
 
-create index trip_places_trip_id_idx on public.trip_places(trip_id);
-create index trip_places_status_idx on public.trip_places(status);
-create index trip_places_google_place_id_idx on public.trip_places(google_place_id);
+create index if not exists trip_places_trip_id_idx on public.trip_places(trip_id);
+create index if not exists trip_places_status_idx on public.trip_places(status);
+create index if not exists trip_places_google_place_id_idx on public.trip_places(google_place_id);
 
+drop trigger if exists trip_places_updated_at on public.trip_places;
 create trigger trip_places_updated_at
   before update on public.trip_places
   for each row execute procedure public.set_updated_at();
 
 alter table public.trip_places enable row level security;
 
+drop policy if exists "trip_places: usuario ve los suyos" on public.trip_places;
 create policy "trip_places: usuario ve los suyos"
   on public.trip_places for select
   using (auth.uid() = user_id);
 
+drop policy if exists "trip_places: usuario crea lugares" on public.trip_places;
 create policy "trip_places: usuario crea lugares"
   on public.trip_places for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "trip_places: usuario actualiza lugares" on public.trip_places;
 create policy "trip_places: usuario actualiza lugares"
   on public.trip_places for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "trip_places: usuario elimina lugares" on public.trip_places;
 create policy "trip_places: usuario elimina lugares"
   on public.trip_places for delete
   using (auth.uid() = user_id);
@@ -1160,7 +1648,7 @@ create policy "trip_places: usuario elimina lugares"
 -- ============================================================
 -- 14. ITINERARY_EVENTS
 -- ============================================================
-create table public.itinerary_events (
+create table if not exists public.itinerary_events (
   id                uuid        primary key default uuid_generate_v4(),
   trip_id            uuid        not null references public.trips(id) on delete cascade,
   user_id            uuid        not null references public.profiles(id) on delete cascade,
@@ -1178,28 +1666,33 @@ create table public.itinerary_events (
   updated_at         timestamptz not null default now()
 );
 
-create index itinerary_events_trip_id_idx on public.itinerary_events(trip_id);
-create index itinerary_events_day_idx on public.itinerary_events(trip_id, day_index);
+create index if not exists itinerary_events_trip_id_idx on public.itinerary_events(trip_id);
+create index if not exists itinerary_events_day_idx on public.itinerary_events(trip_id, day_index);
 
+drop trigger if exists itinerary_events_updated_at on public.itinerary_events;
 create trigger itinerary_events_updated_at
   before update on public.itinerary_events
   for each row execute procedure public.set_updated_at();
 
 alter table public.itinerary_events enable row level security;
 
+drop policy if exists "itinerary_events: usuario ve los suyos" on public.itinerary_events;
 create policy "itinerary_events: usuario ve los suyos"
   on public.itinerary_events for select
   using (auth.uid() = user_id);
 
+drop policy if exists "itinerary_events: usuario crea eventos" on public.itinerary_events;
 create policy "itinerary_events: usuario crea eventos"
   on public.itinerary_events for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "itinerary_events: usuario actualiza eventos" on public.itinerary_events;
 create policy "itinerary_events: usuario actualiza eventos"
   on public.itinerary_events for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "itinerary_events: usuario elimina eventos" on public.itinerary_events;
 create policy "itinerary_events: usuario elimina eventos"
   on public.itinerary_events for delete
   using (auth.uid() = user_id);
@@ -1207,7 +1700,7 @@ create policy "itinerary_events: usuario elimina eventos"
 -- ============================================================
 -- 15. AGENDA_ITEMS
 -- ============================================================
-create table public.agenda_items (
+create table if not exists public.agenda_items (
   id               uuid        primary key default uuid_generate_v4(),
   trip_id           uuid        not null references public.trips(id) on delete cascade,
   user_id           uuid        not null references public.profiles(id) on delete cascade,
@@ -1223,28 +1716,33 @@ create table public.agenda_items (
   updated_at        timestamptz not null default now()
 );
 
-create index agenda_items_trip_id_idx on public.agenda_items(trip_id);
-create index agenda_items_date_idx on public.agenda_items(trip_id, date);
+create index if not exists agenda_items_trip_id_idx on public.agenda_items(trip_id);
+create index if not exists agenda_items_date_idx on public.agenda_items(trip_id, date);
 
+drop trigger if exists agenda_items_updated_at on public.agenda_items;
 create trigger agenda_items_updated_at
   before update on public.agenda_items
   for each row execute procedure public.set_updated_at();
 
 alter table public.agenda_items enable row level security;
 
+drop policy if exists "agenda_items: usuario ve los suyos" on public.agenda_items;
 create policy "agenda_items: usuario ve los suyos"
   on public.agenda_items for select
   using (auth.uid() = user_id);
 
+drop policy if exists "agenda_items: usuario crea items" on public.agenda_items;
 create policy "agenda_items: usuario crea items"
   on public.agenda_items for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "agenda_items: usuario actualiza items" on public.agenda_items;
 create policy "agenda_items: usuario actualiza items"
   on public.agenda_items for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "agenda_items: usuario elimina items" on public.agenda_items;
 create policy "agenda_items: usuario elimina items"
   on public.agenda_items for delete
   using (auth.uid() = user_id);
@@ -1252,7 +1750,7 @@ create policy "agenda_items: usuario elimina items"
 -- ============================================================
 -- 16. WALLET_DOCS
 -- ============================================================
-create table public.wallet_docs (
+create table if not exists public.wallet_docs (
   id               uuid        primary key default uuid_generate_v4(),
   trip_id           uuid        not null references public.trips(id) on delete cascade,
   user_id           uuid        not null references public.profiles(id) on delete cascade,
@@ -1266,27 +1764,32 @@ create table public.wallet_docs (
   updated_at        timestamptz not null default now()
 );
 
-create index wallet_docs_trip_id_idx on public.wallet_docs(trip_id);
+create index if not exists wallet_docs_trip_id_idx on public.wallet_docs(trip_id);
 
+drop trigger if exists wallet_docs_updated_at on public.wallet_docs;
 create trigger wallet_docs_updated_at
   before update on public.wallet_docs
   for each row execute procedure public.set_updated_at();
 
 alter table public.wallet_docs enable row level security;
 
+drop policy if exists "wallet_docs: usuario ve los suyos" on public.wallet_docs;
 create policy "wallet_docs: usuario ve los suyos"
   on public.wallet_docs for select
   using (auth.uid() = user_id);
 
+drop policy if exists "wallet_docs: usuario crea docs" on public.wallet_docs;
 create policy "wallet_docs: usuario crea docs"
   on public.wallet_docs for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "wallet_docs: usuario actualiza docs" on public.wallet_docs;
 create policy "wallet_docs: usuario actualiza docs"
   on public.wallet_docs for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "wallet_docs: usuario elimina docs" on public.wallet_docs;
 create policy "wallet_docs: usuario elimina docs"
   on public.wallet_docs for delete
   using (auth.uid() = user_id);
@@ -1294,45 +1797,168 @@ create policy "wallet_docs: usuario elimina docs"
 -- ============================================================
 -- 17. TRIP_RECOMMENDATIONS
 -- ============================================================
-create table public.trip_recommendations (
-  id              uuid        primary key default gen_random_uuid(),
-  trip_id          uuid        not null references public.trips(id) on delete cascade,
-  user_id          uuid        not null references public.profiles(id) on delete cascade,
-  place_id         text        not null,
-  category         text,
-  relevance_score  numeric,
-  distance_meters  integer,
-  price_level      integer,
-  summary          text,
-  raw_json         jsonb,
-  created_at       timestamptz not null default now(),
-  updated_at       timestamptz not null default now(),
-  unique (trip_id, place_id)
-);
+do $$
+declare
+  v_relkind "char";
+  has_trip_id boolean;
+  has_user_id boolean;
+  has_place_id boolean;
+  has_category boolean;
+  has_trip_place_duplicates boolean := false;
+begin
+  select c.relkind
+    into v_relkind
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relname = 'trip_recommendations'
+  limit 1;
 
-create index trip_recommendations_trip_id_idx on public.trip_recommendations(trip_id);
-create index trip_recommendations_place_id_idx on public.trip_recommendations(place_id);
-create index trip_recommendations_category_idx on public.trip_recommendations(category);
+  -- Si existe como view/materialized view, la reemplazamos por tabla real.
+  if v_relkind = 'v' then
+    execute 'drop view if exists public.trip_recommendations cascade';
+    v_relkind := null;
+  elsif v_relkind = 'm' then
+    execute 'drop materialized view if exists public.trip_recommendations cascade';
+    v_relkind := null;
+  end if;
 
-create trigger trip_recommendations_updated_at
-  before update on public.trip_recommendations
-  for each row execute procedure public.set_updated_at();
+  if v_relkind is null then
+    execute $sql$
+      create table public.trip_recommendations (
+        id               uuid primary key default gen_random_uuid(),
+        trip_id          uuid,
+        user_id          uuid,
+        place_id         text,
+        category         text,
+        relevance_score  numeric,
+        distance_meters  integer,
+        price_level      integer,
+        summary          text,
+        raw_json         jsonb,
+        created_at       timestamptz not null default now(),
+        updated_at       timestamptz not null default now()
+      )
+    $sql$;
+  end if;
 
-alter table public.trip_recommendations enable row level security;
+  -- Asegurar columnas base antes de constraints.
+  execute 'alter table public.trip_recommendations add column if not exists id uuid';
+  execute 'alter table public.trip_recommendations add column if not exists trip_id uuid';
+  execute 'alter table public.trip_recommendations add column if not exists user_id uuid';
+  execute 'alter table public.trip_recommendations add column if not exists place_id text';
+  execute 'alter table public.trip_recommendations add column if not exists category text';
+  execute 'alter table public.trip_recommendations add column if not exists relevance_score numeric';
+  execute 'alter table public.trip_recommendations add column if not exists distance_meters integer';
+  execute 'alter table public.trip_recommendations add column if not exists price_level integer';
+  execute 'alter table public.trip_recommendations add column if not exists summary text';
+  execute 'alter table public.trip_recommendations add column if not exists raw_json jsonb';
+  execute 'alter table public.trip_recommendations add column if not exists created_at timestamptz';
+  execute 'alter table public.trip_recommendations add column if not exists updated_at timestamptz';
 
-create policy "trip_recommendations: usuario ve los suyos"
-  on public.trip_recommendations for select
-  using (auth.uid() = user_id);
+  execute 'update public.trip_recommendations set id = coalesce(id, gen_random_uuid())';
+  execute 'update public.trip_recommendations set created_at = coalesce(created_at, now())';
+  execute 'update public.trip_recommendations set updated_at = coalesce(updated_at, now())';
+  execute 'alter table public.trip_recommendations alter column id set default gen_random_uuid()';
+  execute 'alter table public.trip_recommendations alter column created_at set default now()';
+  execute 'alter table public.trip_recommendations alter column updated_at set default now()';
 
-create policy "trip_recommendations: usuario crea recomendaciones"
-  on public.trip_recommendations for insert
-  with check (auth.uid() = user_id);
+  begin
+    execute 'alter table public.trip_recommendations alter column id set not null';
+    execute 'alter table public.trip_recommendations alter column created_at set not null';
+    execute 'alter table public.trip_recommendations alter column updated_at set not null';
+  exception
+    when others then
+      raise notice 'trip_recommendations not-null warning: %', sqlerrm;
+  end;
 
-create policy "trip_recommendations: usuario actualiza recomendaciones"
-  on public.trip_recommendations for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'trip_recommendations'
+      and column_name = 'trip_id'
+  ) into has_trip_id;
 
-create policy "trip_recommendations: usuario elimina recomendaciones"
-  on public.trip_recommendations for delete
-  using (auth.uid() = user_id);
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'trip_recommendations'
+      and column_name = 'user_id'
+  ) into has_user_id;
+
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'trip_recommendations'
+      and column_name = 'place_id'
+  ) into has_place_id;
+
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'trip_recommendations'
+      and column_name = 'category'
+  ) into has_category;
+
+  execute 'alter table public.trip_recommendations drop constraint if exists trip_recommendations_pkey';
+  execute 'alter table public.trip_recommendations add constraint trip_recommendations_pkey primary key (id)';
+
+  if has_trip_id then
+    execute 'alter table public.trip_recommendations drop constraint if exists trip_recommendations_trip_id_fkey';
+    execute 'alter table public.trip_recommendations add constraint trip_recommendations_trip_id_fkey foreign key (trip_id) references public.trips(id) on delete cascade';
+    execute 'create index if not exists trip_recommendations_trip_id_idx on public.trip_recommendations(trip_id)';
+  end if;
+
+  if has_user_id then
+    execute 'alter table public.trip_recommendations drop constraint if exists trip_recommendations_user_id_fkey';
+    execute 'alter table public.trip_recommendations add constraint trip_recommendations_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade';
+  end if;
+
+  if has_trip_id and has_place_id then
+    execute $sql$
+      select exists (
+        select 1
+        from public.trip_recommendations
+        where trip_id is not null and place_id is not null
+        group by trip_id, place_id
+        having count(*) > 1
+      )
+    $sql$
+    into has_trip_place_duplicates;
+
+    execute 'alter table public.trip_recommendations drop constraint if exists trip_recommendations_trip_place_unique';
+    if not has_trip_place_duplicates then
+      execute 'alter table public.trip_recommendations add constraint trip_recommendations_trip_place_unique unique (trip_id, place_id)';
+    else
+      raise notice 'trip_recommendations_trip_place_unique omitido por duplicados existentes';
+    end if;
+    execute 'create index if not exists trip_recommendations_place_id_idx on public.trip_recommendations(place_id)';
+  end if;
+
+  if has_category then
+    execute 'create index if not exists trip_recommendations_category_idx on public.trip_recommendations(category)';
+  end if;
+
+  execute 'drop trigger if exists trip_recommendations_updated_at on public.trip_recommendations';
+  execute 'create trigger trip_recommendations_updated_at before update on public.trip_recommendations for each row execute procedure public.set_updated_at()';
+
+  execute 'alter table public.trip_recommendations enable row level security';
+
+  if has_user_id then
+    execute 'drop policy if exists "trip_recommendations: usuario ve los suyos" on public.trip_recommendations';
+    execute 'create policy "trip_recommendations: usuario ve los suyos" on public.trip_recommendations for select using (auth.uid() = user_id)';
+    execute 'drop policy if exists "trip_recommendations: usuario crea recomendaciones" on public.trip_recommendations';
+    execute 'create policy "trip_recommendations: usuario crea recomendaciones" on public.trip_recommendations for insert with check (auth.uid() = user_id)';
+    execute 'drop policy if exists "trip_recommendations: usuario actualiza recomendaciones" on public.trip_recommendations';
+    execute 'create policy "trip_recommendations: usuario actualiza recomendaciones" on public.trip_recommendations for update using (auth.uid() = user_id) with check (auth.uid() = user_id)';
+    execute 'drop policy if exists "trip_recommendations: usuario elimina recomendaciones" on public.trip_recommendations';
+    execute 'create policy "trip_recommendations: usuario elimina recomendaciones" on public.trip_recommendations for delete using (auth.uid() = user_id)';
+  end if;
+exception
+  when others then
+    raise notice 'trip_recommendations compat warning: %', sqlerrm;
+end $$;

@@ -62,6 +62,8 @@ No se permiten API keys en frontend. Configura secrets (Edge):
 - `GROQ_API_KEY` (IA Orchestrator)
 - `AVIATIONSTACK_API_KEY` (vuelos)
 - `EXCHANGE_RATE_KEY` (tipo de cambio)
+- `TRAVEL_RISK_API_KEY` (risk zones / safety alerts)
+- `TRAVEL_RISK_BASE_URL` (default: `https://travelriskapi.com/api/v1`)
 - `APP_URL` (para success/cancel URL de Stripe; en local: `http://localhost:5173`)
 
 Funciones incluidas en este repo:
@@ -73,6 +75,7 @@ Funciones incluidas en este repo:
 - `ai-orchestrator`
 - `flight-info`
 - `exchange-rates`
+- `risk-zones`
 - `stripe-create-checkout-session`
 - `stripe-customer-portal`
 - `stripe-webhook`

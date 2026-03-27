@@ -52,6 +52,9 @@ function tripToRow(trip: Trip, userId: string) {
     trip_status: trip.tripStatus ?? 'planning',
     weather_forecast: trip.weatherForecast ?? null,
     weather_forecast_daily: trip.weatherForecastDaily ?? null,
+    risk_level: trip.riskLevel ?? null,
+    risk_summary: trip.riskSummary ?? null,
+    risk_updated_at: trip.riskUpdatedAt ?? null,
   };
 }
 
@@ -99,6 +102,9 @@ export async function updateTripRemote(
   if (patch.tripStatus !== undefined) row.trip_status = patch.tripStatus;
   if (patch.weatherForecast !== undefined) row.weather_forecast = patch.weatherForecast ?? null;
   if (patch.weatherForecastDaily !== undefined) row.weather_forecast_daily = patch.weatherForecastDaily ?? null;
+  if (patch.riskLevel !== undefined) row.risk_level = patch.riskLevel ?? null;
+  if (patch.riskSummary !== undefined) row.risk_summary = patch.riskSummary ?? null;
+  if (patch.riskUpdatedAt !== undefined) row.risk_updated_at = patch.riskUpdatedAt ?? null;
 
   if (patch.transportType !== undefined) row.transport_type = patch.transportType || null;
   if (patch.originCity !== undefined) row.origin_city = patch.originCity || null;
@@ -185,6 +191,9 @@ export async function fetchTrips(userId: string): Promise<Trip[]> {
     tripStatus: row.trip_status,
     weatherForecast: row.weather_forecast,
     weatherForecastDaily: row.weather_forecast_daily ?? undefined,
+    riskLevel: row.risk_level ?? undefined,
+    riskSummary: row.risk_summary ?? undefined,
+    riskUpdatedAt: row.risk_updated_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
@@ -7,6 +7,8 @@ import type { PackingCategory } from '../../../types/packing';
 import { generatePackingItemsForTrip } from '../utils/packingGenerator';
 import { PackingEvidenceModal } from '../components/PackingEvidenceModal';
 import { LuggageAssistantPage } from './LuggageAssistantPage';
+import { fetchPackingEvidenceByTrip } from '../../../services/packingMediaService';
+import type { PackingEvidence } from '../../../types/traveler';
 
 /* ─── Íconos duotone por categoría ──────────────────────────────── */
 const CAT_ICONS: Record<PackingCategory, JSX.Element> = {
@@ -81,12 +83,12 @@ export function PackingChecklistPage() {
   const { t } = useTranslation();
   const currentTripId = useAppStore((s) => s.currentTripId);
   const packingItems = useAppStore((s) => s.packingItems);
-  const packingEvidence = useAppStore((s) => s.packingEvidence);
   const trips = useAppStore((s) => s.trips);
   const travelers = useAppStore((s) => s.travelers);
   const initTravelersFromTrip = useAppStore((s) => s.initTravelersFromTrip);
   const togglePackingItem = useAppStore((s) => s.togglePackingItem);
   const addCustomPackingItem = useAppStore((s) => s.addCustomPackingItem);
+  const removePackingItem = useAppStore((s) => s.removePackingItem);
 
   const currentTrip = trips.find((tr) => tr.id === currentTripId);
 
@@ -120,6 +122,7 @@ export function PackingChecklistPage() {
   const [evidenceModal, setEvidenceModal] = useState<{ itemId: string; itemLabel: string } | null>(null);
   // Asistente de acomodo
   const [showLuggageAssistant, setShowLuggageAssistant] = useState(false);
+  const [packingEvidence, setPackingEvidence] = useState<PackingEvidence[]>([]);
 
   const [collapsed, setCollapsed] = useState<Record<PackingCategory, boolean>>({
     documents:   false,
@@ -132,6 +135,23 @@ export function PackingChecklistPage() {
 
   const [customLabel, setCustomLabel] = useState('');
   const [showAddInput, setShowAddInput] = useState(false);
+
+  const loadTripEvidence = useCallback(async () => {
+    if (!currentTripId) {
+      setPackingEvidence([]);
+      return;
+    }
+    try {
+      const rows = await fetchPackingEvidenceByTrip(currentTripId);
+      setPackingEvidence(rows);
+    } catch {
+      // Silencioso en UI; evita bloquear checklist.
+    }
+  }, [currentTripId]);
+
+  useEffect(() => {
+    void loadTripEvidence();
+  }, [loadTripEvidence]);
 
   const itemsForTrip = useMemo(
     () => (currentTripId ? packingItems.filter((x) => x.tripId === currentTripId) : []),
@@ -149,6 +169,15 @@ export function PackingChecklistPage() {
   const checkedCount = itemsForTraveler.filter((x) => x.checked).length;
   const totalCount = itemsForTraveler.length;
   const progressPct = totalCount === 0 ? 0 : Math.round((checkedCount / totalCount) * 100);
+
+  const evidenceByKey = useMemo(() => {
+    const map = new Map<string, PackingEvidence>();
+    for (const evidence of packingEvidence) {
+      const key = `${evidence.itemId}:${evidence.travelerId ?? ''}`;
+      map.set(key, evidence);
+    }
+    return map;
+  }, [packingEvidence]);
 
   function toggleCollapse(cat: PackingCategory) {
     setCollapsed((s) => ({ ...s, [cat]: !s[cat] }));
@@ -467,9 +496,8 @@ export function PackingChecklistPage() {
                   >
                     <div className="pb-3 px-3 space-y-1.5">
                       {items.map((item) => {
-                        const hasEvidence = packingEvidence.some(
-                          (e) => e.itemId === item.id && e.travelerId === (currentTravelerId ?? '')
-                        );
+                        const evidenceKey = `${item.id}:${currentTravelerId ?? ''}`;
+                        const hasEvidence = evidenceByKey.has(evidenceKey);
                         return (
                           <motion.div
                             key={item.id}
@@ -572,6 +600,34 @@ export function PackingChecklistPage() {
                                     <rect x="16" y="6" width="16" height="6" rx="3" fill="#EA9940" opacity="0.6" />
                                   </svg>
                                 )}
+                              </button>
+                            )}
+
+                            {item.source === 'user_custom' && (
+                              <button
+                                type="button"
+                                onClick={() => removePackingItem(item.id)}
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 10,
+                                  background: 'rgba(18,33,46,0.06)',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                                aria-label="Eliminar ítem"
+                                title="Eliminar ítem"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#12212E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18" />
+                                  <path d="M8 6V4h8v2" />
+                                  <path d="M19 6l-1 14H6L5 6" />
+                                  <path d="M10 11v6M14 11v6" />
+                                </svg>
                               </button>
                             )}
                           </motion.div>
@@ -707,10 +763,23 @@ export function PackingChecklistPage() {
         <PackingEvidenceModal
           open={!!evidenceModal}
           onClose={() => setEvidenceModal(null)}
+          tripId={currentTripId ?? ''}
           itemId={evidenceModal.itemId}
           itemLabel={evidenceModal.itemLabel}
           travelerId={currentTravelerId}
           travelerName={activeTraveler?.name ?? ''}
+          existingEvidence={evidenceByKey.get(`${evidenceModal.itemId}:${currentTravelerId}`) ?? null}
+          onEvidenceSaved={(evidence) => {
+            setPackingEvidence((prev) => {
+              const next = prev.filter(
+                (x) => !(x.itemId === evidence.itemId && x.travelerId === evidence.travelerId)
+              );
+              return [evidence, ...next];
+            });
+          }}
+          onEvidenceRemoved={(evidenceId) => {
+            setPackingEvidence((prev) => prev.filter((x) => x.id !== evidenceId));
+          }}
         />
       )}
     </div>

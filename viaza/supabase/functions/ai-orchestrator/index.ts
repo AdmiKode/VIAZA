@@ -9,6 +9,8 @@ type TaskType =
   | 'document_ocr'
   | 'reservation_parse'
   | 'luggage_analysis'
+  | 'packing_validation_scan'
+  | 'suitcase_layout_plan'
   | 'reviews_summary';
 
 type Body = {
@@ -50,7 +52,11 @@ function providerForTask(task: TaskType): Provider {
     envProvider('AI_PROVIDER_DEFAULT');
 
   // Visión: Groq no soporta imágenes en OpenAI-compatible
-  const isVision = task === 'boarding_pass_ocr' || task === 'document_ocr' || task === 'luggage_analysis';
+  const isVision =
+    task === 'boarding_pass_ocr'
+    || task === 'document_ocr'
+    || task === 'luggage_analysis'
+    || task === 'packing_validation_scan';
   if (override) {
     if (isVision && override === 'groq') return hasEnv('OPENAI_API_KEY') ? 'openai' : 'anthropic';
     return override;
@@ -137,6 +143,36 @@ function parseDataUrl(dataUrl: string): { mediaType: string; base64: string } | 
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) return null;
   return { mediaType: match[1], base64: match[2] };
+}
+
+function parseJsonObjectFromText(text: string): Record<string, unknown> | null {
+  const clean = text.trim();
+  if (!clean) return null;
+
+  try {
+    const parsed = JSON.parse(clean) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // continue
+  }
+
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  const candidate = clean.slice(start, end + 1);
+  try {
+    const parsed = JSON.parse(candidate) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 async function anthropicMessage(params: {
@@ -449,6 +485,128 @@ Usa null si falta un campo.`;
       });
 
       return jsonResponse({ ok: true, result: { suggestion } });
+    }
+
+    if (task_type === 'packing_validation_scan') {
+      const imageDataUrl = String(payload.imageDataUrl ?? '');
+      const luggageType = String(payload.luggageType ?? 'checked');
+      const appLang = String(language_context?.app_lang ?? 'es');
+      const checklist = Array.isArray(payload.checklist_items) ? payload.checklist_items : [];
+      if (!imageDataUrl) return jsonResponse({ ok: false, error: 'imageDataUrl required' }, { status: 400 });
+
+      const model =
+        provider === 'openai'
+          ? (Deno.env.get('OPENAI_MODEL_VISION') ?? 'gpt-4o-mini')
+          : (Deno.env.get('ANTHROPIC_MODEL_VISION') ?? defaultAnthropicModel);
+
+      const checklistJson = JSON.stringify(checklist).slice(0, 12000);
+      const system = `You are a packing validation engine. Reply ONLY valid JSON in ${langName(appLang)}.`;
+      const user = `Analyze the luggage photo and compare against this checklist JSON:
+${checklistJson}
+
+Luggage type: ${luggageType}
+
+Return ONLY this JSON shape:
+{
+  "detected": [
+    {
+      "detected_label": "string",
+      "normalized_label": "string",
+      "confidence": 0.0,
+      "quantity_detected": 1,
+      "match_status": "matched|duplicate|extra|uncertain",
+      "packing_item_id": "uuid or null"
+    }
+  ],
+  "summary": {
+    "completion_pct": 0,
+    "missing_count": 0,
+    "duplicate_count": 0,
+    "uncertain_count": 0,
+    "extra_count": 0,
+    "confidence_avg": 0
+  },
+  "missing_packing_item_ids": ["uuid"],
+  "notes": "short practical note"
+}`;
+
+      const parsedDataUrl = parseDataUrl(imageDataUrl);
+      const userContent =
+        provider === 'anthropic'
+          ? [
+              parsedDataUrl
+                ? { type: 'image', source: { type: 'base64', media_type: parsedDataUrl.mediaType, data: parsedDataUrl.base64 } }
+                : { type: 'text', text: 'Imagen invalida' },
+              { type: 'text', text: user },
+            ]
+          : [
+              { type: 'text', text: user },
+              { type: 'image_url', image_url: { url: imageDataUrl, detail: 'low' } },
+            ];
+
+      const raw = await runLLM({
+        provider,
+        model,
+        temperature: 0.1,
+        max_tokens: 1500,
+        system,
+        userContent,
+      });
+
+      const parsed = parseJsonObjectFromText(raw);
+      return jsonResponse({ ok: true, result: { raw, parsed } });
+    }
+
+    if (task_type === 'suitcase_layout_plan') {
+      const appLang = String(language_context?.app_lang ?? 'es');
+      const profile = payload.profile ?? {};
+      const checklist = Array.isArray(payload.checklist_items) ? payload.checklist_items : [];
+      const scanSummary = payload.scan_summary ?? {};
+      const tripCtx = trip_context ?? {};
+
+      const model =
+        provider === 'openai'
+          ? (Deno.env.get('OPENAI_MODEL_DEFAULT') ?? defaultOpenAIModel)
+          : (provider === 'anthropic'
+            ? defaultAnthropicModel
+            : defaultGroqModel);
+
+      const system = `You create operational suitcase layout plans. Reply ONLY valid JSON in ${langName(appLang)}.`;
+      const user = `Build a practical suitcase layout plan.
+
+Profile JSON: ${JSON.stringify(profile).slice(0, 3000)}
+Checklist JSON: ${JSON.stringify(checklist).slice(0, 12000)}
+Scan summary JSON: ${JSON.stringify(scanSummary).slice(0, 2000)}
+Trip context JSON: ${JSON.stringify(tripCtx).slice(0, 2000)}
+
+Return ONLY this JSON:
+{
+  "strategy_version": "v1",
+  "layout": {
+    "bottom": ["item"],
+    "top": ["item"],
+    "compartments": ["item"],
+    "hand_bag": ["item"],
+    "security_separated": ["item"],
+    "fragile_separated": ["item"],
+    "quick_access": ["item"]
+  },
+  "optimization_tips": ["tip"],
+  "warnings": ["warning"],
+  "notes": "short practical note"
+}`;
+
+      const raw = await runLLM({
+        provider,
+        model,
+        temperature: 0.2,
+        max_tokens: 1400,
+        system,
+        userContent: user,
+      });
+
+      const parsed = parseJsonObjectFromText(raw);
+      return jsonResponse({ ok: true, result: { raw, parsed } });
     }
 
     return jsonResponse({ ok: false, error: `Unsupported task_type: ${task_type}` }, { status: 400 });

@@ -15,10 +15,15 @@ export interface Traveler {
 
 /** Foto de evidencia de un ítem de maleta */
 export interface PackingEvidence {
+  id?: string;
+  tripId?: string;
   itemId: string;
-  travelerId: string;
-  /** base64 data URL de la foto */
-  photoDataUrl: string;
+  travelerId: string | null;
+  /** Preview local opcional (base64) */
+  photoDataUrl?: string;
+  /** URL firmada para mostrar imagen privada desde Storage */
+  photoUrl?: string;
+  storagePath?: string;
   takenAt: string; // ISO
 }
 
@@ -26,11 +31,17 @@ export interface PackingEvidence {
 export interface LuggagePhoto {
   id: string;
   tripId: string;
-  travelerId: string;
-  photoDataUrl: string;
+  travelerId: string | null;
+  /** Preview local opcional (base64) */
+  photoDataUrl?: string;
+  /** URL firmada para mostrar imagen privada desde Storage */
+  photoUrl?: string;
+  storagePath?: string;
   takenAt: string;
   /** Tamaño de maleta elegido por el usuario */
   luggageSize: 'cabin' | 'medium' | 'large' | 'extra_large';
+  phase?: 'open' | 'packed' | 'final';
+  zones?: Record<string, unknown> | null;
   /** Recomendación de acomodo generada por IA */
   arrangementSuggestion?: string;
   arrangementStatus: 'pending' | 'analyzing' | 'ready' | 'error';

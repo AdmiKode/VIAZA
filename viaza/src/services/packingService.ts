@@ -51,6 +51,18 @@ export async function togglePackingItemRemote(
   }
 }
 
+/** Eliminar un ítem de packing por ID */
+export async function deletePackingItemRemote(itemId: string): Promise<void> {
+  const { error } = await supabase
+    .from('packing_items')
+    .delete()
+    .eq('id', itemId);
+
+  if (error) {
+    console.error('[packingService] deletePackingItemRemote error:', error.message);
+  }
+}
+
 /** Obtener todos los ítems de packing de un viaje */
 export async function fetchPackingItems(tripId: string): Promise<PackingItem[]> {
   const { data, error } = await supabase

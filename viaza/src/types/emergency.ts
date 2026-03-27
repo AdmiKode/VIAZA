@@ -82,6 +82,14 @@ export interface EmergencyPublicView {
   emergency_contact_2_phone: string | null;
 }
 
+export interface EmergencyQrAccessLog {
+  id: number;
+  access_type: 'public_view';
+  source: string | null;
+  client_info: string | null;
+  accessed_at: string;
+}
+
 export const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 export type BloodType = typeof BLOOD_TYPES[number];
 

@@ -81,3 +81,10 @@ export async function getPendingNotifications() {
   const result = await LocalNotifications.getPending();
   return result.notifications;
 }
+
+/**
+ * Genera un id numérico estable para notificaciones locales.
+ */
+export function generateNotificationId(): number {
+  return (Date.now() % 2_000_000) + Math.floor(Math.random() * 1000);
+}

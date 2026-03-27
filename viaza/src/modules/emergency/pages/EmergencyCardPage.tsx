@@ -1,27 +1,177 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { getEmergencyProfile } from '../../../services/emergencyService';
+import { getEmergencyProfile, getEmergencyQrAccessLogs } from '../../../services/emergencyService';
 import { EmergencyQRModal } from '../components/EmergencyQRModal';
 import { EmergencyCardForm } from '../components/EmergencyCardForm';
-import type { EmergencyProfile } from '../../../types/emergency';
+import type { EmergencyProfile, EmergencyQrAccessLog } from '../../../types/emergency';
 import { EMPTY_EMERGENCY_FORM } from '../../../types/emergency';
+import { buildSosMessage, sendAssistedSos } from '../../../services/emergencyAssistService';
+import { getCurrentPosition } from '../../../services/locationService';
+import { useAppStore } from '../../../app/store/useAppStore';
 
 const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', soft: '#6CA3A2', muted: 'rgba(18,33,46,0.50)' };
 
 type View = 'loading' | 'onboarding' | 'overview' | 'edit';
 
+type BenefitIconKind = 'medical' | 'contacts' | 'privacy' | 'scan';
+
+type Benefit = {
+  icon: BenefitIconKind;
+  title: string;
+  desc: string;
+};
+
+const BENEFITS: Benefit[] = [
+  {
+    icon: 'medical',
+    title: 'Datos médicos accesibles al instante',
+    desc: 'Tipo de sangre, alergias y medicamentos siempre disponibles',
+  },
+  {
+    icon: 'contacts',
+    title: 'Contactos de emergencia',
+    desc: 'Quienes te cuidan, a un toque de distancia',
+  },
+  {
+    icon: 'privacy',
+    title: 'Privacidad total',
+    desc: 'Tú decides exactamente qué información es pública',
+  },
+  {
+    icon: 'scan',
+    title: 'Sin app necesaria',
+    desc: 'Cualquier persona puede escanear tu QR, sin descargar nada',
+  },
+];
+
+function BenefitIcon({ kind }: { kind: BenefitIconKind }) {
+  switch (kind) {
+    case 'medical':
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      );
+    case 'contacts':
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 3a4 4 0 0 1 0 8" />
+          <path d="M8 7a4 4 0 1 0 0 .1" />
+          <path d="M2 20a6 6 0 0 1 12 0" />
+          <path d="M14 20a5 5 0 0 1 8 0" />
+        </svg>
+      );
+    case 'privacy':
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.dark} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="10" width="16" height="10" rx="2" />
+          <path d="M8 10V8a4 4 0 1 1 8 0v2" />
+        </svg>
+      );
+    case 'scan':
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.soft} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9V5a2 2 0 0 1 2-2h4" />
+          <path d="M21 9V5a2 2 0 0 0-2-2h-4" />
+          <path d="M3 15v4a2 2 0 0 0 2 2h4" />
+          <path d="M21 15v4a2 2 0 0 1-2 2h-4" />
+          <path d="M8 12h8" />
+        </svg>
+      );
+  }
+}
+
+function formatAccessDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('es-MX', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function normalizeSource(source: string | null): string {
+  if (!source) return 'Fuente no identificada';
+  if (source.includes('android')) return 'Android';
+  if (source.includes('iphone') || source.includes('ios')) return 'iOS';
+  if (source.includes('web')) return 'Web';
+  return source;
+}
+
 export default function EmergencyCardPage() {
   const navigate = useNavigate();
+  const currentTripId = useAppStore((s) => s.currentTripId);
+  const currentTrip = useAppStore((s) => s.trips.find((trip) => trip.id === currentTripId) ?? null);
   const [profile, setProfile] = useState<EmergencyProfile | null>(null);
+  const [qrAccessLogs, setQrAccessLogs] = useState<EmergencyQrAccessLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
   const [view, setView] = useState<View>('loading');
   const [showQR, setShowQR] = useState(false);
+  const [sosSending, setSosSending] = useState<'whatsapp' | 'sms' | null>(null);
 
   useEffect(() => {
-    getEmergencyProfile()
-      .then(p => { setProfile(p); setView(p ? 'overview' : 'onboarding'); })
-      .catch(() => setView('onboarding'));
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const p = await getEmergencyProfile();
+        if (cancelled) return;
+        setProfile(p);
+        setView(p ? 'overview' : 'onboarding');
+        if (p) {
+          setLogsLoading(true);
+          try {
+            const logs = await getEmergencyQrAccessLogs(10);
+            if (!cancelled) setQrAccessLogs(logs);
+          } finally {
+            if (!cancelled) setLogsLoading(false);
+          }
+        }
+      } catch {
+        if (!cancelled) setView('onboarding');
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  async function triggerAssistedSos(channel: 'whatsapp' | 'sms') {
+    if (!profile) return;
+    const contactPhone = profile.emergency_contact_1_phone || profile.emergency_contact_2_phone || '';
+    if (!contactPhone.trim()) return;
+
+    setSosSending(channel);
+    try {
+      let coords: { lat: number; lon: number } | null = null;
+      try {
+        coords = await getCurrentPosition();
+      } catch {
+        coords = null;
+      }
+
+      const message = buildSosMessage({
+        travelerName: profile.full_name || 'Viajera VIAZA',
+        destination: currentTrip?.destination ?? null,
+        trackingUrl: `https://appviaza.com/emergency/${profile.public_token}`,
+        lat: coords?.lat ?? null,
+        lon: coords?.lon ?? null,
+      });
+
+      sendAssistedSos({
+        channel,
+        phone: contactPhone,
+        message,
+      });
+    } finally {
+      setSosSending(null);
+    }
+  }
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (view === 'loading') {
@@ -73,7 +223,14 @@ export default function EmergencyCardPage() {
           qr_enabled: profile.qr_enabled,
           consent_public_display: profile.consent_public_display,
         } : EMPTY_EMERGENCY_FORM}
-        onSaved={saved => { setProfile(saved); setView('overview'); }}
+        onSaved={saved => {
+          setProfile(saved);
+          setView('overview');
+          setLogsLoading(true);
+          void getEmergencyQrAccessLogs(10)
+            .then(setQrAccessLogs)
+            .finally(() => setLogsLoading(false));
+        }}
       />
     );
   }
@@ -103,12 +260,7 @@ export default function EmergencyCardPage() {
 
         <div style={{ padding: '28px 20px' }}>
           {/* Beneficios */}
-          {[
-            ['🩺', 'Datos médicos accesibles al instante', 'Tipo de sangre, alergias y medicamentos siempre disponibles'],
-            ['☎️', 'Contactos de emergencia', 'Quienes te cuidan, a un toque de distancia'],
-            ['🔒', 'Privacidad total', 'Tú decides exactamente qué información es pública'],
-            ['📱', 'Sin app necesaria', 'Cualquier persona puede escanear tu QR, sin descargar nada'],
-          ].map(([icon, title, desc]) => (
+          {BENEFITS.map(({ icon, title, desc }) => (
             <div key={title} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
               <div
                 style={{
@@ -119,13 +271,11 @@ export default function EmergencyCardPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 20,
                   flexShrink: 0,
                   overflow: 'hidden',
-                  lineHeight: 1,
                 }}
               >
-                {icon}
+                <BenefitIcon kind={icon} />
               </div>
               <div>
                 <div style={{ color: C.dark, fontSize: 15, fontWeight: 700 }}>{title}</div>
@@ -160,7 +310,7 @@ export default function EmergencyCardPage() {
             <div style={{ color: 'white', fontSize: 22, fontWeight: 800 }}>Emergency Travel Card</div>
             <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, marginTop: 4 }}>{profile!.full_name}</div>
           </div>
-          <div style={{ background: profile!.qr_enabled && profile!.consent_public_display ? 'rgba(46,213,115,0.25)' : 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ background: profile!.qr_enabled && profile!.consent_public_display ? 'rgba(108,163,162,0.22)' : 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: profile!.qr_enabled && profile!.consent_public_display ? C.soft : 'rgba(255,255,255,0.5)' }}/>
             <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>{profile!.qr_enabled && profile!.consent_public_display ? 'QR Activo' : 'QR Inactivo'}</span>
           </div>
@@ -188,11 +338,103 @@ export default function EmergencyCardPage() {
           </motion.button>
         </div>
 
+        <div style={{ background: 'white', borderRadius: 22, padding: '16px 14px', marginBottom: 14, boxShadow: '0 2px 12px rgba(18,33,46,0.07)' }}>
+          <div style={{ color: C.dark, fontSize: 14, fontWeight: 800, marginBottom: 8 }}>SOS asistido</div>
+          <div style={{ color: C.muted, fontSize: 12, marginBottom: 12 }}>
+            Genera mensaje con ubicacion + link de emergencia y abre WhatsApp o SMS para enviar.
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => void triggerAssistedSos('whatsapp')}
+              disabled={sosSending !== null || !(profile?.emergency_contact_1_phone || profile?.emergency_contact_2_phone)}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                border: 'none',
+                background: '#307082',
+                color: 'white',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                opacity: sosSending ? 0.7 : 1,
+              }}
+            >
+              {sosSending === 'whatsapp' ? 'Abriendo...' : 'WhatsApp SOS'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void triggerAssistedSos('sms')}
+              disabled={sosSending !== null || !(profile?.emergency_contact_1_phone || profile?.emergency_contact_2_phone)}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                border: '1px solid rgba(18,33,46,0.18)',
+                background: 'white',
+                color: C.dark,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                opacity: sosSending ? 0.7 : 1,
+              }}
+            >
+              {sosSending === 'sms' ? 'Abriendo...' : 'SMS SOS'}
+            </button>
+          </div>
+        </div>
+
+        {/* Auditoría de accesos QR */}
+        <div style={{ background: 'white', borderRadius: 22, padding: '20px 18px', marginBottom: 14, boxShadow: '0 2px 12px rgba(18,33,46,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ color: C.dark, fontSize: 15, fontWeight: 800 }}>Historial de escaneos QR</div>
+            <button
+              type="button"
+              onClick={() => {
+                setLogsLoading(true);
+                void getEmergencyQrAccessLogs(10)
+                  .then(setQrAccessLogs)
+                  .finally(() => setLogsLoading(false));
+              }}
+              style={{
+                border: 'none',
+                background: 'rgba(18,33,46,0.07)',
+                color: C.dark,
+                borderRadius: 10,
+                padding: '6px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'Questrial, sans-serif',
+              }}
+            >
+              Actualizar
+            </button>
+          </div>
+          {logsLoading ? (
+            <div style={{ color: C.muted, fontSize: 13 }}>Cargando accesos...</div>
+          ) : qrAccessLogs.length === 0 ? (
+            <div style={{ color: C.muted, fontSize: 13 }}>Aún no hay escaneos registrados.</div>
+          ) : (
+            <div>
+              {qrAccessLogs.map((log) => (
+                <div key={log.id} style={{ borderTop: '1px solid rgba(18,33,46,0.06)', padding: '10px 0' }}>
+                  <div style={{ color: C.dark, fontSize: 13, fontWeight: 700 }}>
+                    {normalizeSource(log.source)}
+                  </div>
+                  <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
+                    {formatAccessDate(log.accessed_at)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Resumen médico */}
         <div style={{ background: 'white', borderRadius: 22, padding: '20px 18px', marginBottom: 14, boxShadow: '0 2px 12px rgba(18,33,46,0.07)' }}>
           <div style={{ color: C.dark, fontSize: 15, fontWeight: 800, marginBottom: 16 }}>Resumen médico</div>
           {profile!.blood_type && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `rgba(192,57,43,0.10)`, borderRadius: 20, padding: '6px 14px', marginBottom: 12, marginRight: 8 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(234,153,64,0.12)', borderRadius: 20, padding: '6px 14px', marginBottom: 12, marginRight: 8 }}>
               <span style={{ color: C.accent, fontSize: 15, fontWeight: 900 }}>{profile!.blood_type}</span>
             </div>
           )}

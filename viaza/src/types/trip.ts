@@ -27,6 +27,20 @@ export type WeatherDailySegment = {
   rain_prob_max: number | null;
 };
 
+export type TripRiskLevel = 'low' | 'medium' | 'high' | 'critical' | 'unknown';
+
+export type TripRiskSummary = {
+  provider: string;
+  level: TripRiskLevel;
+  score?: number | null;
+  advisory?: string | null;
+  alertsCount?: number | null;
+  countryCode?: string | null;
+  sourceUrl?: string | null;
+  updatedAt: string;
+  raw?: Record<string, unknown> | null;
+};
+
 export type WeatherForecastDailyEntry = {
   date: string; // YYYY-MM-DD
   morning: WeatherDailySegment;
@@ -60,6 +74,10 @@ export interface Trip {
   weatherForecast?: WeatherForecast;
   /** Forecast cacheado por día (mañana/tarde/noche) */
   weatherForecastDaily?: WeatherForecastDailyEntry[];
+  /** Risk zones / travel advisory */
+  riskLevel?: TripRiskLevel;
+  riskSummary?: TripRiskSummary;
+  riskUpdatedAt?: string;
   tripStatus: TripStatus;
   /** Transporte */
   transportType?: TransportType;

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import type { AgendaCategory, AgendaRecurrence } from '../../../types/agenda';
-import { scheduleNotification, generateNotificationId } from '../../../services/notifications/notificationsService';
+import { scheduleNotification, generateNotificationId } from '../../../services/notificationsService';
 
 const CATEGORIES: { value: AgendaCategory; label: string; color: string; bg: string; icon: JSX.Element }[] = [
   { value: 'medication', label: 'Medicamento', color: '#c0392b', bg: 'rgba(192,57,43,0.10)', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="8" fill="#c0392b" fillOpacity="0.85"/><rect x="20" y="12" width="8" height="24" rx="3" fill="white" fillOpacity="0.9"/><rect x="12" y="20" width="24" height="8" rx="3" fill="white" fillOpacity="0.9"/></svg> },
@@ -58,7 +58,7 @@ export function NewAgendaItemPage() {
         id: notifId,
         title,
         body: notes || `Recordatorio de viaje: ${title}`,
-        at,
+        at: at.toISOString(),
       });
       addAgendaItem({
         tripId: currentTripId,

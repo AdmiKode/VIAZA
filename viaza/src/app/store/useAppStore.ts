@@ -12,7 +12,12 @@ import { computeActiveModules } from '../../engines/activeModulesEngine';
 import { signOut } from '../../services/authService';
 import type { AuthUser } from '../../services/authService';
 import { fetchTrips, saveTrip, updateTripRemote } from '../../services/tripsService';
-import { fetchPackingItems, savePackingItems, togglePackingItemRemote } from '../../services/packingService';
+import {
+  deletePackingItemRemote,
+  fetchPackingItems,
+  savePackingItems,
+  togglePackingItemRemote,
+} from '../../services/packingService';
 import { deleteTravelerRemote, fetchTravelers, saveTravelers, upsertTraveler } from '../../services/travelersService';
 import { upsertAgendaItem, deleteAgendaItemRemote } from '../../services/agendaService';
 import { upsertItineraryEvent, deleteItineraryEventRemote } from '../../services/itineraryService';
@@ -103,6 +108,7 @@ type AppState = {
   updateTrip: (tripId: string, patch: Partial<Omit<Trip, 'id' | 'createdAt'>>) => void;
   togglePackingItem: (itemId: string) => void;
   addCustomPackingItem: (tripId: string, label: string, quantity?: number, travelerId?: string) => void;
+  removePackingItem: (itemId: string) => void;
   /** Inserta un bloque de ítems generados (usado para auto-generar si el trip no tiene ninguno) */
   addPackingItems: (items: PackingItem[]) => void;
 
@@ -547,23 +553,29 @@ export const useAppStore = create<AppState>()(
         void togglePackingItemRemote(itemId, newChecked);
       },
 
-      addCustomPackingItem: (tripId, label, quantity = 1, travelerId) =>
+      addCustomPackingItem: (tripId, label, quantity = 1, travelerId) => {
+        const item: PackingItem = {
+          id: uid(),
+          tripId,
+          travelerId,
+          category: 'extras',
+          label: label.trim(),
+          quantity: Math.max(1, Math.floor(quantity)),
+          checked: false,
+          required: false,
+          source: 'user_custom',
+        };
         set((state) => ({
-          packingItems: [
-            {
-              id: uid(),
-              tripId,
-              travelerId,
-              category: 'extras' as const,
-              label: label.trim(),
-              quantity: Math.max(1, Math.floor(quantity)),
-              checked: false,
-              required: false,
-              source: 'user_custom' as const,
-            },
-            ...state.packingItems
-          ]
-        })),
+          packingItems: [item, ...state.packingItems]
+        }));
+        void savePackingItems([item]);
+      },
+
+      removePackingItem: (itemId) =>
+        set((state) => {
+          void deletePackingItemRemote(itemId);
+          return { packingItems: state.packingItems.filter((x) => x.id !== itemId) };
+        }),
 
       addPackingItems: (items) =>
         set((state) => ({

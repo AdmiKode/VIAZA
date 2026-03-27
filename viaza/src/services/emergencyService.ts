@@ -1,5 +1,10 @@
 import { supabase } from './supabaseClient';
-import type { EmergencyProfile, EmergencyProfileForm, EmergencyPublicView } from '../types/emergency';
+import type {
+  EmergencyProfile,
+  EmergencyProfileForm,
+  EmergencyPublicView,
+  EmergencyQrAccessLog,
+} from '../types/emergency';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -87,4 +92,35 @@ export async function getEmergencyPublicView(publicToken: string): Promise<Emerg
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) return null;
   return row as EmergencyPublicView;
+}
+
+export async function logEmergencyPublicAccess(params: {
+  publicToken: string;
+  source?: string;
+  clientInfo?: string;
+}): Promise<boolean> {
+  const { publicToken, source, clientInfo } = params;
+  if (!publicToken?.trim()) return false;
+  const { data, error } = await supabase.rpc('log_emergency_qr_access', {
+    token: publicToken,
+    source: source ?? null,
+    client_info: clientInfo ?? null,
+  });
+  if (error) return false;
+  return Boolean(data);
+}
+
+export async function getEmergencyQrAccessLogs(limit = 20): Promise<EmergencyQrAccessLog[]> {
+  const profile = await getEmergencyProfile();
+  if (!profile) return [];
+
+  const { data, error } = await supabase
+    .from('emergency_qr_access_logs')
+    .select('id, access_type, source, client_info, accessed_at')
+    .eq('emergency_profile_id', profile.id)
+    .order('accessed_at', { ascending: false })
+    .limit(Math.max(1, Math.min(100, limit)));
+
+  if (error) throw error;
+  return (data ?? []) as EmergencyQrAccessLog[];
 }

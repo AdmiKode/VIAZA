@@ -6,6 +6,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useEffect } from 'react';
 import { getSession, onAuthStateChange } from '../../services/authService';
 import { checkPremiumStatus, consumePremiumCheckoutStarted, syncPremiumFromStripe } from '../../services/premiumService';
+import { initGlobalErrorObservers, reportError } from '../../services/observabilityService';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const currentLanguage = useAppStore((s) => s.currentLanguage);
@@ -32,8 +33,14 @@ export function AppProviders({ children }: PropsWithChildren) {
         })();
         void hydrateFromSupabase();
       }
+    }).catch((error) => {
+      reportError('app.providers.getSession', error);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initGlobalErrorObservers();
   }, []);
 
   // Escuchar cambios de sesión (incluye OAuth callback redirect)

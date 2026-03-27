@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getEmergencyPublicView } from '../../../services/emergencyService';
+import { getEmergencyPublicView, logEmergencyPublicAccess } from '../../../services/emergencyService';
 import type { EmergencyPublicView } from '../../../types/emergency';
 
 const C = { dark: '#12212E', cream: '#ECE7DC', accent: '#EA9940', teal: '#307082', soft: '#6CA3A2', muted: 'rgba(18,33,46,0.50)' };
@@ -22,7 +22,14 @@ export default function EmergencyPublicPage() {
   useEffect(() => {
     if (!publicToken) { setData(null); return; }
     getEmergencyPublicView(publicToken)
-      .then(d => setData(d as EmergencyPublicView | null))
+      .then(d => {
+        setData(d as EmergencyPublicView | null);
+        if (d) {
+          const source = 'public_page';
+          const clientInfo = [navigator.platform, navigator.language].filter(Boolean).join(' | ').slice(0, 400);
+          void logEmergencyPublicAccess({ publicToken, source, clientInfo });
+        }
+      })
       .catch(() => setData('error'));
   }, [publicToken]);
 

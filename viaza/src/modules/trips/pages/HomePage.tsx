@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { WeatherForecastModal } from '../../weather/components/WeatherForecastModal';
 import { fetchWeatherCache } from '../../../services/weatherCacheService';
+import { fetchTripRisk } from '../../../services/riskZonesService';
 import { supabase } from '../../../services/supabaseClient';
 import type { ActiveModuleId } from '../../../engines/activeModulesEngine';
 
@@ -20,6 +21,28 @@ const HERO_GRADIENT: Record<string, string> = {
   adventure: 'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 55%, var(--viaza-accent) 100%)',
   default:   'linear-gradient(160deg, var(--viaza-primary) 0%, var(--viaza-secondary) 70%, var(--viaza-soft) 100%)',
 };
+
+function normalizeRiskLevel(raw?: string): 'low' | 'medium' | 'high' | 'critical' | 'unknown' {
+  const v = String(raw ?? '').trim().toLowerCase();
+  if (v === 'low' || v === 'medium' || v === 'high' || v === 'critical') return v;
+  return 'unknown';
+}
+
+function riskLabel(level: 'low' | 'medium' | 'high' | 'critical' | 'unknown') {
+  if (level === 'critical') return 'Critical';
+  if (level === 'high') return 'High';
+  if (level === 'medium') return 'Medium';
+  if (level === 'low') return 'Low';
+  return 'Unknown';
+}
+
+function riskChipColor(level: 'low' | 'medium' | 'high' | 'critical' | 'unknown') {
+  if (level === 'critical') return 'rgba(200, 70, 70, 0.95)';
+  if (level === 'high') return '#EA9940';
+  if (level === 'medium') return '#307082';
+  if (level === 'low') return 'rgba(255,255,255,0.18)';
+  return 'rgba(255,255,255,0.18)';
+}
 
 /* ─── Icono clima grande ─── */
 function WeatherIcon({ type }: { type: string }) {
@@ -169,6 +192,7 @@ export function HomePage() {
   const appLang = useAppStore((s) => s.currentLanguage);
   const [showForecast, setShowForecast] = useState(false);
   const [forecastStatus, setForecastStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [riskStatus, setRiskStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const updateTrip = useAppStore((s) => s.updateTrip);
 
   const activeModules = new Set<string>(trip?.activeModules ?? []);
@@ -180,6 +204,7 @@ export function HomePage() {
 
   // Auto-reparación: si el viaje no tiene coords, intentar resolver destino en background (Premium)
   const autoResolveKeyRef = useRef<string>('');
+  const autoRiskKeyRef = useRef<string>('');
   useEffect(() => {
     if (!isPremium) return;
     if (!trip?.id) return;
@@ -275,6 +300,42 @@ export function HomePage() {
     // si es premium y aún no hay datos, el effect de arriba lo manejará
   }, [trip?.id, trip?.weatherForecastDaily?.length, isPremium]);
 
+  useEffect(() => {
+    if (!trip?.id || !trip.countryCode) {
+      setRiskStatus('idle');
+      return;
+    }
+
+    const lastUpdateMs = trip.riskUpdatedAt ? new Date(trip.riskUpdatedAt).getTime() : 0;
+    const isFresh = Number.isFinite(lastUpdateMs) && lastUpdateMs > 0 && (Date.now() - lastUpdateMs) < 6 * 60 * 60 * 1000;
+    if (isFresh && trip.riskLevel) {
+      setRiskStatus('ready');
+      return;
+    }
+
+    const key = `${trip.id}:${trip.countryCode}:${trip.riskUpdatedAt ?? 'none'}`;
+    if (autoRiskKeyRef.current === key) return;
+    autoRiskKeyRef.current = key;
+
+    setRiskStatus('loading');
+    void fetchTripRisk({
+      tripId: trip.id,
+      countryCode: trip.countryCode,
+      destinationCountry: trip.destinationCountry,
+    })
+      .then((risk) => {
+        updateTrip(trip.id, {
+          riskLevel: normalizeRiskLevel(risk.level),
+          riskSummary: risk,
+          riskUpdatedAt: risk.updatedAt,
+        });
+        setRiskStatus('ready');
+      })
+      .catch(() => {
+        setRiskStatus('error');
+      });
+  }, [trip?.id, trip?.countryCode, trip?.destinationCountry, trip?.riskUpdatedAt, trip?.riskLevel, updateTrip]);
+
   function formatDayLabel(dateIso: string) {
     try {
       const d = new Date(`${dateIso}T00:00:00`);
@@ -335,6 +396,7 @@ export function HomePage() {
   const heroGradient = trip?.travelType
     ? (HERO_GRADIENT[trip.travelType] ?? HERO_GRADIENT.default)
     : HERO_GRADIENT.default;
+  const heroRiskLevel = normalizeRiskLevel(trip?.riskLevel ?? trip?.riskSummary?.level);
 
   return (
     <div className="min-h-dvh" style={{ background: '#ECE7DC' }}>
@@ -497,6 +559,13 @@ export function HomePage() {
                   <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>{trip.languageCode.toUpperCase()}</span>
                 </div>
               )}
+              {trip.countryCode && (
+                <div className="flex items-center rounded-full px-3 py-1.5" style={{ background: riskChipColor(heroRiskLevel) }}>
+                  <span style={{ color: 'white', fontSize: 12, fontWeight: 700 }}>
+                    Risk {riskLabel(heroRiskLevel)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* CTA */}
@@ -631,6 +700,46 @@ export function HomePage() {
                 </div>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {trip && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="overflow-hidden rounded-3xl border border-[rgb(var(--viaza-primary-rgb)/0.10)] bg-[rgb(var(--viaza-background-rgb)/0.60)] shadow-[var(--shadow-2)]"
+          >
+            <div className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-[var(--viaza-primary)]">Risk Zones</div>
+                  <div className="mt-1 text-xs text-[rgb(var(--viaza-primary-rgb)/0.60)]">
+                    {trip.countryCode ? `Country ${trip.countryCode}` : 'No country code'}
+                  </div>
+                </div>
+                <div
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                  style={{ background: riskChipColor(heroRiskLevel) }}
+                >
+                  {riskLabel(heroRiskLevel)}
+                </div>
+              </div>
+
+              <div className="mt-3 text-sm text-[rgb(var(--viaza-primary-rgb)/0.75)]">
+                {riskStatus === 'loading' && 'Updating travel risk from provider...'}
+                {riskStatus === 'error' && 'Could not refresh risk now. Last saved value is shown.'}
+                {riskStatus !== 'loading' && riskStatus !== 'error' && (
+                  trip.riskSummary?.advisory || 'No advisory text returned by provider.'
+                )}
+              </div>
+
+              {trip.riskSummary?.updatedAt && (
+                <div className="mt-2 text-xs text-[rgb(var(--viaza-primary-rgb)/0.55)]">
+                  Updated: {new Date(trip.riskSummary.updatedAt).toLocaleString(appLang || 'es')}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
