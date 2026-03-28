@@ -7,6 +7,7 @@ type TaskType =
   | 'translation'
   | 'boarding_pass_ocr'
   | 'document_ocr'
+  | 'wallet_doc_parse'
   | 'reservation_parse'
   | 'luggage_analysis'
   | 'packing_validation_scan'
@@ -405,6 +406,74 @@ Usa null si falta un campo.`;
       });
 
       return jsonResponse({ ok: true, result: { raw: content } });
+    }
+
+    // ─── wallet_doc_parse ────────────────────────────────────────────────────
+    // OCR estructurado para documentos de identidad y viaje en el Wallet.
+    // Retorna JSON con doc_type, full_name, doc_number, expiration_date,
+    // issuing_country, nationality y raw_text.
+    if (task_type === 'wallet_doc_parse') {
+      const imageDataUrl = String(payload.imageDataUrl ?? '');
+      const mimeType = String(payload.mimeType ?? 'image/jpeg');
+      if (!imageDataUrl) return jsonResponse({ ok: false, error: 'imageDataUrl required' }, { status: 400 });
+
+      const model =
+        provider === 'openai'
+          ? (Deno.env.get('OPENAI_MODEL_VISION') ?? 'gpt-4o-mini')
+          : (Deno.env.get('ANTHROPIC_MODEL_VISION') ?? defaultAnthropicModel);
+
+      const system = `You are a travel document OCR specialist. Analyze the image and extract structured data from travel or identity documents (passports, visas, IDs, driver licenses, insurance cards, vaccination certificates, travel permits).
+
+Return ONLY a valid JSON object with these exact keys (use null for missing fields):
+{
+  "doc_type": "passport" | "id_card" | "visa" | "driver_license" | "insurance" | "vaccination" | "travel_permit" | "other",
+  "full_name": "string or null",
+  "doc_number": "string or null",
+  "expiration_date": "YYYY-MM-DD or null",
+  "issue_date": "YYYY-MM-DD or null",
+  "issuing_country": "ISO 3166-1 alpha-2 or null",
+  "nationality": "ISO 3166-1 alpha-2 or null",
+  "date_of_birth": "YYYY-MM-DD or null",
+  "raw_text": "all visible text on the document"
+}
+
+CRITICAL: expiration_date MUST be in YYYY-MM-DD format. If you see a date like "15 MAR 2028" convert it to "2028-03-15". Return ONLY the JSON, no markdown, no explanation.`;
+
+      const finalDataUrl = imageDataUrl.startsWith('data:') ? imageDataUrl : `data:${mimeType};base64,${imageDataUrl}`;
+      const parsedUrl = parseDataUrl(finalDataUrl);
+
+      const userContent =
+        provider === 'anthropic'
+          ? [
+              parsedUrl
+                ? { type: 'image', source: { type: 'base64', media_type: parsedUrl.mediaType, data: parsedUrl.base64 } }
+                : { type: 'text', text: 'Invalid image' },
+              { type: 'text', text: 'Extract all structured data from this travel document.' },
+            ]
+          : [
+              { type: 'image_url', image_url: { url: finalDataUrl, detail: 'high' } },
+              { type: 'text', text: 'Extract all structured data from this travel document.' },
+            ];
+
+      const raw = await runLLM({
+        provider,
+        model,
+        temperature: 0,
+        max_tokens: 800,
+        system,
+        userContent,
+      });
+
+      // Intentar parsear el JSON — si falla, devolver raw para que el cliente lo maneje
+      let structured: Record<string, unknown> | null = null;
+      try {
+        const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+        structured = JSON.parse(cleaned);
+      } catch {
+        structured = null;
+      }
+
+      return jsonResponse({ ok: true, result: { structured, raw } });
     }
 
     if (task_type === 'document_ocr') {

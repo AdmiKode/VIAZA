@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
-import { requireEnv } from '../_shared/env.ts';
 import { requirePremium } from '../_shared/premium.ts';
 
 type Category =
@@ -61,7 +60,12 @@ serve(async (req) => {
     if (tripErr) return jsonResponse({ ok: false, error: tripErr.message }, { status: 400 });
     if (!trip || trip.lat == null || trip.lon == null) return jsonResponse({ ok: false, error: 'Trip missing lat/lon' }, { status: 400 });
 
-    const key = requireEnv('GOOGLE_MAPS_API_KEY');
+    const key =
+      Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY')
+      ?? Deno.env.get('GOOGLE_MAPS_API_KEY');
+    if (!key) {
+      return jsonResponse({ ok: false, error: 'Missing GOOGLE_MAPS_SERVER_API_KEY / GOOGLE_MAPS_API_KEY' }, { status: 500 });
+    }
     const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
     url.searchParams.set('key', key);
     url.searchParams.set('location', `${trip.lat},${trip.lon}`);

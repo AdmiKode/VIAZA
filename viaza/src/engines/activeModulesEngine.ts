@@ -13,7 +13,9 @@ export type ActiveModuleId =
   | 'translator'
   | 'quick_phrases'
   | 'route'
-  | 'emergency';
+  | 'emergency'
+  | 'safety'
+  | 'budget';
 
 function uniqStable(list: string[]): string[] {
   const seen = new Set<string>();
@@ -40,12 +42,17 @@ export function computeActiveModules(params: { trip: Trip; isPremium: boolean })
     'wallet',
     'agenda',
     'emergency',
+    'safety',
+    'budget',
     'translator',
     'quick_phrases',
   ];
 
-  if (trip.transportType === 'car' || trip.transportType === 'bus' || trip.transportType === 'train') {
-    if (trip.originCity && trip.originCity.trim().length > 0) base.push('route');
+  if (trip.transportType) {
+    const hasOriginText = Boolean(trip.originCity && trip.originCity.trim().length > 0);
+    const hasDestinationText = Boolean(trip.destination && trip.destination.trim().length > 0);
+    // Exponer rutas cuando hay contexto suficiente para deep links, no sólo con coords completas.
+    if (hasOriginText || hasDestinationText) base.push('route');
   }
 
   if (isPremium) {

@@ -2,6 +2,21 @@
   command = "npm run build"
   publish = "dist"
 
+# ── Android App Links — assetlinks.json debe servirse sin redirect ────────────
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "no-cache"
+
+# ── SPA redirect — va AL FINAL para no capturar .well-known ──────────────────
+[[redirects]]
+  from   = "/.well-known/*"
+  to     = "/.well-known/:splat"
+  status = 200
+  force  = false
+
 [[redirects]]
   from   = "/*"
   to     = "/index.html"

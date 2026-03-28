@@ -50,7 +50,9 @@ serve(async (req) => {
     const { place_id, language = 'es' } = (await req.json()) as Body;
     if (!place_id) return jsonResponse({ ok: false, error: 'place_id is required' }, { status: 400 });
 
-    const googleKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const googleKey =
+      Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY')
+      ?? Deno.env.get('GOOGLE_MAPS_API_KEY');
 
     // Fallback: Open‑Meteo place ids (`om:<id>`) when Google key isn't configured.
     if (!googleKey || isOpenMeteoPlaceId(place_id)) {

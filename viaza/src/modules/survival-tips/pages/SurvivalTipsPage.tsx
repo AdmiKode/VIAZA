@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../../components/ui/AppHeader';
 import { AppCard } from '../../../components/ui/AppCard';
 import { survivalTips, type SurvivalTipCategory } from '../utils/survivalTipsData';
+import { useAppStore } from '../../../app/store/useAppStore';
 
 const categories: Array<{ id: SurvivalTipCategory | 'all'; titleKey: string }> = [
   { id: 'all', titleKey: 'tips.category.all' },
@@ -14,6 +15,7 @@ const categories: Array<{ id: SurvivalTipCategory | 'all'; titleKey: string }> =
 
 export function SurvivalTipsPage() {
   const { t } = useTranslation();
+  const appLang = useAppStore((s) => s.currentLanguage);
   const [category, setCategory] = useState<(typeof categories)[number]['id']>('all');
 
   const items = useMemo(() => {
@@ -45,9 +47,15 @@ export function SurvivalTipsPage() {
       <div className="mt-4 space-y-3">
         {items.map((tip) => (
           <AppCard key={tip.id}>
-            <div className="text-sm font-semibold">{t(tip.titleKey)}</div>
+            <div className="text-sm font-semibold">
+              {tip.titleKey
+                ? t(tip.titleKey)
+                : (appLang.startsWith('en') ? tip.titleEn : tip.titleEs)}
+            </div>
             <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.75)]">
-              {t(tip.descriptionKey)}
+              {tip.descriptionKey
+                ? t(tip.descriptionKey)
+                : (appLang.startsWith('en') ? tip.descriptionEn : tip.descriptionEs)}
             </div>
           </AppCard>
         ))}

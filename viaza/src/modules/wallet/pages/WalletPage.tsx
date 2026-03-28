@@ -5,8 +5,12 @@ import { AppHeader } from '../../../components/ui/AppHeader';
 import { AppCard } from '../../../components/ui/AppCard';
 import { AppButton } from '../../../components/ui/AppButton';
 import { AppSelect } from '../../../components/ui/AppSelect';
+import { AppInput } from '../../../components/ui/AppInput';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { supabase } from '../../../services/supabaseClient';
+import { updateWalletDocFields, reportDocLost } from '../../../services/walletDocsService';
+import { ExpirationBadge } from '../components/ExpirationBadge';
+import { DocViewer } from '../components/DocViewer';
 import type { WalletDocType, WalletDoc } from '../../../types/wallet';
 
 const DOC_TYPES: Array<{ id: WalletDocType; labelKey: string }> = [
@@ -43,8 +47,10 @@ export function WalletPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [docType, setDocType] = useState<WalletDocType>('document');
+  const [expirationDateInput, setExpirationDateInput] = useState('');
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'error'>('idle');
   const [analyzeId, setAnalyzeId] = useState<string | null>(null);
+  const [viewerDoc, setViewerDoc] = useState<WalletDoc | null>(null);
 
   const canUpload = Boolean(trip?.id);
 
@@ -54,7 +60,23 @@ export function WalletPage() {
 
   return (
     <div className="px-4 pt-4 pb-24">
-      <AppHeader title={t('wallet.title')} />
+      {/* DocViewer — fullscreen overlay */}
+      {viewerDoc && (
+        <DocViewer doc={viewerDoc} onClose={() => setViewerDoc(null)} />
+      )}
+
+      <AppHeader
+        title={t('wallet.title')}
+        right={
+          <Link
+            to="/wallet/lost"
+            className="rounded-2xl px-3 py-2 text-xs font-bold"
+            style={{ background: 'rgba(234,153,64,0.12)', color: '#EA9940', textDecoration: 'none' }}
+          >
+            Modo Emergencia
+          </Link>
+        }
+      />
 
       <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.60)]">
         {t('wallet.subtitle')}
@@ -72,6 +94,18 @@ export function WalletPage() {
               </option>
             ))}
           </AppSelect>
+        </div>
+
+        <div className="mt-3">
+          <div className="text-xs font-semibold text-[rgb(var(--viaza-primary-rgb)/0.55)] mb-1">
+            Fecha de vencimiento (opcional)
+          </div>
+          <AppInput
+            type="date"
+            value={expirationDateInput}
+            onChange={(e) => setExpirationDateInput(e.target.value)}
+            placeholder="YYYY-MM-DD"
+          />
         </div>
 
         <input
@@ -104,9 +138,15 @@ export function WalletPage() {
                 storagePath,
                 createdAt: now,
                 updatedAt: now,
+                expirationDate: expirationDateInput || null,
               };
               addWalletDoc(doc);
+              // Persistir fecha de vencimiento en DB si se ingresó
+              if (expirationDateInput) {
+                void updateWalletDocFields(id, { expirationDate: expirationDateInput });
+              }
               setUploadStatus('idle');
+              setExpirationDateInput('');
             } catch {
               setUploadStatus('error');
             } finally {
@@ -146,108 +186,155 @@ export function WalletPage() {
             const hasParsed = Boolean(d.parsedData);
             return (
               <AppCard key={d.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-[var(--viaza-primary)]">
-                      {d.fileName ?? t('wallet.unnamed')}
+                {/* Tap en header del card → abre DocViewer */}
+                <button
+                  type="button"
+                  className="w-full text-left active:opacity-80 transition-opacity"
+                  onClick={() => setViewerDoc(d)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-[var(--viaza-primary)]">
+                        {d.fileName ?? t('wallet.unnamed')}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-[rgb(var(--viaza-primary-rgb)/0.60)]">
+                        <span>{t(`wallet.docType.${d.docType}`)}</span>
+                        {d.mimeType ? <span>· {d.mimeType}</span> : null}
+                        {hasParsed ? <span>· {t('wallet.analysisReady')}</span> : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <ExpirationBadge doc={d} showDate />
+                      </div>
+                      {(d.ocrName || d.ocrDocNumber) && (
+                        <div className="mt-1.5 text-xs text-[rgb(var(--viaza-primary-rgb)/0.55)]">
+                          {d.ocrName && <span className="mr-2">{d.ocrName}</span>}
+                          {d.ocrDocNumber && <span className="font-semibold">{d.ocrDocNumber}</span>}
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-[rgb(var(--viaza-primary-rgb)/0.60)]">
-                      <span>{t(`wallet.docType.${d.docType}`)}</span>
-                      {d.mimeType ? <span>· {d.mimeType}</span> : null}
-                      {hasParsed ? <span>· {t('wallet.analysisReady')}</span> : null}
-                    </div>
+                    <div className="shrink-0 text-[rgb(var(--viaza-primary-rgb)/0.30)] text-lg pt-0.5">›</div>
                   </div>
+                </button>
 
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      className="rounded-2xl px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
-                      style={{ background: 'rgb(var(--viaza-primary-rgb) / 0.10)', color: 'var(--viaza-primary)' }}
-                      onClick={async () => {
+                {/* Acciones */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="rounded-2xl px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
+                    style={{ background: 'rgb(var(--viaza-accent-rgb) / 0.20)', color: 'var(--viaza-primary)' }}
+                    disabled={isAnalyzing || !isPremium || !d.mimeType?.startsWith('image/')}
+                    onClick={async () => {
+                      if (!d.mimeType?.startsWith('image/')) return;
+                      setAnalyzeId(d.id);
+                      try {
                         const { data, error } = await supabase.storage
                           .from('wallet_docs')
                           .createSignedUrl(d.storagePath, 60 * 10);
-                        if (error || !data?.signedUrl) return;
-                        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-                      }}
-                    >
-                      {t('wallet.open')}
-                    </button>
+                        if (error || !data?.signedUrl) throw error ?? new Error('signedUrl error');
 
-                    <button
-                      type="button"
-                      className="rounded-2xl px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
-                      style={{ background: 'rgb(var(--viaza-accent-rgb) / 0.20)', color: 'var(--viaza-primary)' }}
-                      disabled={isAnalyzing || !isPremium || !d.mimeType?.startsWith('image/')}
-                      onClick={async () => {
-                        if (!d.mimeType?.startsWith('image/')) return;
-                        setAnalyzeId(d.id);
-                        try {
-                          const { data, error } = await supabase.storage
-                            .from('wallet_docs')
-                            .createSignedUrl(d.storagePath, 60 * 10);
-                          if (error || !data?.signedUrl) throw error ?? new Error('signedUrl error');
+                        const blobRes = await fetch(data.signedUrl);
+                        if (!blobRes.ok) throw new Error('download error');
+                        const blob = await blobRes.blob();
+                        const imageDataUrl = await fileToDataUrl(blob);
 
-                          const blobRes = await fetch(data.signedUrl);
-                          if (!blobRes.ok) throw new Error('download error');
-                          const blob = await blobRes.blob();
-                          const imageDataUrl = await fileToDataUrl(blob);
+                        if (d.docType === 'boarding_pass') {
+                          const r = await supabase.functions.invoke('ai-orchestrator', {
+                            body: { task_type: 'boarding_pass_ocr', payload: { imageDataUrl } },
+                          });
+                          if (r.error) throw r.error;
+                          const raw = (r.data as { result?: { raw?: string } } | null)?.result?.raw ?? '';
+                          const parsed = { task: 'boarding_pass_ocr', raw };
+                          updateWalletDoc(d.id, { parsedData: parsed });
+                          void updateWalletDocFields(d.id, { parsedData: parsed });
+                        } else {
+                          // Usar wallet_doc_parse: un solo paso que retorna JSON estructurado
+                          // con doc_type, full_name, doc_number, expiration_date, etc.
+                          const ocr = await supabase.functions.invoke('ai-orchestrator', {
+                            body: { task_type: 'wallet_doc_parse', payload: { imageDataUrl } },
+                          });
+                          if (ocr.error) throw ocr.error;
 
-                          if (d.docType === 'boarding_pass') {
-                            const r = await supabase.functions.invoke('ai-orchestrator', {
-                              body: { task_type: 'boarding_pass_ocr', payload: { imageDataUrl } },
-                            });
-                            if (r.error) throw r.error;
-                            const raw = (r.data as { result?: { raw?: string } } | null)?.result?.raw ?? '';
-                            updateWalletDoc(d.id, { parsedData: { task: 'boarding_pass_ocr', raw } });
-                          } else {
-                            const ocr = await supabase.functions.invoke('ai-orchestrator', {
-                              body: { task_type: 'document_ocr' as const, payload: { imageDataUrl } },
-                            });
-                            if (ocr.error) throw ocr.error;
-                            const text = (ocr.data as { result?: { text?: string } } | null)?.result?.text ?? '';
+                          const ocrResult = (ocr.data as {
+                            result?: {
+                              structured?: {
+                                doc_type?: string;
+                                full_name?: string;
+                                doc_number?: string;
+                                expiration_date?: string;
+                                issue_date?: string;
+                                issuing_country?: string;
+                                nationality?: string;
+                                date_of_birth?: string;
+                                raw_text?: string;
+                              } | null;
+                              raw?: string;
+                            };
+                          } | null)?.result;
 
-                            const parsed = await supabase.functions.invoke('ai-orchestrator', {
-                              body: { task_type: 'reservation_parse', payload: { text: text.slice(0, 4000) } },
-                            });
-                            if (parsed.error) throw parsed.error;
+                          const structured = ocrResult?.structured ?? null;
+                          const rawText = ocrResult?.raw ?? '';
 
-                            updateWalletDoc(d.id, {
-                              parsedData: {
-                                task: 'document_ocr',
-                                text,
-                                reservation_raw: (parsed.data as { result?: { raw?: string } } | null)?.result?.raw ?? '',
-                              },
-                            });
-                          }
-                        } catch {
-                          // silencioso (MVP)
-                        } finally {
-                          setAnalyzeId(null);
+                          const parsed = {
+                            task: 'wallet_doc_parse',
+                            doc_type: structured?.doc_type ?? null,
+                            raw_text: structured?.raw_text ?? rawText,
+                          };
+
+                          updateWalletDoc(d.id, {
+                            parsedData: parsed,
+                            ocrName: structured?.full_name ?? undefined,
+                            ocrDocNumber: structured?.doc_number ?? undefined,
+                            expirationDate: structured?.expiration_date ?? undefined,
+                          });
+                          void updateWalletDocFields(d.id, {
+                            parsedData: parsed,
+                            ocrName: structured?.full_name ?? null,
+                            ocrDocNumber: structured?.doc_number ?? null,
+                            expirationDate: structured?.expiration_date ?? null,
+                          });
                         }
-                      }}
-                    >
-                      {isAnalyzing ? t('wallet.analyzing') : t('wallet.analyze')}
-                    </button>
+                      } catch {
+                        // silencioso (MVP)
+                      } finally {
+                        setAnalyzeId(null);
+                      }
+                    }}
+                  >
+                    {isAnalyzing ? t('wallet.analyzing') : t('wallet.analyze')}
+                  </button>
 
-                    {!isPremium && (
-                      <Link to="/premium" className="-mt-1 block text-right text-xs font-semibold text-[var(--viaza-accent)]">
-                        {t('wallet.premiumForAnalysis')}
-                      </Link>
-                    )}
+                  {!isPremium && (
+                    <Link to="/premium" className="self-center text-xs font-semibold text-[var(--viaza-accent)]">
+                      {t('wallet.premiumForAnalysis')}
+                    </Link>
+                  )}
 
+                  {/* Reportar perdido */}
+                  {!d.isReportedLost && (
                     <button
                       type="button"
                       className="rounded-2xl px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
-                      style={{ background: 'rgb(var(--viaza-primary-rgb) / 0.06)', color: 'rgb(var(--viaza-primary-rgb) / 0.70)' }}
+                      style={{ background: 'rgb(var(--viaza-primary-rgb) / 0.06)', color: 'var(--viaza-secondary)' }}
                       onClick={async () => {
-                        await supabase.storage.from('wallet_docs').remove([d.storagePath]);
-                        deleteWalletDoc(d.id);
+                        updateWalletDoc(d.id, { isReportedLost: true, lostReportedAt: new Date().toISOString() });
+                        void reportDocLost(d.id);
                       }}
                     >
-                      {t('wallet.delete')}
+                      Reportar perdido
                     </button>
-                  </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="rounded-2xl px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
+                    style={{ background: 'rgb(var(--viaza-primary-rgb) / 0.06)', color: 'rgb(var(--viaza-primary-rgb) / 0.70)' }}
+                    onClick={async () => {
+                      await supabase.storage.from('wallet_docs').remove([d.storagePath]);
+                      deleteWalletDoc(d.id);
+                    }}
+                  >
+                    {t('wallet.delete')}
+                  </button>
                 </div>
               </AppCard>
             );

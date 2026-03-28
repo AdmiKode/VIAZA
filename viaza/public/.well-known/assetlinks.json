@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ikviaza.app",
+      "sha256_cert_fingerprints": [
+        "49:42:4E:C5:C2:B3:E4:7A:CB:08:EB:C0:AB:3A:16:7A:F7:96:0F:63:5E:5F:BF:23:B7:04:96:F2:E6:BA:81:CB"
+      ]
+    }
+  }
+]

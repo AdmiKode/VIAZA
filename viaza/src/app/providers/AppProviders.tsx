@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { getSession, onAuthStateChange } from '../../services/authService';
 import { checkPremiumStatus, consumePremiumCheckoutStarted, syncPremiumFromStripe } from '../../services/premiumService';
 import { initGlobalErrorObservers, reportError } from '../../services/observabilityService';
+import { registerPushToken, setupPushListeners, requestNotificationPermission } from '../../services/pushNotificationService';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const currentLanguage = useAppStore((s) => s.currentLanguage);
@@ -50,6 +51,16 @@ export function AppProviders({ children }: PropsWithChildren) {
         setSupabaseUser(user);
         void checkPremiumStatus().then((active) => setIsPremium(active)).catch(() => setIsPremium(false));
         void hydrateFromSupabase();
+        // Registrar token push cuando el usuario se autentica
+        void (async () => {
+          try {
+            await requestNotificationPermission();
+            await setupPushListeners();
+            await registerPushToken('android');
+          } catch {
+            // push no disponible en web o permiso denegado — fallo silencioso
+          }
+        })();
       } else {
         setIsPremium(false);
       }

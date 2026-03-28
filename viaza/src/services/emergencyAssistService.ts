@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { supabase } from './supabaseClient';
 
 type SosChannel = 'whatsapp' | 'sms';
 
@@ -54,14 +55,36 @@ export function sendAssistedSos(params: {
   channel: SosChannel;
   phone: string;
   message: string;
+  /** Datos opcionales para registrar el SOS en base de datos */
+  sosContext?: {
+    sessionId?: string;
+    tripId?: string;
+    lat?: number | null;
+    lon?: number | null;
+    accuracy?: number | null;
+    notes?: string;
+  };
 }): void {
+  // Registrar SOS en DB (fire-and-forget — no bloquea el WhatsApp/SMS)
+  void supabase.functions.invoke('sos-handler', {
+    body: {
+      sessionId: params.sosContext?.sessionId,
+      tripId: params.sosContext?.tripId,
+      lat: params.sosContext?.lat,
+      lon: params.sosContext?.lon,
+      accuracy: params.sosContext?.accuracy,
+      companionPhone: params.phone,
+      method: params.channel,
+      notes: params.sosContext?.notes,
+    },
+  }).catch((e) => console.warn('[emergencyAssistService] sos-handler error:', e));
+
   const normalized = normalizePhone(params.phone);
   const encoded = encodeURIComponent(params.message);
   const url = channelUrl(params.channel, normalized, encoded);
 
   if (params.channel === 'whatsapp') {
     if (Capacitor.isNativePlatform()) {
-      // Intento nativo primero
       const waUrl = `whatsapp://send?phone=${normalized.replace(/[^\d]/g, '')}&text=${encoded}`;
       openUrl(waUrl);
       setTimeout(() => openUrl(url), 700);

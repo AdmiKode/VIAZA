@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { parseReservation, type ParsedReservation } from '../../../services/reservationParserService';
+import { preParseEmailText } from '../../../utils/emailPreParser';
 
 const TYPE_META: Record<string, { label: string }> = {
   flight:    { label: 'Vuelo'      },
@@ -31,14 +32,41 @@ export function ImportReservationPage() {
   const [selectedDay, setSelectedDay] = useState(0);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [usedPreParser, setUsedPreParser] = useState(false);
 
   async function handleAnalyze() {
     if (!text.trim()) { setError('Pega primero el texto de tu reserva'); return; }
     setError('');
     setLoading(true);
+    setUsedPreParser(false);
     try {
-      const result = await parseReservation(text.trim());
-      setParsed(result);
+      // 1️⃣ Run regex pre-parser first (no cost)
+      const pre = preParseEmailText(text.trim());
+
+      if (pre.highConfidence && pre.result) {
+        // High-confidence regex match → skip AI call
+        setParsed(pre.result);
+        setUsedPreParser(true);
+      } else {
+        // Fall through to AI (optionally hint detected type in future)
+        const result = await parseReservation(text.trim());
+        // Merge any regex pre-fill into AI result (fill gaps AI might miss)
+        if (pre.result) {
+          if (!result.confirmationCode && pre.result.confirmationCode) {
+            result.confirmationCode = pre.result.confirmationCode;
+          }
+          if (!result.rawDate && pre.result.rawDate) {
+            result.rawDate = pre.result.rawDate;
+          }
+          if (!result.startTime && pre.result.startTime) {
+            result.startTime = pre.result.startTime;
+          }
+          if (!result.endTime && pre.result.endTime) {
+            result.endTime = pre.result.endTime;
+          }
+        }
+        setParsed(result);
+      }
     } catch (e) {
       setError((e as Error).message ?? 'Error al analizar');
     } finally {
@@ -69,6 +97,7 @@ export function ImportReservationPage() {
     setParsed(null);
     setError('');
     setSaved(false);
+    setUsedPreParser(false);
   }
 
   const typeMeta = parsed ? (TYPE_META[parsed.type] ?? { label: parsed.type }) : null;
@@ -153,8 +182,11 @@ export function ImportReservationPage() {
               <div className="rounded-3xl p-5" style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.10)' }}>
                 <div className="flex items-start gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ background: 'rgba(234,153,64,0.12)', color: '#EA9940' }}>{typeMeta?.label}</span>
+                      {usedPreParser && (
+                        <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ background: 'rgba(108,163,162,0.15)', color: '#6CA3A2' }}>⚡ Detección rápida</span>
+                      )}
                     </div>
                     <div style={{ color: '#12212E', fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>{parsed.title}</div>
                     {parsed.description && <div style={{ color: 'rgba(18,33,46,0.50)', fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{parsed.description}</div>}
@@ -183,6 +215,28 @@ export function ImportReservationPage() {
                 <button type="button" onClick={handleReset} className="flex-1 rounded-3xl py-3.5 font-bold text-sm" style={{ background: 'white', color: 'rgba(18,33,46,0.55)', border: 'none', cursor: 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 2px 12px rgba(18,33,46,0.08)' }}>
                   Volver a pegar
                 </button>
+                {usedPreParser && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setUsedPreParser(false);
+                      setLoading(true);
+                      try {
+                        const result = await parseReservation(text.trim());
+                        setParsed(result);
+                      } catch (e) {
+                        setError((e as Error).message ?? 'Error al analizar');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="rounded-3xl py-3.5 px-4 font-bold text-sm"
+                    style={{ background: 'rgba(48,112,130,0.10)', color: '#307082', border: 'none', cursor: 'pointer', fontFamily: 'Questrial, sans-serif', whiteSpace: 'nowrap' }}
+                  >
+                    {loading ? '…' : 'Verificar con IA'}
+                  </button>
+                )}
                 <motion.button whileTap={{ scale: 0.97 }} type="button" onClick={handleConfirm} className="flex-1 rounded-3xl py-3.5 font-extrabold text-sm" style={{ background: 'linear-gradient(135deg, #12212E 0%, #307082 100%)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'Questrial, sans-serif', boxShadow: '0 8px 24px rgba(18,33,46,0.30)' }}>
                   ✓ Añadir al itinerario
                 </motion.button>

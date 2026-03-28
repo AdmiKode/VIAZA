@@ -53,11 +53,19 @@ import { AddPlacePage } from '../../modules/places/pages/AddPlacePage';
 import { ImportReservationPage } from '../../modules/import-reservation/pages/ImportReservationPage';
 import { RecommendationsPage } from '../../modules/recommendations/pages/RecommendationsPage';
 import { WalletPage } from '../../modules/wallet/pages/WalletPage';
+import { WalletLostModePage } from '../../modules/wallet/pages/WalletLostModePage';
 import { LandingPage } from '../../modules/landing/pages/LandingPage';
 import { PrivacyPage } from '../../modules/landing/pages/PrivacyPage';
 import { TermsPage } from '../../modules/landing/pages/TermsPage';
 import EmergencyCardPage from '../../modules/emergency/pages/EmergencyCardPage';
 import EmergencyPublicPage from '../../modules/emergency/pages/EmergencyPublicPage';
+import { SosFlowPage } from '../../modules/emergency/pages/SosFlowPage';
+import { SosPublicPage } from '../../modules/emergency/pages/SosPublicPage';
+import { TravelMemoryPage } from '../../modules/journal/pages/TravelMemoryPage';
+import { SafeWalkPage } from '../../modules/safety/pages/SafeWalkPage';
+import { LiveTrackingPage } from '../../modules/safety/pages/LiveTrackingPage';
+import { SharedItineraryPage } from '../../modules/itinerary/pages/SharedItineraryPage';
+import BudgetPage from '../../modules/finances/pages/BudgetPage';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -91,8 +99,17 @@ export function AppRouter() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
 
+        {/* ── SOS evento público por token (sin auth) ─────────────── */}
+        <Route path="/sos/:token" element={<SosPublicPage />} />
+
         {/* ── Emergency Travel Card (pública, sin auth) ───────────── */}
         <Route path="/emergency/:publicToken" element={<EmergencyPublicPage />} />
+
+        {/* ── Safe Walk: vista del acompañante (pública, sin auth) ── */}
+        <Route path="/safety/view/:token" element={<LiveTrackingPage />} />
+
+        {/* ── Itinerario compartido (público, sin auth) ───────────── */}
+        <Route path="/itinerary/shared/:token" element={<SharedItineraryPage />} />
 
         {/* Alias para el link del email de Supabase → /reset-password?token=... */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -175,10 +192,23 @@ export function AppRouter() {
           <Route path="/places/add" element={<AddPlacePage />} />
           <Route path="/recommendations" element={<RecommendationsPage />} />
           <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/wallet/lost" element={<WalletLostModePage />} />
           <Route path="/import-reservation" element={<ImportReservationPage />} />
 
           {/* ── Emergency Travel Card (privada, requiere auth) ───── */}
           <Route path="/profile/emergency" element={<EmergencyCardPage />} />
+
+          {/* ── SOS Flow (privado, requiere auth) ───────────────── */}
+          <Route path="/sos" element={<SosFlowPage />} />
+
+          {/* ── Safety ───────────────────────────────────────────── */}
+          <Route path="/safety/safewalk" element={<SafeWalkPage />} />
+
+          {/* ── Finances / Budget ────────────────────────────────── */}
+          <Route path="/budget" element={<BudgetPage />} />
+
+          {/* ── Travel Memory / Bitacora ─────────────────────────── */}
+          <Route path="/journal" element={<TravelMemoryPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

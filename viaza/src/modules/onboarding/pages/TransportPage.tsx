@@ -12,6 +12,12 @@ type PlacesPrediction = {
   structured_formatting: { main_text: string; secondary_text?: string };
 };
 
+type PlaceDetailsPayload = {
+  ok?: boolean;
+  error?: string;
+  place?: { lat: number | null; lon: number | null };
+} | null;
+
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -19,6 +25,38 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => clearTimeout(t);
   }, [value, delay]);
   return debounced;
+}
+
+async function resolvePlaceCoordsByPlaceId(placeId: string, language: string): Promise<{ lat: number; lon: number } | null> {
+  const { data, error: fnErr } = await supabase.functions.invoke('places-details', {
+    body: { place_id: placeId, language },
+  });
+  if (fnErr) throw fnErr;
+  const payload = data as PlaceDetailsPayload;
+  if (payload && payload.ok === false) throw new Error(payload.error ?? 'Places error');
+  const place = payload?.place;
+  if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lon)) return null;
+  return { lat: place.lat as number, lon: place.lon as number };
+}
+
+async function resolveOriginFromQuery(query: string, language: string): Promise<{ name: string; lat: number; lon: number } | null> {
+  const cleaned = query.trim();
+  if (cleaned.length < 2) return null;
+
+  const { data, error: acErr } = await supabase.functions.invoke('places-autocomplete', {
+    body: { input: cleaned, language },
+  });
+  if (acErr) throw acErr;
+
+  const payload = data as { ok?: boolean; error?: string; predictions?: PlacesPrediction[] } | null;
+  if (payload && payload.ok === false) throw new Error(payload.error ?? 'Places error');
+
+  const first = (payload?.predictions ?? [])[0];
+  if (!first?.place_id) return null;
+
+  const coords = await resolvePlaceCoordsByPlaceId(first.place_id, language);
+  if (!coords) return null;
+  return { name: first.structured_formatting.main_text || cleaned, lat: coords.lat, lon: coords.lon };
 }
 
 /* ─── Haversine: distancia en km entre dos puntos ──────────────── */
@@ -478,16 +516,22 @@ function OriginCityInput({
 
     try {
       setLoading(true);
-      const { data, error: fnErr } = await supabase.functions.invoke('places-details', {
-        body: { place_id: result.place_id, language: lang },
-      });
-      if (fnErr) throw fnErr;
-      const payload = data as { ok?: boolean; error?: string; place?: { lat: number | null; lon: number | null } } | null;
-      if (payload && payload.ok === false) throw new Error(payload.error ?? 'Places error');
-      const place = payload?.place;
-      if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lon)) throw new Error('Missing origin geometry');
-      setDraft({ originLat: place.lat as number, originLon: place.lon as number });
+      const place = await resolvePlaceCoordsByPlaceId(result.place_id, lang);
+      if (!place) throw new Error('Missing origin geometry');
+      setDraft({ originLat: place.lat, originLon: place.lon });
     } catch (e: unknown) {
+      try {
+        const fallback = await resolveOriginFromQuery(result.structured_formatting.main_text || result.description, lang);
+        if (fallback) {
+          setDraft({ originCity: fallback.name, originLat: fallback.lat, originLon: fallback.lon });
+          setError(false);
+          setErrorText('');
+          return;
+        }
+      } catch {
+        // no-op: keep original error state below
+      }
+
       setError(true);
       setErrorText((e as Error)?.message ?? '');
       setDraft({ originLat: null, originLon: null });
@@ -749,14 +793,38 @@ export function TransportPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const selected = useAppStore((s) => s.onboardingDraft.transportType);
+  const draft = useAppStore((s) => s.onboardingDraft);
+  const lang = useAppStore((s) => s.currentLanguage);
   const setDraft = useAppStore((s) => s.setOnboardingDraft);
+  const [submitting, setSubmitting] = useState(false);
 
   function handleSelect(val: TransportType) {
     setDraft({ transportType: val });
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!selected) return;
+    const needsOrigin =
+      (selected === 'car' || selected === 'bus' || selected === 'train' || selected === 'flight')
+      && Boolean(draft.originCity?.trim());
+
+    if (needsOrigin && (!Number.isFinite(draft.originLat) || !Number.isFinite(draft.originLon))) {
+      setSubmitting(true);
+      try {
+        const resolved = await resolveOriginFromQuery(draft.originCity, lang);
+        if (resolved) {
+          setDraft({
+            originCity: resolved.name,
+            originLat: resolved.lat,
+            originLon: resolved.lon,
+          });
+        }
+      } catch {
+        // Non-blocking: keep text origin for manual deep links.
+      } finally {
+        setSubmitting(false);
+      }
+    }
     navigate('/onboarding/smart-detection');
   }
 
@@ -905,24 +973,24 @@ export function TransportPage() {
         </button>
         <button
           type="button"
-          onClick={handleContinue}
-          disabled={!selected}
+          onClick={() => { void handleContinue(); }}
+          disabled={!selected || submitting}
           style={{
             flex: 2,
             height: 54,
             borderRadius: 16,
-            background: selected ? '#EA9940' : 'rgba(18,33,46,0.12)',
-            color: selected ? 'white' : 'rgba(18,33,46,0.30)',
+            background: selected && !submitting ? '#EA9940' : 'rgba(18,33,46,0.12)',
+            color: selected && !submitting ? 'white' : 'rgba(18,33,46,0.30)',
             fontSize: 15,
             fontWeight: 700,
             fontFamily: 'Questrial, sans-serif',
             border: 'none',
-            cursor: selected ? 'pointer' : 'default',
-            boxShadow: selected ? '0 6px 20px rgba(234,153,64,0.35)' : 'none',
+            cursor: selected && !submitting ? 'pointer' : 'default',
+            boxShadow: selected && !submitting ? '0 6px 20px rgba(234,153,64,0.35)' : 'none',
             transition: 'all 0.25s ease',
           }}
         >
-          {selected ? t('common.continue') : t('transport.selectFirst')}
+          {submitting ? t('common.loading') : (selected ? t('common.continue') : t('transport.selectFirst'))}
         </button>
       </div>
     </motion.div>

@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../../app/store/useAppStore';
 import type { ItineraryEventType } from '../../../types/itinerary';
+import { DayRoutePanel } from '../components/DayRoutePanel';
+import { FlightAlertCard } from '../components/FlightAlertCard';
+import { ShareItineraryButton } from '../components/ShareItineraryButton';
 
 const EVENT_META: Record<ItineraryEventType, { color: string; bg: string; label: string; icon: JSX.Element }> = {
   flight:    { color: '#12212E', bg: 'rgba(18,33,46,0.08)', label: 'Vuelo',      icon: <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M8 38L22 24l-4-8 6-6 4 8 8-4 2 2-14 10 6 12-4 2-4-8-4 4z" fill="#12212E"/></svg> },
@@ -41,6 +44,7 @@ export function ItineraryPage() {
 
   const currentTrip = trips.find((t) => t.id === currentTripId);
   const [expandedDay, setExpandedDay] = useState<number>(0);
+  const [routeDayIndex, setRouteDayIndex] = useState<number | null>(null);
 
   const days = useMemo(() => (currentTrip ? buildDays(currentTrip) : []), [currentTrip]);
 
@@ -203,6 +207,14 @@ export function ItineraryPage() {
                                         {ev.startTime && <span style={{ color: 'rgba(18,33,46,0.40)', fontSize: 11 }}>{ev.startTime}{ev.endTime ? ` – ${ev.endTime}` : ''}</span>}
                                       </div>
                                       {ev.description && <div style={{ color: 'rgba(18,33,46,0.50)', fontSize: 12, marginTop: 3, lineHeight: 1.4 }}>{ev.description}</div>}
+                                      {/* Flight alert subscription */}
+                                      {ev.type === 'flight' && ev.confirmationCode && day.date && (
+                                        <FlightAlertCard
+                                          flightNumber={ev.confirmationCode}
+                                          flightDate={day.date}
+                                          tripId={currentTripId ?? undefined}
+                                        />
+                                      )}
                                     </div>
                                   </div>
                                   <button
@@ -218,6 +230,42 @@ export function ItineraryPage() {
                           })}
                         </div>
                       )}
+
+                      {/* Botón Ver ruta del día */}
+                      {dayEvents.length >= 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setRouteDayIndex(routeDayIndex === day.index ? null : day.index)}
+                          className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 transition active:scale-[0.97]"
+                          style={{
+                            background: routeDayIndex === day.index ? 'rgba(48,112,130,0.15)' : 'rgba(48,112,130,0.08)',
+                            border: '1.5px solid rgba(48,112,130,0.20)',
+                            cursor: 'pointer',
+                            fontFamily: 'Questrial, sans-serif',
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 48 48" fill="none">
+                            <path d="M8 24h32M28 14l12 10-12 10" stroke="#307082" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                          </svg>
+                          <span style={{ color: '#307082', fontSize: 13, fontWeight: 700 }}>
+                            {routeDayIndex === day.index ? 'Ocultar ruta' : 'Ver ruta del día'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* DayRoutePanel */}
+                      <AnimatePresence>
+                        {routeDayIndex === day.index && currentTripId && (
+                          <DayRoutePanel
+                            tripId={currentTripId}
+                            dayIndex={day.index}
+                            dayLabel={day.label}
+                            events={itineraryEvents.filter((e) => e.tripId === currentTripId)}
+                            places={savedPlaces.filter((p) => p.tripId === currentTripId)}
+                            onClose={() => setRouteDayIndex(null)}
+                          />
+                        )}
+                      </AnimatePresence>
 
                       {/* Botón añadir evento */}
                       <button
@@ -237,6 +285,13 @@ export function ItineraryPage() {
           );
         })}
       </div>
+
+      {/* ── Compartir itinerario ── */}
+      {currentTripId && (
+        <div className="px-5 mt-4">
+          <ShareItineraryButton tripId={currentTripId} />
+        </div>
+      )}
 
       {/* ── FAB: añadir lugar ── */}
       <motion.button

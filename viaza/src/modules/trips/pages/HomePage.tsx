@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -8,6 +8,9 @@ import { fetchWeatherCache } from '../../../services/weatherCacheService';
 import { fetchTripRisk } from '../../../services/riskZonesService';
 import { supabase } from '../../../services/supabaseClient';
 import type { ActiveModuleId } from '../../../engines/activeModulesEngine';
+import { ActionAlerts } from '../components/ActionAlerts';
+import { TripReadiness } from '../components/TripReadiness';
+import { useTripBrain } from '../../../hooks/useTripBrain';
 
 /* ─── Gradientes hero por tipo de viaje ─── */
 const HERO_GRADIENT: Record<string, string> = {
@@ -33,7 +36,7 @@ function riskLabel(level: 'low' | 'medium' | 'high' | 'critical' | 'unknown') {
   if (level === 'high') return 'High';
   if (level === 'medium') return 'Medium';
   if (level === 'low') return 'Low';
-  return 'Unknown';
+  return 'Pending';
 }
 
 function riskChipColor(level: 'low' | 'medium' | 'high' | 'critical' | 'unknown') {
@@ -130,8 +133,19 @@ const TOOLS = [
     ),
   },
   {
+    to: '/route', labelKey: 'trip.route', subtitleKey: 'tools.route.subtitle',
+    requiresModule: 'route' as ActiveModuleId,
+    color: '#307082',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <circle cx="12" cy="12" r="5" fill="#307082" />
+        <circle cx="36" cy="36" r="5" fill="#EA9940" />
+        <path d="M12 18v8a8 8 0 0 0 8 8h10" stroke="#12212E" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     to: '/translator', labelKey: 'translator.title', subtitleKey: 'tools.translator.subtitle',
-    requiresPremium: true,
     requiresModule: 'translator' as ActiveModuleId,
     color: '#307082',
     icon: <svg width="32" height="32" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="24" height="18" rx="6" fill="#307082"/><rect x="4" y="8" width="24" height="9" rx="6" fill="white" opacity="0.35"/><rect x="20" y="20" width="24" height="18" rx="6" fill="#EA9940"/><rect x="20" y="20" width="24" height="9" rx="6" fill="white" opacity="0.30"/><path d="M13 17h8M17 13v8" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/><path d="M28 30l3 5 3-5" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>,
@@ -194,6 +208,7 @@ export function HomePage() {
   const [forecastStatus, setForecastStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [riskStatus, setRiskStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const updateTrip = useAppStore((s) => s.updateTrip);
+  const brain = useTripBrain();
 
   const activeModules = new Set<string>(trip?.activeModules ?? []);
   const hasCoords =
@@ -272,26 +287,44 @@ export function HomePage() {
       })
     : [];
 
-  /* Weather V2 (Premium): cache diario desde Edge, no fetch por render */
-  useEffect(() => {
+  const loadForecast = useCallback(async (force = false) => {
     if (!isPremium) return;
     if (!trip?.id || !hasCoords || !trip.startDate || !trip.endDate) return;
-    if (trip.weatherForecastDaily && trip.weatherForecastDaily.length > 0) return;
+    if (!force && trip.weatherForecastDaily && trip.weatherForecastDaily.length > 0) return;
+
     setForecastStatus('loading');
-    void fetchWeatherCache({
-      tripId: trip.id,
-      lat: Number(trip.lat),
-      lon: Number(trip.lon),
-      startDate: trip.startDate,
-      endDate: trip.endDate,
-      timezone: trip.destinationTimezone,
-    })
-      .then((forecastDaily) => {
-        updateTrip(trip.id, { weatherForecastDaily: forecastDaily });
-        setForecastStatus('ready');
-      })
-      .catch(() => { setForecastStatus('error'); });
-  }, [isPremium, trip?.id, trip?.lat, trip?.lon, trip?.startDate, trip?.endDate, trip?.destinationTimezone, trip?.weatherForecastDaily?.length]);
+    try {
+      const forecastDaily = await fetchWeatherCache({
+        tripId: trip.id,
+        lat: Number(trip.lat),
+        lon: Number(trip.lon),
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        timezone: trip.destinationTimezone,
+      });
+      if (!forecastDaily || forecastDaily.length === 0) throw new Error('No forecast rows');
+      updateTrip(trip.id, { weatherForecastDaily: forecastDaily });
+      setForecastStatus('ready');
+    } catch {
+      setForecastStatus('error');
+    }
+  }, [
+    isPremium,
+    trip?.id,
+    trip?.lat,
+    trip?.lon,
+    trip?.startDate,
+    trip?.endDate,
+    trip?.destinationTimezone,
+    trip?.weatherForecastDaily,
+    hasCoords,
+    updateTrip,
+  ]);
+
+  /* Weather V2 (Premium): cache diario + fallback directo Open-Meteo */
+  useEffect(() => {
+    void loadForecast(false);
+  }, [loadForecast]);
 
   useEffect(() => {
     if (!trip) { setForecastStatus('idle'); return; }
@@ -664,7 +697,14 @@ export function HomePage() {
             ) : forecastStatus === 'error' ? (
               <div className="px-5 pb-5">
                 <div className="rounded-2xl border border-[rgb(var(--viaza-accent-rgb)/0.25)] bg-[rgb(var(--viaza-accent-rgb)/0.08)] p-4 text-sm text-[rgb(var(--viaza-primary-rgb)/0.75)]">
-                  {t('weather.forecast.noData')}
+                  <div>{t('weather.forecast.noData')}</div>
+                  <button
+                    type="button"
+                    onClick={() => { void loadForecast(true); }}
+                    className="mt-3 rounded-full bg-[rgb(var(--viaza-primary-rgb)/0.10)] px-3 py-1.5 text-xs font-semibold text-[var(--viaza-primary)] transition active:scale-[0.98]"
+                  >
+                    {t('common.retry')}
+                  </button>
                 </div>
               </div>
             ) : (
@@ -825,6 +865,20 @@ export function HomePage() {
 	              </button>
             </div>
           </motion.div>
+        )}
+
+        {/* ═══════════════════════════════
+            TRIP BRAIN — Readiness + Alerts
+        ══════════════════════════════ */}
+        {trip && (
+          <>
+            <TripReadiness
+              pct={brain.readinessPct}
+              phase={brain.phase}
+              daysLeft={brain.daysLeft}
+            />
+            <ActionAlerts alerts={brain.alerts} />
+          </>
         )}
 
         {/* ═══════════════════════════════

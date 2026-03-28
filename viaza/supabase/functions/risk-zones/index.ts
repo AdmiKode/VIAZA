@@ -123,8 +123,16 @@ async function fetchProviderRisk(params: {
     `${root}/countries/${countryCode2}`,
     `${root}/country/${iso3}`,
     `${root}/country/${countryCode2}`,
+    `${root}/risk/${iso3}`,
+    `${root}/risk/${countryCode2}`,
+    `${root}/advisory/${iso3}`,
+    `${root}/advisory/${countryCode2}`,
     `${root}/advisories/${iso3}`,
     `${root}/advisories/${countryCode2}`,
+    `${root}/risk?country=${iso3}`,
+    `${root}/risk?country=${countryCode2}`,
+    `${root}/advisory?country=${iso3}`,
+    `${root}/advisory?country=${countryCode2}`,
   ];
 
   const attempts: string[] = [];
@@ -135,6 +143,7 @@ async function fetchProviderRisk(params: {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
           'Accept': 'application/json',
         },
       });
