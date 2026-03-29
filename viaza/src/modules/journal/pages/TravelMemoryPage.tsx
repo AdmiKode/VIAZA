@@ -428,7 +428,7 @@ export function TravelMemoryPage() {
               </div>
 
               {formError && (
-                <div style={{ fontSize: 12, color: '#C0392B', marginBottom: 10 }}>{formError}</div>
+                <div style={{ fontSize: 12, color: '#EA9940', fontWeight: 600, marginBottom: 10 }}>{formError}</div>
               )}
 
               <button

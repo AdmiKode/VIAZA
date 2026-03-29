@@ -45,8 +45,8 @@ const RISK_DB: Record<string, RiskZone> = {
 const RISK_COLORS: Record<1|2|3|4, string> = {
   1: '#6CA3A2',
   2: '#EA9940',
-  3: '#C0392B',
-  4: '#7B1C1C',
+  3: '#EA9940',
+  4: '#12212E',
 };
 
 const RISK_LABELS: Record<1|2|3|4, string> = {
@@ -83,27 +83,29 @@ function RiskZoneBanner({ destination }: { destination: string | undefined }) {
   const zone = RISK_DB[code];
   if (zone.level === 1) return null; // nivel 1 no lo mostramos
   const color = RISK_COLORS[zone.level];
+  const isMaxLevel = zone.level === 4;
 
   return (
     <div style={{
-      background: `${color}18`, border: `1.5px solid ${color}55`,
+      background: isMaxLevel ? '#12212E' : `${color}18`,
+      border: `1.5px solid ${isMaxLevel ? '#12212E' : color + '55'}`,
       borderRadius: 14, padding: '12px 14px', marginTop: 12,
       display: 'flex', gap: 10, alignItems: 'flex-start',
     }}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isMaxLevel ? '#EA9940' : color} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
         <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
       </svg>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color, marginBottom: 3 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: isMaxLevel ? '#EA9940' : color, marginBottom: 3 }}>
           {RISK_LABELS[zone.level]}: {zone.label}
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(18,33,46,0.7)', lineHeight: 1.5 }}>{zone.tip}</div>
+        <div style={{ fontSize: 12, color: isMaxLevel ? 'rgba(255,255,255,0.75)' : 'rgba(18,33,46,0.7)', lineHeight: 1.5 }}>{zone.tip}</div>
       </div>
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        style={{ background: 'none', border: 'none', color: 'rgba(18,33,46,0.3)', cursor: 'pointer', padding: 0, fontSize: 16, lineHeight: 1, flexShrink: 0 }}
+        style={{ background: 'none', border: 'none', color: isMaxLevel ? 'rgba(255,255,255,0.4)' : 'rgba(18,33,46,0.3)', cursor: 'pointer', padding: 0, fontSize: 16, lineHeight: 1, flexShrink: 0 }}
       >
         ×
       </button>

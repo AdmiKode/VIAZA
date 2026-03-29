@@ -66,7 +66,7 @@ const CAT_COLORS: Record<PackingCategory, string> = {
   clothes:    'rgba(234,153,64,0.12)',
   toiletries: 'rgba(108,163,162,0.15)',
   electronics:'rgba(18,33,46,0.10)',
-  health:     'rgba(220,80,80,0.10)',
+  health:     'rgba(234,153,64,0.10)',
   extras:     'rgba(234,153,64,0.08)',
 };
 
@@ -75,7 +75,7 @@ const CAT_ACCENT: Record<PackingCategory, string> = {
   clothes:    '#EA9940',
   toiletries: '#6CA3A2',
   electronics:'#12212E',
-  health:     '#c0392b',
+  health:     '#EA9940',
   extras:     '#EA9940',
 };
 
@@ -640,8 +640,10 @@ export function PackingChecklistPage() {
                                     color: '#EA9940',
                                     fontWeight: 700,
                                     letterSpacing: 0.5,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
                                   }}>
-                                    ★
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="#EA9940" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                                   </span>
                                 )}
                               </div>

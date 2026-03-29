@@ -17,11 +17,11 @@ export const MOOD_LABELS: Record<JournalMood, string> = {
 };
 
 export const MOOD_COLORS: Record<JournalMood, string> = {
-  great:   '#27AE60',
-  good:    '#307082',
-  neutral: '#6CA3A2',
+  great:   '#307082',
+  good:    '#6CA3A2',
+  neutral: '#ECE7DC',
   tired:   '#EA9940',
-  bad:     '#C0392B',
+  bad:     '#12212E',
 };
 
 export interface JournalEntry {
