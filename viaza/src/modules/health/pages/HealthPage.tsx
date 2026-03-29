@@ -13,6 +13,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  scheduleNotification,
+  requestNotificationPermissions,
+} from '../../../services/notificationsService';
 import { useAppStore } from '../../../app/store/useAppStore';
 import {
   getMedications,
@@ -99,6 +103,16 @@ function IconBack() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={P.primary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+  );
+}
+
+function IconBell({ active }: { active?: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+      stroke={active ? P.secondary : P.muted} strokeWidth="2.2" strokeLinecap="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
   );
 }
@@ -351,6 +365,50 @@ function MedCard({
   onTogglePacked: (id: string, packed: boolean) => void;
   onDelete: (id: string) => void;
 }) {
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduled, setScheduled] = useState(false);
+  const [schedMsg, setSchedMsg] = useState('');
+
+  async function handleScheduleReminders() {
+    if (med.times.length === 0) {
+      setSchedMsg('Agrega horarios al medicamento para programar recordatorios');
+      setTimeout(() => setSchedMsg(''), 3000);
+      return;
+    }
+    setScheduling(true);
+    try {
+      await requestNotificationPermissions();
+      const today = new Date();
+      let count = 0;
+      for (const t of med.times) {
+        const [h, m] = t.split(':').map(Number);
+        const at = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m, 0);
+        if (at.getTime() < Date.now()) {
+          // Si ya pasó hoy, programa para mañana
+          at.setDate(at.getDate() + 1);
+        }
+        const notifId = Math.abs((med.id + t).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 2_000_000;
+        await scheduleNotification({
+          id: notifId,
+          title: `Medicamento: ${med.name}`,
+          body: med.dose_amount
+            ? `Tomar ${med.dose_amount} ${med.dose_unit}`
+            : 'Hora de tu medicamento',
+          at: at.toISOString(),
+        });
+        count++;
+      }
+      setScheduled(true);
+      setSchedMsg(`${count} recordatorio${count !== 1 ? 's' : ''} programado${count !== 1 ? 's' : ''}`);
+      setTimeout(() => setSchedMsg(''), 4000);
+    } catch {
+      setSchedMsg('No se pudo programar — verifica permisos');
+      setTimeout(() => setSchedMsg(''), 4000);
+    } finally {
+      setScheduling(false);
+    }
+  }
+
   return (
     <motion.div
       layout
@@ -389,6 +447,19 @@ function MedCard({
           {med.notes && (
             <div style={{ fontSize: 12, color: P.muted, marginTop: 4, fontStyle: 'italic' }}>{med.notes}</div>
           )}
+          {/* Feedback scheduling */}
+          <AnimatePresence>
+            {schedMsg && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                style={{ fontSize: 11, color: scheduled ? P.secondary : P.accent, marginTop: 6, fontWeight: 600 }}
+              >
+                {schedMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
@@ -408,6 +479,22 @@ function MedCard({
               ? <IconCheck />
               : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={P.muted} strokeWidth="2.2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
             }
+          </button>
+          {/* Recordatorio */}
+          <button
+            type="button"
+            onClick={handleScheduleReminders}
+            disabled={scheduling}
+            title="Programar recordatorios"
+            style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: scheduled ? `rgba(48,112,130,0.12)` : 'rgba(18,33,46,0.07)',
+              border: 'none', cursor: scheduling ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.2s', opacity: scheduling ? 0.6 : 1,
+            }}
+          >
+            <IconBell active={scheduled} />
           </button>
           {/* Borrar */}
           <button

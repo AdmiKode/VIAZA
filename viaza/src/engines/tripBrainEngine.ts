@@ -92,6 +92,8 @@ export interface TripBrainInput {
   flightWatchCount?: number;
   /** Days since last wallet doc was added (to detect stale wallet) */
   daysSinceLastWalletUpdate?: number | null;
+  /** Número de medicamentos críticos sin empacar */
+  criticalMedsUnpacked?: number;
 }
 
 export function computeTripBrain(input: TripBrainInput): TripBrainResult {
@@ -106,6 +108,7 @@ export function computeTripBrain(input: TripBrainInput): TripBrainResult {
     isRiskDestination = false,
     riskLevel,
     daysSinceLastWalletUpdate,
+    criticalMedsUnpacked = 0,
   } = input;
 
   const phase = detectPhase(trip);
@@ -142,6 +145,18 @@ export function computeTripBrain(input: TripBrainInput): TripBrainResult {
       description: `Faltan ${100 - packPct}% de items en tu lista de packing y el viaje es en ${daysLeft} dia${daysLeft !== 1 ? 's' : ''}.`,
       actionLabel: 'Ver packing',
       actionPath: '/packing',
+    });
+  }
+
+  // [URGENTE] Medicamentos críticos sin empacar
+  if (criticalMedsUnpacked > 0 && (isApproaching || phase === 'in_trip')) {
+    allAlerts.push({
+      id: 'critical_meds_unpacked',
+      severity: 'urgent',
+      title: `Medicamento${criticalMedsUnpacked > 1 ? 's' : ''} crítico${criticalMedsUnpacked > 1 ? 's' : ''} sin empacar`,
+      description: `${criticalMedsUnpacked} medicamento${criticalMedsUnpacked > 1 ? 's' : ''} marcado${criticalMedsUnpacked > 1 ? 's' : ''} como crítico${criticalMedsUnpacked > 1 ? 's' : ''} no ${criticalMedsUnpacked > 1 ? 'están' : 'está'} en la maleta.`,
+      actionLabel: 'Ver salud',
+      actionPath: '/health',
     });
   }
 

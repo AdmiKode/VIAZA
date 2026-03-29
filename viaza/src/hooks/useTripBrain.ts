@@ -29,6 +29,7 @@ export function useTripBrain(): TripBrainResult {
   const [riskLevel, setRiskLevel] = useState<'low' | 'medium' | 'high' | 'extreme' | undefined>(undefined);
   const [budgetSpent, setBudgetSpent] = useState(0);
   const [budgetTotal, setBudgetTotal] = useState(0);
+  const [criticalMedsUnpacked, setCriticalMedsUnpacked] = useState(0);
 
   // Verificar si el usuario tiene perfil de emergencia configurado
   useEffect(() => {
@@ -110,6 +111,26 @@ export function useTripBrain(): TripBrainResult {
     return () => { cancelled = true; };
   }, [currentTripId]);
 
+  // Medicamentos críticos sin empacar
+  useEffect(() => {
+    if (!currentTripId) { setCriticalMedsUnpacked(0); return; }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { count } = await supabase
+          .from('health_medications')
+          .select('id', { count: 'exact', head: true })
+          .eq('trip_id', currentTripId)
+          .eq('is_critical', true)
+          .eq('packed', false);
+        if (!cancelled) setCriticalMedsUnpacked(count ?? 0);
+      } catch {
+        if (!cancelled) setCriticalMedsUnpacked(0);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentTripId]);
+
   const result = useMemo(() => {
     if (!trip) return EMPTY_RESULT;
     return computeTripBrain({
@@ -123,11 +144,13 @@ export function useTripBrain(): TripBrainResult {
       isRiskDestination,
       riskLevel,
       daysSinceLastWalletUpdate,
+      criticalMedsUnpacked,
     });
   }, [
     trip, packingItems, walletDocs, hasEmergencyProfile,
     itineraryEvents, budgetSpent, budgetTotal,
     isRiskDestination, riskLevel, daysSinceLastWalletUpdate,
+    criticalMedsUnpacked,
   ]);
 
   return result;

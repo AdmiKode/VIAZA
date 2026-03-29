@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../../app/store/useAppStore';
+import { supabase } from '../../../services/supabaseClient';
 import {
   getJournalEntries,
   createJournalEntry,
@@ -84,6 +85,11 @@ export function TravelMemoryPage() {
   const [customTag, setCustomTag] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Resumen IA
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +199,43 @@ export function TravelMemoryPage() {
     } catch { /* silenciar */ }
   }
 
+  async function handleGenerateSummary() {
+    if (entries.length === 0) return;
+    setGeneratingSummary(true);
+    setShowSummary(true);
+    setAiSummary(null);
+    try {
+      const reviewsText = entries
+        .map((e) => {
+          const parts: string[] = [];
+          if (e.title) parts.push(`Titulo: ${e.title}`);
+          parts.push(`Fecha: ${formatDate(e.entryDate)}`);
+          if (e.mood) parts.push(`Animo: ${MOOD_LABELS[e.mood]}`);
+          parts.push(`Contenido: ${e.body}`);
+          if (e.tags.length) parts.push(`Tags: ${e.tags.join(', ')}`);
+          return parts.join('\n');
+        })
+        .join('\n\n---\n\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-orchestrator', {
+        body: {
+          task_type: 'reviews_summary',
+          payload: { reviews_text: reviewsText },
+          trip_context: {},
+          language_context: { app_lang: 'es' },
+        },
+      });
+
+      if (error) throw error;
+      const summary = (data as { result?: { summary?: string } })?.result?.summary;
+      setAiSummary(summary ?? 'No se pudo generar el resumen');
+    } catch {
+      setAiSummary('Error al conectar con IA. Verifica tu conexion.');
+    } finally {
+      setGeneratingSummary(false);
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: P.bg, paddingBottom: 100, fontFamily: 'Questrial, sans-serif' }}>
 
@@ -208,16 +251,66 @@ export function TravelMemoryPage() {
               {entries.length} {entries.length === 1 ? 'momento registrado' : 'momentos registrados'}
             </div>
           </div>
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            style={{ background: P.accent, border: 'none', borderRadius: 12, padding: '10px 18px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-          >
-            {showForm ? 'Cancelar' : '+ Nuevo'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {entries.length >= 2 && (
+              <button
+                onClick={() => void handleGenerateSummary()}
+                disabled={generatingSummary}
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 12, padding: '10px 14px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: generatingSummary ? 'wait' : 'pointer', backdropFilter: 'blur(8px)' }}
+              >
+                {generatingSummary ? 'Generando...' : 'Resumen IA'}
+              </button>
+            )}
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              style={{ background: P.accent, border: 'none', borderRadius: 12, padding: '10px 18px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              {showForm ? 'Cancelar' : '+ Nuevo'}
+            </button>
+          </div>
         </div>
       </div>
 
       <div style={{ padding: '20px' }}>
+
+        {/* Panel resumen IA */}
+        <AnimatePresence>
+          {showSummary && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', marginBottom: 20, boxShadow: `0 4px 20px rgba(${P.rgb},0.1)`, borderLeft: `4px solid ${P.secondary}` }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: P.primary }}>Resumen de la bitacora</div>
+                <button
+                  onClick={() => setShowSummary(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(18,33,46,0.35)', fontSize: 18, lineHeight: 1 }}
+                >x</button>
+              </div>
+              {generatingSummary && (
+                <div style={{ fontSize: 13, color: P.softTeal, fontStyle: 'italic' }}>
+                  Analizando tus momentos...
+                </div>
+              )}
+              {!generatingSummary && aiSummary && (
+                <div style={{ fontSize: 13, color: P.primary, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{aiSummary}</div>
+              )}
+              {!generatingSummary && !aiSummary && (
+                <div style={{ fontSize: 13, color: P.softTeal }}>Sin resumen disponible</div>
+              )}
+              {!generatingSummary && aiSummary && (
+                <button
+                  onClick={() => void handleGenerateSummary()}
+                  style={{ marginTop: 12, background: `rgba(${P.rgb},0.07)`, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, color: P.secondary, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Regenerar
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Formulario */}
         <AnimatePresence>

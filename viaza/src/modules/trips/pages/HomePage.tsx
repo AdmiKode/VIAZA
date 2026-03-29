@@ -882,6 +882,51 @@ export function HomePage() {
         )}
 
         {/* ═══════════════════════════════
+            AIRPORT FLOW — card contextual
+        ══════════════════════════════ */}
+        {trip?.transportType === 'flight' && trip.flightDepartureTime && (() => {
+          const depMs = new Date(trip.flightDepartureTime).getTime();
+          const hoursLeft = (depMs - Date.now()) / 3600000;
+          if (hoursLeft < 0 || hoursLeft > 72) return null;
+          const urgent = hoursLeft <= 6;
+          return (
+            <Link to="/airport-flow" style={{ textDecoration: 'none' }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: urgent ? '#EA9940' : 'white',
+                  borderRadius: 20, padding: '16px 18px',
+                  boxShadow: urgent ? '0 6px 24px rgba(234,153,64,0.30)' : '0 4px 20px rgba(18,33,46,0.08)',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: 14, flexShrink: 0,
+                  background: urgent ? 'rgba(255,255,255,0.25)' : 'rgba(234,153,64,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={urgent ? 'white' : '#EA9940'} strokeWidth="2" strokeLinecap="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 12 19.79 19.79 0 0 1 1.92 3.18 2 2 0 0 1 3.9 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: urgent ? 'white' : '#12212E' }}>
+                    {urgent ? 'Preparate para el aeropuerto' : 'Vuelo en las proximas horas'}
+                  </div>
+                  <div style={{ fontSize: 12, color: urgent ? 'rgba(255,255,255,0.8)' : 'rgba(18,33,46,0.5)', marginTop: 2 }}>
+                    {Math.round(hoursLeft)}h restantes · Ver cuando salir
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={urgent ? 'white' : 'rgba(18,33,46,0.3)'} strokeWidth="2.5" strokeLinecap="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </motion.div>
+            </Link>
+          );
+        })()}
+
+        {/* ═══════════════════════════════
             QUICK TOOLS 2×2
         ══════════════════════════════ */}
         <div>
