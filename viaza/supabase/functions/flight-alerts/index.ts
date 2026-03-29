@@ -93,10 +93,10 @@ function buildPushMessage(
 
   if (curr.status !== prev.status) {
     const statusMap: Record<string, string> = {
-      cancelled: '❌ CANCELADO',
-      diverted: '⚠️ DESVIADO',
-      active: '✈️ En vuelo',
-      landed: '🛬 Aterrizó',
+      cancelled: 'CANCELADO',
+      diverted: 'DESVIADO',
+      active: 'En vuelo',
+      landed: 'Aterrizo',
       scheduled: 'Programado',
     };
     changes.push(`Estado: ${statusMap[curr.status] ?? curr.status}`);

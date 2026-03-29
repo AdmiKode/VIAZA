@@ -98,12 +98,12 @@ export function formatFlightStatus(snapshot: FlightSnapshot): string {
 
 export function getFlightStatusColor(snapshot: FlightSnapshot): string {
   switch (snapshot.status) {
-    case 'cancelled': return '#EF4444';
-    case 'diverted':  return '#F97316';
+    case 'cancelled': return '#12212E';
+    case 'diverted':  return '#EA9940';
     case 'active':    return '#307082';
     case 'landed':    return '#6CA3A2';
     default:
-      if ((snapshot.dep_delay_min ?? 0) >= 60) return '#F97316';
+      if ((snapshot.dep_delay_min ?? 0) >= 60) return '#EA9940';
       if ((snapshot.dep_delay_min ?? 0) >= 15) return '#EA9940';
       return '#12212E';
   }
