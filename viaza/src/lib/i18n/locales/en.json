@@ -850,6 +850,8 @@
   "weather.title": "Trip Weather",
   "health.title": "Health",
   "airport.title": "Airport Flow",
+  "memory.title": "Trip Journal",
+  "memory.subtitle": "Moments and memories",
   "agenda.title": "Agenda",
   "itinerary.title": "Itinerary",
   "places.title": "Places",

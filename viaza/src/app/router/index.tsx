@@ -212,6 +212,7 @@ export function AppRouter() {
 
           {/* ── Travel Memory / Bitacora ─────────────────────────── */}
           <Route path="/journal" element={<TravelMemoryPage />} />
+          <Route path="/memory" element={<TravelMemoryPage />} />
 
           {/* ── Health Module ─────────────────────────────────────── */}
           <Route path="/health" element={<HealthPage />} />

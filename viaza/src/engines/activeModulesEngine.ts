@@ -15,7 +15,10 @@ export type ActiveModuleId =
   | 'route'
   | 'emergency'
   | 'safety'
-  | 'budget';
+  | 'budget'
+  | 'health'
+  | 'airport'
+  | 'memory';
 
 function uniqStable(list: string[]): string[] {
   const seen = new Set<string>();
@@ -46,13 +49,16 @@ export function computeActiveModules(params: { trip: Trip; isPremium: boolean })
     'budget',
     'translator',
     'quick_phrases',
+    'health',
+    'memory',
   ];
 
   if (trip.transportType) {
     const hasOriginText = Boolean(trip.originCity && trip.originCity.trim().length > 0);
     const hasDestinationText = Boolean(trip.destination && trip.destination.trim().length > 0);
-    // Exponer rutas cuando hay contexto suficiente para deep links, no sólo con coords completas.
     if (hasOriginText || hasDestinationText) base.push('route');
+    // Airport flow: mostrar si es vuelo (con o sin hora confirmada)
+    if (trip.transportType === 'flight') base.push('airport');
   }
 
   if (isPremium) {

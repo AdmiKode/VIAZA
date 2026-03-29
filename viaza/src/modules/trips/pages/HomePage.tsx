@@ -165,6 +165,44 @@ const TOOLS = [
     color: '#6CA3A2',
     icon: <svg width="32" height="32" viewBox="0 0 48 48" fill="none"><rect x="13" y="6" width="22" height="28" rx="7" fill="#6CA3A2"/><rect x="13" y="6" width="22" height="13" rx="7" fill="white" opacity="0.30"/><rect x="9" y="32" width="30" height="10" rx="5" fill="#307082"/><rect x="19" y="15" width="4" height="8" rx="2" fill="#EA9940"/><rect x="25" y="15" width="4" height="8" rx="2" fill="#EA9940"/></svg>,
   },
+  {
+    to: '/health', labelKey: 'health.title', subtitleKey: 'tools.health.subtitle',
+    requiresModule: 'health' as ActiveModuleId,
+    color: '#6CA3A2',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <rect x="6" y="6" width="36" height="36" rx="10" fill="#6CA3A2"/>
+        <rect x="20" y="12" width="8" height="24" rx="4" fill="white"/>
+        <rect x="12" y="20" width="24" height="8" rx="4" fill="white" opacity="0.7"/>
+      </svg>
+    ),
+  },
+  {
+    to: '/airport-flow', labelKey: 'airport.title', subtitleKey: 'tools.airport.subtitle',
+    requiresModule: 'airport' as ActiveModuleId,
+    color: '#EA9940',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="#EA9940"/>
+        <path d="M10 34l8-16 6 4 8-10 4 2-10 18H10z" fill="white" opacity="0.9"/>
+        <rect x="10" y="37" width="28" height="3" rx="1.5" fill="white" opacity="0.5"/>
+      </svg>
+    ),
+  },
+  {
+    to: '/memory', labelKey: 'memory.title', subtitleKey: 'memory.subtitle',
+    requiresModule: 'memory' as ActiveModuleId,
+    color: '#307082',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <rect x="6" y="8" width="36" height="32" rx="8" fill="#307082"/>
+        <rect x="6" y="8" width="36" height="16" rx="8" fill="white" opacity="0.18"/>
+        <circle cx="16" cy="24" r="5" fill="#EA9940" opacity="0.85"/>
+        <circle cx="28" cy="28" r="6" fill="#6CA3A2" opacity="0.85"/>
+        <circle cx="36" cy="20" r="4" fill="white" opacity="0.5"/>
+      </svg>
+    ),
+  },
 ];
 
 const BEFORE_YOU_GO: Array<{
