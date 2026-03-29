@@ -158,3 +158,79 @@ export async function deleteJournalEntry(id: string): Promise<void> {
     .eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Sube una foto (base64 o blob) al bucket viaza-journal y
+ * agrega el path al array photo_paths de la entrada.
+ * Retorna la URL pública firmada (signed URL, 1 año).
+ */
+export async function uploadJournalPhoto(params: {
+  entryId: string;
+  userId: string;
+  base64Data: string;  // data sin el prefijo "data:image/jpeg;base64,"
+  mimeType: string;    // 'image/jpeg' | 'image/png' | 'image/webp'
+}): Promise<{ path: string; signedUrl: string }> {
+  const { entryId, userId, base64Data, mimeType } = params;
+  const ext = mimeType.split('/')[1] ?? 'jpg';
+  const path = `${userId}/${entryId}/${Date.now()}.${ext}`;
+
+  // Convertir base64 a Uint8Array
+  const binary = atob(base64Data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  const { error: uploadErr } = await supabase.storage
+    .from('viaza-journal')
+    .upload(path, bytes.buffer, { contentType: mimeType, upsert: false });
+
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  // Signed URL válida por 1 año
+  const { data: signedData, error: signErr } = await supabase.storage
+    .from('viaza-journal')
+    .createSignedUrl(path, 60 * 60 * 24 * 365);
+
+  if (signErr || !signedData) throw new Error(signErr?.message ?? 'Error firmando URL');
+
+  // Agregar path al array de la entrada
+  const { error: updateErr } = await supabase.rpc('append_journal_photo', {
+    p_entry_id: entryId,
+    p_path: path,
+  });
+
+  // Si el RPC no existe, usamos update directo con array_append via select
+  if (updateErr) {
+    // Fallback: leer paths actuales y actualizar
+    const { data: entry, error: selErr } = await supabase
+      .from('trip_journal_entries')
+      .select('photo_paths')
+      .eq('id', entryId)
+      .single();
+    if (selErr) throw new Error(selErr.message);
+
+    const current: string[] = (entry as { photo_paths: string[] }).photo_paths ?? [];
+    const { error: updErr2 } = await supabase
+      .from('trip_journal_entries')
+      .update({ photo_paths: [...current, path] })
+      .eq('id', entryId);
+    if (updErr2) throw new Error(updErr2.message);
+  }
+
+  return { path, signedUrl: signedData.signedUrl };
+}
+
+/**
+ * Obtiene signed URLs para los photo_paths de una entrada.
+ */
+export async function getJournalPhotoUrls(photoPaths: string[]): Promise<string[]> {
+  if (!photoPaths.length) return [];
+  const results = await Promise.all(
+    photoPaths.map(async (path) => {
+      const { data } = await supabase.storage
+        .from('viaza-journal')
+        .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 días
+      return data?.signedUrl ?? '';
+    })
+  );
+  return results.filter(Boolean);
+}

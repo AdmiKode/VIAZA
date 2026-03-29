@@ -66,6 +66,9 @@ import { SafeWalkPage } from '../../modules/safety/pages/SafeWalkPage';
 import { LiveTrackingPage } from '../../modules/safety/pages/LiveTrackingPage';
 import { SharedItineraryPage } from '../../modules/itinerary/pages/SharedItineraryPage';
 import BudgetPage from '../../modules/finances/pages/BudgetPage';
+import { HealthPage } from '../../modules/health/pages/HealthPage';
+import { AirportFlowPage } from '../../modules/airport/pages/AirportFlowPage';
+import { WeatherPage } from '../../modules/weather/pages/WeatherPage';
 
 export function AppRouter() {
   const hasTrip = useAppStore((s) => Boolean(s.currentTripId));
@@ -209,6 +212,15 @@ export function AppRouter() {
 
           {/* ── Travel Memory / Bitacora ─────────────────────────── */}
           <Route path="/journal" element={<TravelMemoryPage />} />
+
+          {/* ── Health Module ─────────────────────────────────────── */}
+          <Route path="/health" element={<HealthPage />} />
+
+          {/* ── Airport Flow / Go Now ─────────────────────────────── */}
+          <Route path="/airport-flow" element={<AirportFlowPage />} />
+
+          {/* ── Weather Intelligence ──────────────────────────────── */}
+          <Route path="/weather" element={<WeatherPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

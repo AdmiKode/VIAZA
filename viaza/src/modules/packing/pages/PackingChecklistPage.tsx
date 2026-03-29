@@ -79,6 +79,87 @@ const CAT_ACCENT: Record<PackingCategory, string> = {
   extras:     '#EA9940',
 };
 
+// ─── Banner restricciones de aerolínea ───────────────────────────────────────
+
+interface AirlineRestrictionsBannerProps {
+  isInternational: boolean;
+  airline?: string;
+}
+
+function AirlineRestrictionsBanner({ isInternational, airline }: AirlineRestrictionsBannerProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const carryOnKg = 10;
+  const checkedKg = isInternational ? 23 : 25;
+  const carryOnDims = '55 × 40 × 20 cm';
+  const checkedDims = isInternational ? '90 × 75 × 43 cm' : '158 cm lineales';
+
+  return (
+    <div style={{ margin: '12px 20px 0' }}>
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          width: '100%', background: 'rgba(48,112,130,0.08)',
+          border: '1.5px solid rgba(48,112,130,0.20)',
+          borderRadius: 14, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+          fontFamily: 'Questrial, sans-serif', textAlign: 'left',
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#307082" strokeWidth="2" strokeLinecap="round">
+          <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        </svg>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#12212E' }}>
+          Restricciones de equipaje{airline ? ` · ${airline}` : ''} (estimado)
+        </span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#307082" strokeWidth="2.5" strokeLinecap="round"
+          style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          style={{
+            background: 'white', borderRadius: '0 0 14px 14px',
+            border: '1.5px solid rgba(48,112,130,0.15)', borderTop: 'none',
+            padding: '14px 16px', marginTop: -4,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div style={{ flex: 1, background: 'rgba(48,112,130,0.07)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: 'rgba(18,33,46,0.5)', marginBottom: 3 }}>MALETA DOCUMENTADA</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#12212E' }}>{checkedKg} kg</div>
+              <div style={{ fontSize: 10, color: 'rgba(18,33,46,0.5)' }}>{checkedDims}</div>
+            </div>
+            <div style={{ flex: 1, background: 'rgba(234,153,64,0.08)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: 'rgba(18,33,46,0.5)', marginBottom: 3 }}>EQUIPAJE DE MANO</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#12212E' }}>{carryOnKg} kg</div>
+              <div style={{ fontSize: 10, color: 'rgba(18,33,46,0.5)' }}>{carryOnDims}</div>
+            </div>
+          </div>
+
+          {/* Regla de líquidos */}
+          <div style={{ background: 'rgba(18,33,46,0.04)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#12212E', marginBottom: 4 }}>Regla de líquidos (mano)</div>
+            <div style={{ fontSize: 12, color: 'rgba(18,33,46,0.6)', lineHeight: 1.6 }}>
+              Max 100 ml por envase · Todos en bolsa transparente resellable 1L · 1 bolsa por persona
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: 'rgba(18,33,46,0.45)', lineHeight: 1.5 }}>
+            Valores estimados estándar. Verifica con tu aerolínea antes de viajar.
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 export function PackingChecklistPage() {
   const { t } = useTranslation();
   const currentTripId = useAppStore((s) => s.currentTripId);
@@ -387,6 +468,14 @@ export function PackingChecklistPage() {
             </span>
           </button>
         </div>
+      )}
+
+      {/* ── Banner de restricciones de aerolínea ── */}
+      {currentTrip?.transportType === 'flight' && (
+        <AirlineRestrictionsBanner
+          isInternational={(currentTrip as any).isInternational ?? false}
+          airline={currentTrip.airline}
+        />
       )}
 
       {/* ── Categorías ── */}

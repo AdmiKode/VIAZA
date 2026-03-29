@@ -1,15 +1,19 @@
 // src/modules/journal/pages/TravelMemoryPage.tsx
-// Bitácora de viaje — crear, ver y eliminar entradas con mood, tags y ubicación.
+// Bitácora de viaje — crear, ver y eliminar entradas con mood, tags, fotos.
 // Sin emojis. Paleta oficial VIAZA.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../../app/store/useAppStore';
 import {
   getJournalEntries,
   createJournalEntry,
   deleteJournalEntry,
+  uploadJournalPhoto,
+  getJournalPhotoUrls,
   MOOD_LABELS,
   MOOD_COLORS,
   type JournalEntry,
@@ -33,13 +37,44 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Abre un input file en web y devuelve base64 sin prefijo */
+function pickPhotoWeb(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) { reject(new Error('Sin archivo')); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1] ?? '';
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  });
+}
+
 export function TravelMemoryPage() {
   const navigate = useNavigate();
   const currentTripId = useAppStore((s) => s.currentTripId);
+  const userId = useAppStore((s) => s.user?.id ?? '');
 
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+
+  // Fotos locales (pre-upload) para el formulario
+  const [pendingPhotos, setPendingPhotos] = useState<{ base64: string; mime: string; preview: string }[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // URLs de fotos por entryId
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string[]>>({});
+  const loadingPhotosRef = useRef<Set<string>>(new Set());
 
   // Form state
   const [title, setTitle] = useState('');
@@ -61,6 +96,22 @@ export function TravelMemoryPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Carga lazy de fotos por entrada
+  const loadPhotosForEntry = useCallback(async (entry: JournalEntry) => {
+    if (!entry.photoPaths.length) return;
+    if (loadingPhotosRef.current.has(entry.id)) return;
+    if (photoUrls[entry.id]) return;
+    loadingPhotosRef.current.add(entry.id);
+    try {
+      const urls = await getJournalPhotoUrls(entry.photoPaths);
+      setPhotoUrls(prev => ({ ...prev, [entry.id]: urls }));
+    } catch { /* silenciar */ }
+  }, [photoUrls]);
+
+  useEffect(() => {
+    entries.forEach(e => { void loadPhotosForEntry(e); });
+  }, [entries, loadPhotosForEntry]);
+
   function toggleTag(tag: string) {
     setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
   }
@@ -71,19 +122,61 @@ export function TravelMemoryPage() {
     setCustomTag('');
   }
 
+  async function handleTakePhoto() {
+    setUploadingPhoto(true);
+    try {
+      let base64 = '';
+      let mime = 'image/jpeg';
+
+      if (Capacitor.isNativePlatform()) {
+        const photo = await Camera.getPhoto({
+          quality: 80,
+          allowEditing: false,
+          resultType: CameraResultType.Base64,
+          source: CameraSource.Prompt,
+        });
+        base64 = photo.base64String ?? '';
+        mime = `image/${photo.format ?? 'jpeg'}`;
+      } else {
+        // Web: usar input file
+        base64 = await pickPhotoWeb();
+        mime = 'image/jpeg';
+      }
+
+      if (!base64) return;
+      const preview = `data:${mime};base64,${base64}`;
+      setPendingPhotos(prev => [...prev, { base64, mime, preview }]);
+    } catch { /* usuario canceló */ }
+    finally { setUploadingPhoto(false); }
+  }
+
   async function handleSave() {
     if (!body.trim()) { setFormError('El contenido no puede estar vacío'); return; }
     setSaving(true);
     setFormError(null);
     try {
-      await createJournalEntry({
+      const entry = await createJournalEntry({
         tripId: currentTripId ?? undefined,
         title: title.trim() || undefined,
         body: body.trim(),
         mood,
         tags,
       });
+
+      // Upload fotos pendientes
+      for (const p of pendingPhotos) {
+        try {
+          await uploadJournalPhoto({
+            entryId: entry.id,
+            userId,
+            base64Data: p.base64,
+            mimeType: p.mime,
+          });
+        } catch { /* no bloquear por una foto fallida */ }
+      }
+
       setTitle(''); setBody(''); setMood(undefined); setTags([]); setCustomTag('');
+      setPendingPhotos([]);
       setShowForm(false);
       await load();
     } catch (e) {
@@ -206,6 +299,41 @@ export function TravelMemoryPage() {
                 </button>
               </div>
 
+              {/* Fotos pendientes */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: P.softTeal, marginBottom: 8 }}>Fotos del momento</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {pendingPhotos.map((p, i) => (
+                    <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+                      <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button
+                        type="button"
+                        onClick={() => setPendingPhotos(prev => prev.filter((_, j) => j !== i))}
+                        style={{ position: 'absolute', top: 3, right: 3, background: 'rgba(18,33,46,0.65)', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => void handleTakePhoto()}
+                    disabled={uploadingPhoto}
+                    style={{
+                      width: 72, height: 72, borderRadius: 10, border: `1.5px dashed rgba(${P.rgb},0.25)`,
+                      background: `rgba(${P.rgb},0.04)`, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={P.softTeal} strokeWidth="2" strokeLinecap="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    <span style={{ fontSize: 9, color: P.softTeal }}>{uploadingPhoto ? '...' : 'Foto'}</span>
+                  </button>
+                </div>
+              </div>
+
               {formError && (
                 <div style={{ fontSize: 12, color: '#C0392B', marginBottom: 10 }}>{formError}</div>
               )}
@@ -250,6 +378,23 @@ export function TravelMemoryPage() {
                   <div style={{ fontSize: 15, fontWeight: 700, color: P.primary, marginBottom: 4 }}>{entry.title}</div>
                 )}
                 <div style={{ fontSize: 13, color: P.primary, lineHeight: 1.6, marginBottom: 8 }}>{entry.body}</div>
+
+                {/* Fotos de la entrada */}
+                {entry.photoPaths.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {photoUrls[entry.id]
+                      ? photoUrls[entry.id].map((url, i) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt=""
+                            style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                          />
+                        ))
+                      : <div style={{ fontSize: 11, color: P.softTeal }}>{entry.photoPaths.length} foto{entry.photoPaths.length > 1 ? 's' : ''}</div>
+                    }
+                  </div>
+                )}
 
                 {/* Tags */}
                 {entry.tags.length > 0 && (
