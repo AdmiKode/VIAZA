@@ -335,25 +335,52 @@ export function WeatherPage() {
 
   useEffect(() => {
     if (!trip) { setLoading(false); return; }
-    const lat = trip.originLat ?? 19.4326;
-    const lon = trip.originLon ?? -99.1332;
 
-    fetchWeatherCache({
-      tripId: trip.id,
-      lat,
-      lon,
-      startDate: trip.startDate ?? new Date().toISOString().slice(0, 10),
-      endDate: trip.endDate ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-      timezone: 'auto',
-    })
-      .then(entries => {
-        setDays(processEntries(entries));
+    // Coordenadas del DESTINO (lat/lon), no del origen
+    const destLat = trip.lat;
+    const destLon = trip.lon;
+
+    async function load() {
+      let lat = destLat;
+      let lon = destLon;
+
+      // Si el viaje no tiene coordenadas guardadas, geocodificamos el nombre del destino
+      if (!lat || !lon) {
+        try {
+          const geo = await fetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip!.destination)}&count=1&language=es&format=json`
+          );
+          const geoJson = await geo.json() as { results?: { latitude: number; longitude: number }[] };
+          const r = geoJson.results?.[0];
+          if (r) { lat = r.latitude; lon = r.longitude; }
+        } catch { /* ignorar — intentará con coords en 0 */ }
+      }
+
+      if (!lat || !lon) {
+        setError('No hay coordenadas para este destino.');
         setLoading(false);
+        return;
+      }
+
+      fetchWeatherCache({
+        tripId: trip!.id,
+        lat,
+        lon,
+        startDate: trip!.startDate ?? new Date().toISOString().slice(0, 10),
+        endDate: trip!.endDate ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        timezone: 'auto',
       })
-      .catch(err => {
-        setError(err instanceof Error ? err.message : 'Error al cargar el clima');
-        setLoading(false);
-      });
+        .then(entries => {
+          setDays(processEntries(entries));
+          setLoading(false);
+        })
+        .catch(err => {
+          setError(err instanceof Error ? err.message : 'Error al cargar el clima');
+          setLoading(false);
+        });
+    }
+
+    void load();
   }, [trip]);
 
   const planBAlerts = useMemo(() => generatePlanBAlerts(days), [days]);
