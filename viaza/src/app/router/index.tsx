@@ -46,8 +46,10 @@ import { BoardingPassScannerPage } from '../../modules/airline/pages/BoardingPas
 import { LuggageAssistantRoute } from '../../modules/packing/pages/LuggageAssistantRoute';
 import { AgendaPage } from '../../modules/agenda/pages/AgendaPage';
 import { NewAgendaItemPage } from '../../modules/agenda/pages/NewAgendaItemPage';
+import { AgendaItemDetailPage } from '../../modules/agenda/pages/AgendaItemDetailPage';
 import { ItineraryPage } from '../../modules/itinerary/pages/ItineraryPage';
 import { AddEventPage } from '../../modules/itinerary/pages/AddEventPage';
+import { DayDetailPage } from '../../modules/itinerary/pages/DayDetailPage';
 import { PlacesPage } from '../../modules/places/pages/PlacesPage';
 import { AddPlacePage } from '../../modules/places/pages/AddPlacePage';
 import { ImportReservationPage } from '../../modules/import-reservation/pages/ImportReservationPage';
@@ -189,8 +191,10 @@ export function AppRouter() {
           {/* ── Nuevos módulos ─────────────────────────────────────── */}
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/agenda/new" element={<NewAgendaItemPage />} />
+          <Route path="/agenda/:id" element={<AgendaItemDetailPage />} />
           <Route path="/itinerary" element={<ItineraryPage />} />
           <Route path="/itinerary/add-event" element={<AddEventPage />} />
+          <Route path="/itinerary/day/:index" element={<DayDetailPage />} />
           <Route path="/places" element={<PlacesPage />} />
           <Route path="/places/add" element={<AddPlacePage />} />
           <Route path="/recommendations" element={<RecommendationsPage />} />

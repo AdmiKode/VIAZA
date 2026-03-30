@@ -248,7 +248,7 @@ export function AgendaPage() {
                       </div>
 
                       {/* Contenido */}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0" style={{ cursor: 'pointer' }} onClick={() => navigate(`/agenda/${item.id}`)}>
                         <div className="flex items-start justify-between gap-2">
                           <div style={{ color: '#12212E', fontSize: 15, fontWeight: 700, textDecoration: item.completed ? 'line-through' : 'none', opacity: item.completed ? 0.6 : 1 }}>
                             {item.title}

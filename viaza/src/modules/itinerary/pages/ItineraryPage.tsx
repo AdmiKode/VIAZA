@@ -267,6 +267,17 @@ export function ItineraryPage() {
                         )}
                       </AnimatePresence>
 
+                      {/* Botón ver detalle del día */}
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/itinerary/day/${day.index}`)}
+                        className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 transition active:scale-[0.97]"
+                        style={{ background: 'rgba(48,112,130,0.08)', border: '1.5px solid rgba(48,112,130,0.20)', cursor: 'pointer', fontFamily: 'Questrial, sans-serif' }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#307082" strokeWidth="2.5" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <span style={{ color: '#307082', fontSize: 13, fontWeight: 700 }}>Ver detalle del día</span>
+                      </button>
+
                       {/* Botón añadir evento */}
                       <button
                         type="button"
