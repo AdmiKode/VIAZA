@@ -12,6 +12,7 @@ import { updateWalletDocFields, reportDocLost } from '../../../services/walletDo
 import { ExpirationBadge } from '../components/ExpirationBadge';
 import { DocViewer } from '../components/DocViewer';
 import type { WalletDocType, WalletDoc } from '../../../types/wallet';
+import { expirationLevel, daysUntilExpiration } from '../../../types/wallet';
 
 const DOC_TYPES: Array<{ id: WalletDocType; labelKey: string }> = [
   { id: 'boarding_pass', labelKey: 'wallet.docType.boarding_pass' },
@@ -58,6 +59,18 @@ export function WalletPage() {
     return [...walletDocs].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
   }, [walletDocs]);
 
+  // Documentos urgentes: vencidos o críticos (<7 días)
+  const urgentDocs = useMemo(() => {
+    return walletDocs.filter((d) => {
+      const level = expirationLevel(d);
+      return level === 'expired' || level === 'critical';
+    }).sort((a, b) => {
+      const da = daysUntilExpiration(a) ?? 9999;
+      const db = daysUntilExpiration(b) ?? 9999;
+      return da - db;
+    });
+  }, [walletDocs]);
+
   return (
     <div className="px-4 pt-4 pb-24">
       {/* DocViewer — fullscreen overlay */}
@@ -81,6 +94,61 @@ export function WalletPage() {
       <div className="mt-2 text-sm text-[rgb(var(--viaza-primary-rgb)/0.60)]">
         {t('wallet.subtitle')}
       </div>
+
+      {/* ── Banner de documentos urgentes ──────────────────────────────── */}
+      {urgentDocs.length > 0 && (
+        <div
+          className="mt-4 rounded-3xl overflow-hidden"
+          style={{ background: 'white', boxShadow: '0 4px 20px rgba(18,33,46,0.08)' }}
+        >
+          <div
+            className="px-5 pt-4 pb-3 flex items-center gap-2"
+            style={{ borderBottom: '1px solid rgba(18,33,46,0.06)' }}
+          >
+            <div
+              className="flex items-center justify-center rounded-xl flex-shrink-0"
+              style={{ width: 32, height: 32, background: 'rgba(234,153,64,0.15)' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EA9940" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div className="text-sm font-bold" style={{ color: '#12212E' }}>
+              Documentos que requieren atenci{'\u00f3'}n
+            </div>
+          </div>
+          {urgentDocs.map((d, i) => {
+            const days = daysUntilExpiration(d);
+            const level = expirationLevel(d);
+            const isExpired = level === 'expired';
+            return (
+              <div
+                key={d.id}
+                className="px-5 py-3 flex items-center gap-3"
+                style={{ borderBottom: i < urgentDocs.length - 1 ? '1px solid rgba(18,33,46,0.05)' : 'none' }}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate" style={{ color: '#12212E' }}>
+                    {d.fileName ?? t('wallet.unnamed')}
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: 'rgba(18,33,46,0.50)' }}>
+                    {isExpired
+                      ? `Vencio hace ${Math.abs(days ?? 0)} dia${Math.abs(days ?? 0) === 1 ? '' : 's'}`
+                      : days === 0
+                        ? 'Vence hoy'
+                        : days === 1
+                          ? 'Vence mana{"\u00f1"}ana'
+                          : `Vence en ${days} dias`}
+                  </div>
+                </div>
+                <ExpirationBadge doc={d} />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <AppCard className="mt-4">
         <div className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--viaza-primary-rgb)/0.55)]">

@@ -66,6 +66,7 @@ import { SosPublicPage } from '../../modules/emergency/pages/SosPublicPage';
 import { TravelMemoryPage } from '../../modules/journal/pages/TravelMemoryPage';
 import { SafeWalkPage } from '../../modules/safety/pages/SafeWalkPage';
 import { LiveTrackingPage } from '../../modules/safety/pages/LiveTrackingPage';
+import { SafetyHubPage } from '../../modules/safety/pages/SafetyHubPage';
 import { SharedItineraryPage } from '../../modules/itinerary/pages/SharedItineraryPage';
 import BudgetPage from '../../modules/finances/pages/BudgetPage';
 import { HealthPage } from '../../modules/health/pages/HealthPage';
@@ -209,6 +210,7 @@ export function AppRouter() {
           <Route path="/sos" element={<SosFlowPage />} />
 
           {/* ── Safety ───────────────────────────────────────────── */}
+          <Route path="/safety" element={<SafetyHubPage />} />
           <Route path="/safety/safewalk" element={<SafeWalkPage />} />
 
           {/* ── Finances / Budget ────────────────────────────────── */}

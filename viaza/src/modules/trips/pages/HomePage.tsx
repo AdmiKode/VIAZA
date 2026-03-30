@@ -916,6 +916,70 @@ export function HomePage() {
               daysLeft={brain.daysLeft}
             />
             <ActionAlerts alerts={brain.alerts} />
+
+            {/* ── Sugerencias contextuales del brain ── */}
+            {brain.suggestions.length > 0 && (
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#12212E', marginBottom: 10 }}>
+                  Que sigue
+                </div>
+                <div className="space-y-2">
+                  {brain.suggestions.map((s) => (
+                    <Link
+                      key={s.id}
+                      to={s.actionPath}
+                      style={{ textDecoration: 'none', display: 'block' }}
+                    >
+                      <div
+                        className="flex items-center gap-3 rounded-2xl px-4 py-3 transition active:scale-[0.98]"
+                        style={{ background: 'white', boxShadow: '0 2px 12px rgba(18,33,46,0.07)' }}
+                      >
+                        <div
+                          className="flex items-center justify-center rounded-xl flex-shrink-0"
+                          style={{
+                            width: 38, height: 38,
+                            background: s.icon === 'safety' ? 'rgba(18,33,46,0.08)'
+                              : s.icon === 'budget' ? 'rgba(234,153,64,0.12)'
+                              : s.icon === 'wallet' ? 'rgba(108,163,162,0.15)'
+                              : s.icon === 'packing' ? 'rgba(48,112,130,0.12)'
+                              : 'rgba(18,33,46,0.06)',
+                          }}
+                        >
+                          {s.icon === 'safety' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12212E" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          )}
+                          {s.icon === 'budget' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EA9940" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          )}
+                          {s.icon === 'wallet' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6CA3A2" strokeWidth="2" strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 12h.01"/></svg>
+                          )}
+                          {s.icon === 'packing' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#307082" strokeWidth="2" strokeLinecap="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>
+                          )}
+                          {s.icon === 'itinerary' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#307082" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          )}
+                          {s.icon === 'route' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#307082" strokeWidth="2" strokeLinecap="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M5 8v8a4 4 0 0 0 4 4h1"/><path d="M19 16V8a4 4 0 0 0-4-4h-1"/></svg>
+                          )}
+                          {!s.icon && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12212E" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#12212E' }}>{s.title}</div>
+                          {s.description && (
+                            <div className="mt-0.5 truncate" style={{ fontSize: 11, color: 'rgba(18,33,46,0.50)' }}>{s.description}</div>
+                          )}
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(18,33,46,0.25)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 

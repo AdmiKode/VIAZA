@@ -309,22 +309,29 @@ Checkpoint fin Día 2:
 16. **Emergency QR** — RPC pública + anon access + log de accesos ✅ (30 mar)
 17. **places-nearby** edge function — geocoding + Overpass OSM fallback ✅ (30 mar)
 18. **Flight Alerts** — paleta correcta, sin emojis ✅ (30 mar)
+19. **SafetyHubPage** — hub `/safety` con SOS, SafeWalk, EmergencyCard, números locales ✅ (30 mar)
+20. **SplitBill persistente** — sessions + expenses en Supabase (confirmado 30 mar) ✅
+21. **Wallet expiración** — banner urgente de docs vencidos/críticos al tope de WalletPage ✅ (30 mar)
+22. **Smart Trip Brain suggestions** — sección "Que sigue" en HomePage conectada al engine ✅ (30 mar)
+
+### Decisiones de alcance cerradas (30 marzo):
+| Item | Decisión | Razón |
+|------|----------|-------|
+| `PackingListPage` separada | DESCARTADA | Duplicaría flujo con ChecklistPage sin función distinta |
+| `CountryPickerPage` en onboarding | DESCARTADA | Geocoding ya resuelve país; no hay lógica gobernante que lo requiera |
+| Tips estáticos en HomePage | DESCARTADOS | Reemplazados por Smart Trip Brain suggestions (datos reales) |
+| `TripDetailsPage` premium visual | MOVIDA a Polish post-cierre funcional | Después de Safety/SplitBill/Wallet/Brain |
 
 ### Lo que está a medias:
 | Feature | Problema |
 |---------|---------|
-| DepartureReminderPage | Cálculo OK pero notificación nativa es stub — no dispara Capacitor |
-| TripDetailsPage | Funcional pero sin diseño premium |
-| HomePage tips | No filtra por destino del viaje activo |
-| PlaceDetailPage | No existe todavía — próximo paso |
+| DepartureReminderPage | Cálculo OK. scheduleLocalNotification de Capacitor implementado — verificar en device |
+| TripDetailsPage | Funcional pero sin diseño premium (movido a bloque de polish) |
 | EmptyState reutilizable | Se hace inline en cada pantalla |
 
 ### Lo que NO existe todavía:
 - `PlaceDetailPage` (`/places/:id`) — detalle + asignar a día + link Google Maps
-- `CountryPickerPage` — selector de país antes del destino específico
-- `PackingListPage` separada de la checklist
 - `TripsList` — gestionar múltiples viajes en pantalla propia
-- Generación automática de packing si items están vacíos al abrir checklist
 - `ThemePreviewPage` — preview de temas por travelType en Settings
 - Build nativo Capacitor Android firmado para Play Store (keystore lista, falta pipeline CI)
 - Módulo Colaboración (trip_members, Realtime, invitaciones)
@@ -433,7 +440,7 @@ Checkpoint fin Día 2:
 
 ## PLAN DE TRABAJO — 30 DE MARZO DE 2026
 
-> Commits del día: b0719cb → cb3f008 → 2db7236 → 480c382 → 832c6db → 3f857f1
+> Commits del día: b0719cb → cb3f008 → 2db7236 → 480c382 → 832c6db → 3f857f1 → 4ade600
 
 ### COMPLETADO HOY ✅
 ```
@@ -454,30 +461,34 @@ Checkpoint fin Día 2:
 [x] AgendaPage — tap en item navega a /agenda/:id
 [x] ItineraryPage — botón "Ver detalle del día" navega a /itinerary/day/:index
 [x] i18n 5 idiomas — ~60 claves nuevas (profile, settings, agenda, itinerary)
+[x] SafetyHubPage — hub /safety: SOS, SafeWalk, EmergencyCard, números emergencia locales
+[x] router — ruta /safety registrada (estaba rota en tripBrainEngine, ahora resuelve)
+[x] WalletPage — banner urgente de docs vencidos/críticos al tope
+[x] HomePage — sección "Que sigue" conectada a brain.suggestions (reemplaza tips estáticos)
+[x] SplitBill — persistencia en Supabase confirmada (ya existía, documentada ahora)
 ```
 
-### PRÓXIMO PASO — PlaceDetailPage
+### DECISIONES DE ALCANCE CERRADAS ✅
+```
+[DESCARTADA]  PackingListPage separada — sin función distinta a ChecklistPage
+[DESCARTADA]  CountryPickerPage en onboarding — geocoding resuelve el país
+[DESCARTADA]  Tips estáticos en HomePage — reemplazados por brain.suggestions
+[MOVIDA]      TripDetailsPage premium visual → bloque de polish post-cierre funcional
+```
+
+### PRÓXIMOS PASOS — por orden de prioridad
 ```
 [ ] PlaceDetailPage.tsx — /places/:id
-    - Mapa estático Google Maps (lat/lon del lugar)
     - Info: nombre, dirección, categoría, status, notas
     - Botón "Asignar a día del itinerario" → selector de día
-    - Botón "Abrir en Google Maps" (link externo)
-    - Botón editar status (want_to_go / booked / visited)
-    - Botón eliminar
+    - Botón "Abrir en Google Maps" (link externo lat/lon)
+    - Editar status (want_to_go / booked / visited)
+    - Eliminar lugar
 [ ] Registrar ruta /places/:id en router
 [ ] PlacesPage — tap en item navega a /places/:id
 [ ] i18n claves de PlaceDetailPage en 5 idiomas
-[ ] commit + push
-```
-
-### PENDIENTE (próximas sesiones)
-```
-[ ] DepartureReminder — notif nativa Capacitor real (scheduleLocalNotification)
-[ ] TripDetailsPage — rediseño premium
-[ ] TripsList — gestionar varios viajes en pantalla propia
-[ ] Auto-generar packing si items vacíos en PackingChecklistPage
 [ ] ThemePreviewPage — preview de 6 temas en Settings
+[ ] TripsList — gestionar varios viajes en pantalla propia
 [ ] Build Android firmado → aab para Play Store
 [ ] Colaboración trip_members + Realtime Supabase
 [ ] ImportReservationPage — parser GPT-4 real (UI existe)
