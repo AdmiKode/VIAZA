@@ -71,9 +71,9 @@ function formatTime(isoString: string | null): string {
 function StatusBadge({ status }: { status: SessionStatus }) {
   const config: Record<SessionStatus, { label: string; color: string; bg: string }> = {
     active: { label: 'En camino', color: P.secondary, bg: 'rgba(48,112,130,0.12)' },
-    completed: { label: 'Llegó bien', color: '#2A7D4F', bg: 'rgba(42,125,79,0.10)' },
+    completed: { label: 'Llegó bien', color: '#307082', bg: 'rgba(48,112,130,0.10)' },
     expired: { label: 'Tiempo vencido', color: P.accent, bg: 'rgba(234,153,64,0.12)' },
-    sos_triggered: { label: 'SOS ACTIVADO', color: '#C0392B', bg: 'rgba(192,57,43,0.12)' },
+    sos_triggered: { label: 'SOS ACTIVADO', color: '#EA9940', bg: 'rgba(234,153,64,0.12)' },
   };
   const c = config[status];
   return (
@@ -175,9 +175,9 @@ export function CompanionMapView({ companionToken }: CompanionMapViewProps) {
         <div className="px-4 pt-4">
           <div
             className="rounded-3xl px-5 py-4 text-center"
-            style={{ background: 'rgba(192,57,43,0.10)', border: '2px solid rgba(192,57,43,0.40)' }}
+            style={{ background: 'rgba(234,153,64,0.10)', border: '2px solid rgba(234,153,64,0.35)' }}
           >
-            <p className="text-sm font-bold" style={{ color: '#C0392B' }}>
+            <p className="text-sm font-bold" style={{ color: '#EA9940' }}>
               SOS ACTIVADO
             </p>
             <p className="text-xs mt-1" style={{ color: `rgba(18,33,46,0.65)` }}>
@@ -192,7 +192,7 @@ export function CompanionMapView({ companionToken }: CompanionMapViewProps) {
         className="px-5 pt-12 pb-8"
         style={{
           background: session.status === 'sos_triggered'
-            ? 'linear-gradient(160deg, #7B241C 0%, #C0392B 100%)'
+            ? 'linear-gradient(160deg, #12212E 0%, #307082 100%)'
             : 'linear-gradient(160deg, #12212E 0%, #307082 100%)',
           borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,

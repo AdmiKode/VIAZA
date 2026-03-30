@@ -12,7 +12,7 @@ const P = {
   softTeal: '#6CA3A2',
   bg:       '#ECE7DC',
   accent:   '#EA9940',
-  danger:   '#C0392B',
+  danger:   '#12212E',
   rgb:      '18,33,46',
 };
 
@@ -100,7 +100,7 @@ export function SosPublicPage() {
 
       {/* Header */}
       <div style={{
-        background: `linear-gradient(160deg, ${P.danger} 0%, #922B21 100%)`,
+        background: `linear-gradient(160deg, ${P.danger} 0%, #307082 100%)`,
         padding: '52px 24px 28px',
         textAlign: 'center',
       }}>

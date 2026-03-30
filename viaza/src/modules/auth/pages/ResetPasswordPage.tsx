@@ -199,14 +199,14 @@ export function ResetPasswordPage() {
                   </button>
                 </div>
                 {confirm && confirm !== password && (
-                  <div style={{ color: '#c0392b', fontSize: 12, marginTop: 6, fontFamily: 'Questrial, sans-serif' }}>Las contraseñas no coinciden</div>
+                  <div style={{ color: '#EA9940', fontSize: 12, marginTop: 6, fontFamily: 'Questrial, sans-serif' }}>Las contraseñas no coinciden</div>
                 )}
               </div>
 
               {/* Error */}
               {error && (
-                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl px-4 py-3" style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.20)' }}>
-                  <span style={{ color: '#c0392b', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>{error}</span>
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl px-4 py-3" style={{ background: 'rgba(234,153,64,0.08)', border: '1px solid rgba(234,153,64,0.25)' }}>
+                  <span style={{ color: '#EA9940', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>{error}</span>
                 </motion.div>
               )}
 

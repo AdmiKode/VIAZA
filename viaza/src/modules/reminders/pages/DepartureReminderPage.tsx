@@ -195,9 +195,9 @@ export function DepartureReminderPage() {
 
         {status === 'error' && errorMsg && (
           <div style={{
-            background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.20)',
+            background: 'rgba(234,153,64,0.08)', border: '1px solid rgba(234,153,64,0.25)',
             borderRadius: 14, padding: '12px 16px',
-            fontSize: 13, color: '#c0392b', fontWeight: 600,
+            fontSize: 13, color: '#EA9940', fontWeight: 600,
           }}>
             {errorMsg}
           </div>

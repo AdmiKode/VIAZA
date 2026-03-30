@@ -6,7 +6,7 @@ import type { AgendaCategory, AgendaRecurrence } from '../../../types/agenda';
 import { scheduleNotification, generateNotificationId } from '../../../services/notificationsService';
 
 const CATEGORIES: { value: AgendaCategory; label: string; color: string; bg: string; icon: JSX.Element }[] = [
-  { value: 'medication', label: 'Medicamento', color: '#c0392b', bg: 'rgba(192,57,43,0.10)', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="8" fill="#c0392b" fillOpacity="0.85"/><rect x="20" y="12" width="8" height="24" rx="3" fill="white" fillOpacity="0.9"/><rect x="12" y="20" width="24" height="8" rx="3" fill="white" fillOpacity="0.9"/></svg> },
+  { value: 'medication', label: 'Medicamento', color: '#EA9940', bg: 'rgba(234,153,64,0.10)', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="8" fill="#EA9940" fillOpacity="0.85"/><rect x="20" y="12" width="8" height="24" rx="3" fill="white" fillOpacity="0.9"/><rect x="12" y="20" width="24" height="8" rx="3" fill="white" fillOpacity="0.9"/></svg> },
   { value: 'call',       label: 'Llamada',     color: '#307082', bg: 'rgba(48,112,130,0.10)', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M14 8c0 0 4 6 4 10s-4 4-4 8c0 2 4 14 16 14 4 0 4-4 8-4s10 4 10 4l-6 6C22 48 0 26 0 14l6-6z" fill="#307082"/></svg> },
   { value: 'meeting',    label: 'Reunión',     color: '#12212E', bg: 'rgba(18,33,46,0.09)', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><circle cx="16" cy="14" r="7" fill="#12212E" fillOpacity="0.8"/><circle cx="32" cy="14" r="7" fill="#12212E" fillOpacity="0.5"/><path d="M2 40c0-7.73 6.27-14 14-14s14 6.27 14 14" fill="#12212E" fillOpacity="0.8"/></svg> },
   { value: 'checkin',    label: 'Check-in',    color: '#EA9940', bg: 'rgba(234,153,64,0.12)', icon: <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="32" rx="7" fill="#EA9940" fillOpacity="0.9"/><path d="M16 28l6 6 12-12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg> },
@@ -231,7 +231,7 @@ export function NewAgendaItemPage() {
 
         {/* ── Error ── */}
         {error && (
-          <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(192,57,43,0.10)', color: '#c0392b' }}>
+          <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(234,153,64,0.12)', color: '#EA9940' }}>
             {error}
           </div>
         )}

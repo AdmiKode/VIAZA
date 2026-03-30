@@ -216,8 +216,8 @@ export function PackingEvidenceModal({
                   width: 46,
                   height: 46,
                   borderRadius: 14,
-                  background: 'rgba(192,57,43,0.10)',
-                  color: '#c0392b',
+                  background: 'rgba(234,153,64,0.10)',
+                  color: '#EA9940',
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
@@ -227,7 +227,7 @@ export function PackingEvidenceModal({
                 }}
               >
                 <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
-                  <path d="M12 12l24 24M36 12L12 36" stroke="#c0392b" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M12 12l24 24M36 12L12 36" stroke="#EA9940" strokeWidth="4" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
@@ -318,13 +318,13 @@ export function PackingEvidenceModal({
         {error && (
           <div
             style={{
-              background: 'rgba(192,57,43,0.08)',
-              border: '1px solid rgba(192,57,43,0.20)',
+              background: 'rgba(234,153,64,0.08)',
+              border: '1px solid rgba(234,153,64,0.25)',
               borderRadius: 12,
               padding: '10px 14px',
               fontFamily: 'Questrial, sans-serif',
               fontSize: 13,
-              color: '#c0392b',
+              color: '#EA9940',
             }}
           >
             {error}

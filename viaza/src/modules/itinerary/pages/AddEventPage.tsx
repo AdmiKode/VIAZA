@@ -137,7 +137,7 @@ export function AddEventPage() {
           </div>
         )}
 
-        {error && <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(192,57,43,0.10)', color: '#c0392b' }}>{error}</div>}
+        {error && <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(234,153,64,0.12)', color: '#EA9940' }}>{error}</div>}
 
         {/* Preview */}
         <div className="flex items-center gap-3 rounded-3xl p-4" style={{ background: selectedType.bg }}>

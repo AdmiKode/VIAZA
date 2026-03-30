@@ -8,9 +8,9 @@ import type { AgendaCategory } from '../../../types/agenda';
 /* ─── Paleta por categoría ─────────────────────────────────────── */
 const CAT_META: Record<AgendaCategory, { color: string; bg: string; label: string; icon: JSX.Element }> = {
   medication: {
-    color: '#c0392b', bg: 'rgba(192,57,43,0.10)',
+    color: '#EA9940', bg: 'rgba(234,153,64,0.10)',
     label: 'Medicamento',
-    icon: <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="8" fill="#c0392b" fillOpacity="0.85"/><rect x="20" y="12" width="8" height="24" rx="3" fill="white" fillOpacity="0.9"/><rect x="12" y="20" width="24" height="8" rx="3" fill="white" fillOpacity="0.9"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="8" fill="#EA9940" fillOpacity="0.85"/><rect x="20" y="12" width="8" height="24" rx="3" fill="white" fillOpacity="0.9"/><rect x="12" y="20" width="24" height="8" rx="3" fill="white" fillOpacity="0.9"/></svg>,
   },
   call: {
     color: '#307082', bg: 'rgba(48,112,130,0.10)',
@@ -293,9 +293,9 @@ export function AgendaPage() {
                           type="button"
                           onClick={() => handleDelete(item.id)}
                           className="flex items-center justify-center rounded-full transition"
-                          style={{ width: 32, height: 32, background: 'rgba(192,57,43,0.08)', border: 'none', cursor: 'pointer' }}
+                          style={{ width: 32, height: 32, background: 'rgba(234,153,64,0.10)', border: 'none', cursor: 'pointer' }}
                         >
-                          <svg width="13" height="13" viewBox="0 0 48 48" fill="none"><path d="M14 14l20 20M34 14L14 34" stroke="#c0392b" strokeWidth="3.5" strokeLinecap="round"/></svg>
+                          <svg width="13" height="13" viewBox="0 0 48 48" fill="none"><path d="M14 14l20 20M34 14L14 34" stroke="#EA9940" strokeWidth="3.5" strokeLinecap="round"/></svg>
                         </button>
                       </div>
                     </motion.div>

@@ -133,7 +133,7 @@ export function BoardingPassScannerPage() {
         {/* Error */}
         <AnimatePresence>
           {status === 'error' && errorMsg && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.20)', borderRadius: 14, padding: '14px 16px', fontSize: 13, color: '#c0392b', fontWeight: 600 }}>
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ background: 'rgba(234,153,64,0.08)', border: '1px solid rgba(234,153,64,0.25)', borderRadius: 14, padding: '14px 16px', fontSize: 13, color: '#EA9940', fontWeight: 600 }}>
               {errorMsg}
             </motion.div>
           )}

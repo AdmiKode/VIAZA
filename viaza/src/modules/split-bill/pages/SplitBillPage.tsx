@@ -482,9 +482,4 @@ export function SplitBillPage() {
     </div>
   );
 }
-  const { t } = useTranslation();
-  const [total, setTotal] = useState('1200');
-  const [people, setPeople] = useState('3');
-  const [tipPct, setTipPct] = useState('10');
-  const [advanced, setAdvanced] = useState(false);
 

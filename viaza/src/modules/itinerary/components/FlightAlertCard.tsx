@@ -124,8 +124,8 @@ export function FlightAlertCard({ flightNumber, flightDate, tripId }: FlightAler
           disabled={loading}
           className="rounded-full px-3 py-1.5 text-xs font-bold flex-shrink-0"
           style={{
-            background: watch ? 'rgba(239,68,68,0.10)' : '#307082',
-            color: watch ? '#EF4444' : 'white',
+            background: watch ? 'rgba(18,33,46,0.08)' : '#307082',
+            color: watch ? '#12212E' : 'white',
             border: 'none',
             cursor: loading ? 'not-allowed' : 'pointer',
             fontFamily: 'Questrial, sans-serif',
@@ -137,7 +137,7 @@ export function FlightAlertCard({ flightNumber, flightDate, tripId }: FlightAler
       </div>
 
       {error && (
-        <div style={{ fontSize: 11, color: '#EF4444', marginTop: 4 }}>{error}</div>
+        <div style={{ fontSize: 11, color: '#EA9940', marginTop: 4 }}>{error}</div>
       )}
     </motion.div>
   );

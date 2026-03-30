@@ -27,7 +27,7 @@ const P = {
   softTeal:   '#6CA3A2',
   bg:         '#ECE7DC',
   accent:     '#EA9940',
-  danger:     '#C0392B',
+  danger:     '#12212E',
   rgb:        '18,33,46',
 };
 
@@ -41,7 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   sent: P.accent,
   delivered: P.secondary,
-  acknowledged: '#27AE60',
+  acknowledged: '#307082',
   resolved: P.softTeal,
   expired: `rgba(${P.rgb},0.3)`,
 };
@@ -148,7 +148,7 @@ export function SosFlowPage() {
     <div style={{ minHeight: '100vh', background: P.bg, paddingBottom: 100, fontFamily: 'Questrial, sans-serif' }}>
 
       {/* Header */}
-      <div style={{ background: `linear-gradient(160deg, ${P.danger} 0%, #922B21 100%)`, padding: '52px 20px 24px' }}>
+      <div style={{ background: `linear-gradient(160deg, ${P.danger} 0%, #307082 100%)`, padding: '52px 20px 24px' }}>
         <button
           onClick={() => navigate(-1)}
           style={{ background: 'none', border: 'none', color: '#fff', fontSize: 14, cursor: 'pointer', opacity: 0.8, marginBottom: 12, padding: 0 }}
@@ -232,7 +232,7 @@ export function SosFlowPage() {
               animate={{ opacity: 1, y: 0 }}
               style={{ background: '#fff', borderRadius: 16, padding: '20px', marginTop: 8, boxShadow: `0 4px 20px rgba(${P.rgb},0.1)` }}
             >
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#27AE60', marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#307082', marginBottom: 4 }}>
                 Alerta SOS activada
               </div>
               <div style={{ fontSize: 12, color: P.softTeal, marginBottom: 16 }}>

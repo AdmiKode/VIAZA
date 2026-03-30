@@ -150,8 +150,8 @@ export function ShareItineraryButton({ tripId, existingToken }: ShareItineraryBu
               disabled={loading}
               className="rounded-xl py-2.5 px-3 text-xs font-bold"
               style={{
-                background: 'rgba(239,68,68,0.08)',
-                color: '#EF4444',
+                background: 'rgba(18,33,46,0.06)',
+                color: '#12212E',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: 'Questrial, sans-serif',
@@ -165,7 +165,7 @@ export function ShareItineraryButton({ tripId, existingToken }: ShareItineraryBu
       )}
 
       {error && (
-        <div style={{ fontSize: 11, color: '#EF4444', marginTop: 6 }}>{error}</div>
+        <div style={{ fontSize: 11, color: '#EA9940', marginTop: 6 }}>{error}</div>
       )}
     </div>
   );

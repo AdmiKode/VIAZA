@@ -387,10 +387,10 @@ function FlightLiveTab() {
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" fill="rgba(192,57,43,0.15)" />
-              <path d="M15 9l-6 6M9 9l6 6" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="10" fill="rgba(234,153,64,0.15)" />
+              <path d="M15 9l-6 6M9 9l6 6" stroke="#EA9940" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span style={{ color: '#C0392B', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>{error}</span>
+            <span style={{ color: '#EA9940', fontSize: 13, fontFamily: 'Questrial, sans-serif' }}>{error}</span>
           </motion.div>
         )}
 

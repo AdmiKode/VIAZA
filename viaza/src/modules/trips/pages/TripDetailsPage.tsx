@@ -5,14 +5,14 @@ import { useAppStore } from '../../../app/store/useAppStore';
 
 /* ─── Hero gradients por tipo de viaje ─── */
 const HERO_GRADIENT: Record<string, string> = {
-  beach:     'linear-gradient(160deg, #0E4F6B 0%, #1A8FA0 45%, #EA9940 100%)',
-  mountain:  'linear-gradient(160deg, #1C2E1A 0%, #3B5E2B 55%, #7D9B4F 100%)',
-  city:      'linear-gradient(160deg, #12212E 0%, #223B52 55%, #307082 100%)',
-  camping:   'linear-gradient(160deg, #1A2E10 0%, #3A5C20 55%, #7A9B50 100%)',
-  work:      'linear-gradient(160deg, #1A2030 0%, #2A3A55 55%, #4A6080 100%)',
-  snow:      'linear-gradient(160deg, #1A2A3E 0%, #2A4A6E 55%, #5A8AAE 100%)',
-  roadtrip:  'linear-gradient(160deg, #1E2C1A 0%, #3A5028 55%, #6A8040 100%)',
-  adventure: 'linear-gradient(160deg, #2A1E10 0%, #5A3A20 55%, #EA9940 100%)',
+  beach:     'linear-gradient(160deg, #12212E 0%, #307082 45%, #6CA3A2 100%)',
+  mountain:  'linear-gradient(160deg, #12212E 0%, #1E3A4A 55%, #307082 100%)',
+  city:      'linear-gradient(160deg, #12212E 0%, #1E3040 55%, #307082 100%)',
+  camping:   'linear-gradient(160deg, #12212E 0%, #1A2E3A 55%, #6CA3A2 100%)',
+  work:      'linear-gradient(160deg, #12212E 0%, #1E2C3A 55%, #307082 100%)',
+  snow:      'linear-gradient(160deg, #12212E 0%, #1E2E46 55%, #6CA3A2 100%)',
+  roadtrip:  'linear-gradient(160deg, #12212E 0%, #EA9940 55%, #6CA3A2 100%)',
+  adventure: 'linear-gradient(160deg, #12212E 0%, #307082 55%, #EA9940 100%)',
   default:   'linear-gradient(160deg, #12212E 0%, #307082 70%, #6CA3A2 100%)',
 };
 

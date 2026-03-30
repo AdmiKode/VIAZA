@@ -913,11 +913,11 @@ export function LuggageAssistantPage({
           <div
             style={{
               marginTop: 12,
-              background: 'rgba(192,57,43,0.08)',
-              border: '1px solid rgba(192,57,43,0.20)',
+              background: 'rgba(234,153,64,0.08)',
+              border: '1px solid rgba(234,153,64,0.25)',
               borderRadius: 12,
               padding: '10px 12px',
-              color: '#c0392b',
+              color: '#EA9940',
               fontSize: 13,
             }}
           >

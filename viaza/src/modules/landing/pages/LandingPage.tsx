@@ -18,7 +18,7 @@ const C = {
   dark:        '#12212E',
   cream:       '#ECE7DC',
   accent:      '#EA9940',
-  accentLight: '#F0B86B',
+  accentLight: '#EA9940',
   teal:        '#307082',
   muted:       'rgba(236,231,220,0.55)',
   glass:       'rgba(255,255,255,0.05)',
