@@ -34,7 +34,7 @@ export function TermsPage() {
 
         <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.1, marginBottom: 16 }}>
           Términos y<br />
-          <span style={{ background: 'linear-gradient(135deg, #EA9940 0%, #F0B86B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg, #EA9940 0%, #ECE7DC 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Condiciones
           </span>
         </h1>

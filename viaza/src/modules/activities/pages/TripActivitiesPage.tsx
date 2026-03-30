@@ -504,7 +504,7 @@ export function TripActivitiesPage() {
                   <div style={{ fontSize: 11, color: 'rgba(18,33,46,0.50)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {t('activity.booking')}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: selectedActivity.bookingRequired ? '#c0392b' : '#307082', marginTop: 4 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: selectedActivity.bookingRequired ? '#EA9940' : '#307082', marginTop: 4 }}>
                     {selectedActivity.bookingRequired ? t('activity.required') : t('activity.walkIn')}
                   </div>
                 </div>

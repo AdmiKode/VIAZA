@@ -284,7 +284,7 @@ export function LandingPage() {
         <motion.h1 initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.75 }}
           style={{ fontSize: 'clamp(38px,7vw,76px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: -1.5, marginBottom: 20, maxWidth: 860 }}>
           Tu viaje empieza{' '}
-          <span style={{ background: 'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg,#EA9940 0%,#ECE7DC 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             antes de despegar.
           </span>
         </motion.h1>
@@ -302,7 +302,7 @@ export function LandingPage() {
           style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center', marginBottom: 24 }}>
           {/* TODO: eliminar este botón cuando lancemos a producción */}
           <Link to="/splash"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', color: C.dark, borderRadius: 14, padding: '15px 34px', fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 32px rgba(234,153,64,0.45)', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#EA9940 0%,#ECE7DC 100%)', color: C.dark, borderRadius: 14, padding: '15px 34px', fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 32px rgba(234,153,64,0.45)', transition: 'transform 0.2s, box-shadow 0.2s' }}
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform='translateY(-3px)'; el.style.boxShadow='0 14px 42px rgba(234,153,64,0.6)'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform='translateY(0)'; el.style.boxShadow='0 8px 32px rgba(234,153,64,0.45)'; }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -401,7 +401,7 @@ export function LandingPage() {
             <span style={{ color:'#EA9940', fontSize:12, fontWeight:700, letterSpacing:2, textTransform:'uppercase', display:'block', marginBottom:18 }}>05 — Empieza a viajar diferente</span>
             <h2 style={{ fontSize:'clamp(30px,5vw,54px)', fontWeight:800, letterSpacing:-0.5, lineHeight:1.13, marginBottom:20 }}>
               Tu próximo viaje<br/>
-              <span style={{ background:'linear-gradient(135deg,#EA9940 0%,#F0B86B 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>empieza aquí.</span>
+              <span style={{ background:'linear-gradient(135deg,#EA9940 0%,#ECE7DC 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>empieza aquí.</span>
             </h2>
             <p style={{ color:C.muted, fontSize:18, lineHeight:1.75, marginBottom:48 }}>VIAZA convierte la preparación del viaje en una experiencia <strong style={{ color:C.cream }}>visual, inteligente y simple.</strong></p>
           </div>

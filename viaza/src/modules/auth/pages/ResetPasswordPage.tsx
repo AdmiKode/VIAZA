@@ -68,7 +68,7 @@ export function ResetPasswordPage() {
   }
 
   const strength = password.length === 0 ? 0 : password.length < 8 ? 1 : password.length < 12 ? 2 : 3;
-  const strengthColor = ['transparent', '#c0392b', '#EA9940', '#6CA3A2'][strength];
+  const strengthColor = ['transparent', '#EA9940', '#EA9940', '#6CA3A2'][strength];
   const strengthLabel = ['', 'Débil', 'Media', 'Fuerte'][strength];
 
   return (
