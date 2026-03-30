@@ -19,6 +19,7 @@
 //   <DocViewer doc={doc} onClose={() => setOpen(false)} />
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getSignedUrl } from '../../../services/walletDocsService';
 import type { WalletDoc } from '../../../types/wallet';
@@ -39,6 +40,7 @@ function isPdf(mimeType?: string) {
 }
 
 export function DocViewer({ doc, onClose }: DocViewerProps) {
+  const { t } = useTranslation();
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
 
@@ -76,7 +78,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
         <div className="flex items-center justify-between px-4 pt-safe pb-3 pt-4" style={{ background: 'rgba(0,0,0,0.80)' }}>
           <div className="min-w-0 flex-1 mr-3">
             <div className="truncate text-sm font-semibold text-white">
-              {doc.fileName ?? 'Documento'}
+              {doc.fileName ?? t('wallet.unnamed')}
             </div>
             {doc.mimeType && (
               <div className="text-xs text-white/50 mt-0.5">{doc.mimeType}</div>
@@ -88,7 +90,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
             className="shrink-0 rounded-full px-4 py-2 text-sm font-semibold"
             style={{ background: 'rgba(255,255,255,0.12)', color: 'white' }}
           >
-            Cerrar
+            {t('wallet.docClose')}
           </button>
         </div>
 
@@ -96,14 +98,14 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
         <div className="flex-1 overflow-hidden relative">
           {loadState === 'loading' && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white/60 text-sm">Cargando...</div>
+              <div className="text-white/60 text-sm">{t('wallet.docLoading')}</div>
             </div>
           )}
 
           {loadState === 'error' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-              <div className="text-white/70 text-sm">No se pudo cargar el documento.</div>
-              <div className="text-white/40 text-xs">Verifica tu conexión e intenta de nuevo.</div>
+              <div className="text-white/70 text-sm">{t('wallet.docLoadError')}</div>
+              <div className="text-white/40 text-xs">{t('wallet.docLoadErrorHint')}</div>
             </div>
           )}
 
@@ -133,7 +135,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
                   {/* Fallback para Android WebView donde iframe no carga PDF */}
                   <div className="shrink-0 px-4 py-3" style={{ background: 'rgba(0,0,0,0.80)' }}>
                     <div className="text-xs text-white/40 mb-2 text-center">
-                      ¿No se ve el PDF? {/* [NO CONFIRMADO] Apertura nativa requiere @capacitor-community/file-opener (Fase 2) */}
+                      {t('wallet.pdfFallbackHint')}
                     </div>
                     <button
                       type="button"
@@ -141,7 +143,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
                       style={{ background: 'rgba(255,255,255,0.12)', color: 'white' }}
                       onClick={() => window.open(signedUrl, '_blank', 'noopener,noreferrer')}
                     >
-                      Abrir en nueva pestaña
+                      {t('wallet.openExternal')}
                     </button>
                   </div>
                 </div>
@@ -162,15 +164,15 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
                       {doc.mimeType?.split('/')[1]?.slice(0, 4) ?? 'DOC'}
                     </span>
                   </div>
-                  <div className="text-white/80 text-sm font-semibold">{doc.fileName ?? 'Archivo'}</div>
-                  <div className="text-white/40 text-xs">{doc.mimeType ?? 'Tipo desconocido'}</div>
+                  <div className="text-white/80 text-sm font-semibold">{doc.fileName ?? t('wallet.unnamed')}</div>
+                  <div className="text-white/40 text-xs">{doc.mimeType ?? ''}</div>
                   <button
                     type="button"
                     className="mt-2 rounded-2xl px-6 py-3 text-sm font-semibold"
                     style={{ background: 'rgba(255,255,255,0.12)', color: 'white' }}
                     onClick={() => window.open(signedUrl, '_blank', 'noopener,noreferrer')}
                   >
-                    Abrir / Descargar
+                    {t('wallet.openDownload')}
                   </button>
                 </div>
               )}

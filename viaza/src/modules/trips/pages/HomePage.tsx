@@ -921,7 +921,7 @@ export function HomePage() {
             {brain.suggestions.length > 0 && (
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: '#12212E', marginBottom: 10 }}>
-                  Que sigue
+                  {t('home.whatsNext')}
                 </div>
                 <div className="space-y-2">
                   {brain.suggestions.map((s) => (

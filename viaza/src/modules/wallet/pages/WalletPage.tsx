@@ -8,7 +8,7 @@ import { AppSelect } from '../../../components/ui/AppSelect';
 import { AppInput } from '../../../components/ui/AppInput';
 import { useAppStore } from '../../../app/store/useAppStore';
 import { supabase } from '../../../services/supabaseClient';
-import { updateWalletDocFields, reportDocLost } from '../../../services/walletDocsService';
+import { updateWalletDocFields, reportDocLost, deleteWalletDocRemote } from '../../../services/walletDocsService';
 import { ExpirationBadge } from '../components/ExpirationBadge';
 import { DocViewer } from '../components/DocViewer';
 import type { WalletDocType, WalletDoc } from '../../../types/wallet';
@@ -116,7 +116,7 @@ export function WalletPage() {
               </svg>
             </div>
             <div className="text-sm font-bold" style={{ color: '#12212E' }}>
-              Documentos que requieren atenci{'\u00f3'}n
+              {t('wallet.urgentTitle')}
             </div>
           </div>
           {urgentDocs.map((d, i) => {
@@ -135,12 +135,12 @@ export function WalletPage() {
                   </div>
                   <div className="text-xs mt-0.5" style={{ color: 'rgba(18,33,46,0.50)' }}>
                     {isExpired
-                      ? `Vencio hace ${Math.abs(days ?? 0)} dia${Math.abs(days ?? 0) === 1 ? '' : 's'}`
+                      ? t('wallet.expiredAgo', { count: Math.abs(days ?? 0) })
                       : days === 0
-                        ? 'Vence hoy'
+                        ? t('wallet.expiresToday')
                         : days === 1
-                          ? 'Vence mana{"\u00f1"}ana'
-                          : `Vence en ${days} dias`}
+                          ? t('wallet.expiresTomorrow')
+                          : t('wallet.expiresInDays', { count: days ?? 0 })}
                   </div>
                 </div>
                 <ExpirationBadge doc={d} />
@@ -166,7 +166,7 @@ export function WalletPage() {
 
         <div className="mt-3">
           <div className="text-xs font-semibold text-[rgb(var(--viaza-primary-rgb)/0.55)] mb-1">
-            Fecha de vencimiento (opcional)
+            {t('wallet.expirationDate')}
           </div>
           <AppInput
             type="date"
@@ -388,7 +388,7 @@ export function WalletPage() {
                         void reportDocLost(d.id);
                       }}
                     >
-                      Reportar perdido
+                      {t('wallet.reportLost')}
                     </button>
                   )}
 
@@ -398,6 +398,7 @@ export function WalletPage() {
                     style={{ background: 'rgb(var(--viaza-primary-rgb) / 0.06)', color: 'rgb(var(--viaza-primary-rgb) / 0.70)' }}
                     onClick={async () => {
                       await supabase.storage.from('wallet_docs').remove([d.storagePath]);
+                      void deleteWalletDocRemote(d.id);
                       deleteWalletDoc(d.id);
                     }}
                   >
