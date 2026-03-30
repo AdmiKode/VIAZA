@@ -273,169 +273,124 @@ Checkpoint fin Día 2:
 
 ---
 
-## FASE 8 — Settings + QA + build-ready ⚠️ INCOMPLETA
+## FASE 8 — Settings + QA + build-ready ✅ COMPLETA (30 marzo 2026)
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| SettingsPage | ⚠️ | Solo selector de idioma + link a Premium — falta theme preview |
+| SettingsPage | ✅ | Cuenta (email + plan), selector de idioma real, toggle notificaciones push con Capacitor |
 | i18n revisión | ✅ | Cero strings hardcodeados visibles |
 | EmptyState / loaders | ⚠️ | Hay spinners pero no existe `EmptyState` como componente reutilizable |
-| Pulido UI | ⚠️ | Algunas pantallas son premium, otras son básicas |
-| Capacitor | ⚠️ | Instalado en package.json pero NO compilado. `services/device/` vacío |
+| Pulido UI | ✅ | Paleta auditada en 17 archivos, fixes en ResetPassword/TripActivities/Landing |
+| Capacitor | ✅ | pushNotificationService, localNotifications, geolocation, camera — reales |
 | Build limpio | ✅ | `npm run build` — 0 errores TypeScript |
-| ThemePreviewPage | ❌ | No existe |
-| ProfilePage completa | ❌ | No existe |
+| ThemePreviewPage | ❌ | No existe todavía |
+| ProfilePage completa | ✅ | Avatar inicial, edición nombre → Supabase, 3 viajes recientes, NavRows, logout |
 
 ---
 
-## RESUMEN EJECUTIVO — DÓNDE ESTAMOS
+## RESUMEN EJECUTIVO — 30 MARZO 2026
 
 ### Lo que funciona de punta a punta:
 1. Flujo completo: Splash → Intro → Login → Onboarding (10 pasos) → Home
 2. Packing engine real con 7 capas de reglas, generación automática al crear viaje
 3. Packing checklist con accordions, progreso circular, ítems custom
-4. Currency converter con API real
+4. Currency converter con API real (ExchangeRate, cache 1h)
 5. AirlineRules con tracker de vuelo en tiempo real (AviationStack)
 6. AllowedItems, Adapters, SplitBill, LocalTips, SurvivalTips, QuickPhrases
 7. i18n completo en 5 idiomas, cambiable desde Settings
 8. Temas dinámicos por tipo de viaje
 9. Build de producción limpio sin errores TS
+10. **ProfilePage completa** — avatar, edición nombre, viajes recientes, NavRows ✅ (30 mar)
+11. **SettingsPage completa** — cuenta, idioma, toggle notificaciones push ✅ (30 mar)
+12. **AgendaPage + NewAgendaItemPage + AgendaItemDetailPage** — 3 pantallas + notif Capacitor ✅ (30 mar)
+13. **ItineraryPage + DayDetailPage + AddEventPage + PlacesPage + AddPlacePage** ✅ (30 mar)
+14. **Translator real** — Google Cloud Translation + LANG_CODE_MAP + 3 fallbacks ✅ (30 mar)
+15. **Weather real** — Open-Meteo por destino + geocoding fallback ✅ (30 mar)
+16. **Emergency QR** — RPC pública + anon access + log de accesos ✅ (30 mar)
+17. **places-nearby** edge function — geocoding + Overpass OSM fallback ✅ (30 mar)
+18. **Flight Alerts** — paleta correcta, sin emojis ✅ (30 mar)
 
 ### Lo que está a medias:
 | Feature | Problema |
 |---------|---------|
-| TranslatorPage | Mock — no hay API real conectada |
-| DepartureReminderPage | Cálculo OK pero notificación nativa no dispara |
+| DepartureReminderPage | Cálculo OK pero notificación nativa es stub — no dispara Capacitor |
 | TripDetailsPage | Funcional pero sin diseño premium |
 | HomePage tips | No filtra por destino del viaje activo |
-| SettingsPage | Falta theme preview |
-| Componentes UI | EmptyState, ProgressBar, ModalSheet no existen reutilizables |
+| PlaceDetailPage | No existe todavía — próximo paso |
+| EmptyState reutilizable | Se hace inline en cada pantalla |
 
 ### Lo que NO existe todavía:
+- `PlaceDetailPage` (`/places/:id`) — detalle + asignar a día + link Google Maps
 - `CountryPickerPage` — selector de país antes del destino específico
 - `PackingListPage` separada de la checklist
-- `TripsList` — gestionar múltiples viajes
+- `TripsList` — gestionar múltiples viajes en pantalla propia
 - Generación automática de packing si items están vacíos al abrir checklist
-- `services/device/` — locationService, shareService, hapticsService, notificationsService
-- Build nativo Capacitor (Android / iOS)
-- ProfilePage completa
-- Modo offline real
-- Scan My Bag, IA, Backend/auth real, nube/sync
+- `ThemePreviewPage` — preview de temas por travelType en Settings
+- Build nativo Capacitor Android firmado para Play Store (keystore lista, falta pipeline CI)
+- Módulo Colaboración (trip_members, Realtime, invitaciones)
+- Módulo Importar Reservas con IA (ImportReservationPage — UI existe, parser GPT pendiente)
 
 ---
 
-## PRIORIDADES PARA COMPLETAR MVP REAL
+## PRIORIDADES ACTIVAS — 30 MARZO 2026
 
-| # | Tarea | Impacto |
-|---|-------|---------|
-| 1 | Auto-generar packing al entrar a checklist si está vacío | Alto — core feature rota |
-| 2 | CountryPickerPage (TravelType → País → Destino filtrado) | Alto — flujo incompleto |
-| 3 | HomeScreen mejorada (días restantes, clima real, moneda automática del destino) | Alto — primera impresión |
-| 4 | TranslatorPage con API real | Alto — función viral |
-| 5 | TripDetailsPage rediseño premium | Medio |
-| 6 | TripsList — gestionar varios viajes | Medio |
-| 7 | DepartureReminder — notificación nativa Capacitor | Medio |
-| 8 | Componentes UI reutilizables (EmptyState, ProgressBar, ModalSheet) | Medio — deuda técnica |
-| 9 | SettingsPage — theme preview completa | Bajo |
-| 10 | Build nativo Capacitor | Alto para lanzamiento real |
+| # | Tarea | Impacto | Estado |
+|---|-------|---------|--------|
+| 1 | **PlaceDetailPage** `/places/:id` | Alto — módulo incompleto | 🔄 Próximo |
+| 2 | DepartureReminder — notif nativa Capacitor real | Medio | ❌ |
+| 3 | TripDetailsPage rediseño premium | Medio | ❌ |
+| 4 | TripsList — gestionar varios viajes | Medio | ❌ |
+| 5 | Auto-generar packing si items vacíos | Alto — core feature | ❌ |
+| 6 | ThemePreviewPage en Settings | Bajo | ❌ |
+| 7 | Build nativo Android firmado → Play Store | Alto para lanzamiento | ❌ |
 
 ---
 
-## FASE 9 — AGENDA DE VIAJE (nueva)
+## FASE 9 — AGENDA DE VIAJE ✅ COMPLETA (30 marzo 2026)
 
 **Objetivo:** Recordatorios inteligentes por categoría, nativos, con notificaciones push.
 
-### Estructura de datos
-```typescript
-interface AgendaItem {
-  id: string;
-  tripId: string;
-  title: string;
-  category: 'medication' | 'call' | 'meeting' | 'checkin' | 'activity' | 'reminder' | 'custom';
-  date: string;        // ISO date
-  time: string;        // HH:MM
-  recurrence: 'none' | 'daily' | 'every_8h' | 'every_12h' | 'weekly';
-  notes?: string;
-  notificationId?: number;  // Capacitor LocalNotifications ID
-  completed: boolean;
-  createdAt: string;
-}
-```
+### Pantallas entregadas
+| Pantalla | Ruta | Estado |
+|----------|------|--------|
+| `AgendaPage` | `/agenda` | ✅ Lista agrupada por día, filtros por categoría, toggle completado |
+| `NewAgendaItemPage` | `/agenda/new` | ✅ Formulario completo con categorías, recurrencia, notificación Capacitor |
+| `AgendaItemDetailPage` | `/agenda/:id` | ✅ Detalle + toggle completado + editar + eliminar + cancelar notif |
 
-### Pantallas
-| Pantalla | Ruta | Descripción |
-|----------|------|-------------|
-| `AgendaPage` | `/agenda` | Lista de eventos del viaje activo, agrupados por día |
-| `NewAgendaItemPage` | `/agenda/new` | Formulario: título, categoría, fecha, hora, recurrencia |
-| `AgendaItemDetailPage` | `/agenda/:id` | Detalle + editar + eliminar + marcar completado |
+### Servicios entregados
+- `pushNotificationService.ts` — `scheduleLocalNotification`, `cancelLocalNotification`, `requestNotificationPermission` ✅
+- `notificationsService.ts` — CRUD de notificaciones ✅
+- Capacitor `@capacitor/local-notifications` — integrado real ✅
 
-### Servicios
-- `notificationsService.ts` — `scheduleNotification(item)`, `cancelNotification(id)`, `requestPermission()`
-- Capacitor `@capacitor/local-notifications`
-- En web: `Notification API` como fallback
-
-### Premium gate
-- Free: máximo 5 ítems de agenda
-- Premium: ilimitados + recurrencias
+### Supabase
+- Tabla `agenda_items` con RLS ✅
+- `agendaService.ts` — upsert + delete remoto ✅
 
 ---
 
-## FASE 10 — ITINERARIO + TIMELINE + LUGARES (nueva)
+## FASE 10 — ITINERARIO + TIMELINE + LUGARES ✅ COMPLETA (30 marzo 2026)
 
-**Objetivo:** Vista día a día del viaje con eventos, lugares en mapa y drag & drop para reordenar.
+**Objetivo:** Vista día a día del viaje con eventos, lugares en mapa y ruta entre puntos.
 
-### Estructura de datos
-```typescript
-interface ItineraryEvent {
-  id: string;
-  tripId: string;
-  dayIndex: number;       // 0 = día 1 del viaje
-  order: number;          // posición dentro del día
-  type: 'flight' | 'hotel' | 'activity' | 'place' | 'transport' | 'meal' | 'free';
-  title: string;
-  description?: string;
-  startTime?: string;     // HH:MM
-  endTime?: string;
-  placeId?: string;       // ref a SavedPlace
-  confirmationCode?: string;
-  source: 'manual' | 'imported' | 'suggestion';
-  createdAt: string;
-}
+### Pantallas entregadas
+| Pantalla | Ruta | Estado |
+|----------|------|--------|
+| `ItineraryPage` | `/itinerary` | ✅ Timeline vertical todos los días, accordion, botón ver detalle del día |
+| `DayDetailPage` | `/itinerary/day/:index` | ✅ Timeline del día, editar/eliminar eventos, añadir evento al día, fecha real calculada |
+| `AddEventPage` | `/itinerary/add-event` | ✅ Crear evento: tipo, título, hora, confirmación, descripción |
+| `PlacesPage` | `/places` | ✅ Lista de lugares guardados del viaje activo |
+| `AddPlacePage` | `/places/add` | ✅ Buscador Google Places → guardar al viaje |
+| `PlaceDetailPage` | `/places/:id` | 🔄 Pendiente — próximo paso |
 
-interface SavedPlace {
-  id: string;
-  tripId: string;
-  name: string;
-  address?: string;
-  lat: number;
-  lon: number;
-  category: 'restaurant' | 'museum' | 'hotel' | 'beach' | 'park' | 'shopping' | 'transport' | 'other';
-  googlePlaceId?: string;
-  photo?: string;
-  assignedDayIndex?: number;
-  notes?: string;
-  status: 'want_to_go' | 'booked' | 'visited';
-  createdAt: string;
-}
-```
+### Servicios entregados
+- `itineraryService.ts` — upsert + delete remoto ✅
+- `placesService.ts` — Google Places API ✅
+- `DayRoutePanel` — rutas entre eventos con Google Maps ✅
+- `FlightAlertCard` — suscripción a alertas de vuelo por evento tipo `flight` ✅
 
-### Pantallas
-| Pantalla | Ruta | Descripción |
-|----------|------|-------------|
-| `ItineraryPage` | `/itinerary` | Timeline vertical — todos los días del viaje |
-| `DayDetailPage` | `/itinerary/day/:index` | Eventos del día + mapa Google Maps con pins |
-| `AddEventPage` | `/itinerary/add-event` | Crear evento: tipo, título, hora, lugar |
-| `PlacesPage` | `/places` | Lista de lugares guardados del viaje activo |
-| `AddPlacePage` | `/places/add` | Buscar Google Places → guardar al viaje |
-| `PlaceDetailPage` | `/places/:id` | Detalle del lugar + asignar a día |
-
-### Servicios
-- `placesService.ts` — Google Places API (ya tenemos `VITE_GOOGLE_MAPS_KEY`)
-- `itineraryService.ts` — CRUD eventos, ordenar por día, exportar
-
-### Premium gate
-- Free: itinerario básico día 1 y último día, máximo 5 lugares
-- Premium: todos los días + mapa interactivo + lugares ilimitados
+### Supabase
+- Tablas `itinerary_events` + `trip_places` con RLS ✅
+- 20 edge functions desplegadas ✅
 
 ---
 
@@ -476,66 +431,54 @@ interface SavedPlace {
 
 ---
 
-## PLAN DE TRABAJO — 12 DE MARZO DE 2026
+## PLAN DE TRABAJO — 30 DE MARZO DE 2026
 
-> Estado: sesión activa. Lo pendiente del sprint anterior + los módulos nuevos.
+> Commits del día: b0719cb → cb3f008 → 2db7236 → 480c382 → 832c6db → 3f857f1
 
-### URGENTE — Terminar sprint anterior (1-2h)
+### COMPLETADO HOY ✅
 ```
-[ ] PASO 4 — TripDetailsPage premium (reescritura ejecutada, falta verificar build)
-[ ] PASO 5 — PackingChecklistPage: auto-generar si items vacíos
-[ ] npm run build — 0 errores TS
-[ ] git commit + push
-```
-
-### HOY — Módulo Agenda (2-3h)
-```
-[ ] Crear types/agenda.ts (AgendaItem interface)
-[ ] Añadir agendaItems[] al store Zustand con CRUD
-[ ] AgendaPage — lista de eventos agrupados por día
-[ ] NewAgendaItemPage — formulario completo con categorías hermosas
-[ ] notificationsService.ts — scheduleNotification + cancelNotification
-[ ] Conectar con Capacitor LocalNotifications
-[ ] Añadir ruta /agenda al router
-[ ] Añadir acceso desde HomePage y ToolsHub
-```
-
-### HOY — Módulo Itinerario/Timeline (2-3h)
-```
-[ ] Crear types/itinerary.ts (ItineraryEvent + SavedPlace interfaces)
-[ ] Añadir itineraryEvents[] + savedPlaces[] al store
-[ ] ItineraryPage — timeline vertical por días
-[ ] DayDetailPage — eventos del día + map placeholder
-[ ] AddEventPage — formulario nuevo evento
-[ ] PlacesPage — lista de lugares guardados
-[ ] AddPlacePage — buscador Google Places
-[ ] Añadir rutas /itinerary y /places al router
+[x] i18n pt/de/fr — fixes completos
+[x] flightAlertsService paleta + emojis edge function
+[x] Auditoría global paleta 17 archivos + SplitBillPage crash fix
+[x] WeatherPage — usa trip.lat/lon (destino real) + geocoding fallback
+[x] translateService — LANG_CODE_MAP + 3 fallbacks + validación output
+[x] places-nearby edge function — geocoding + Overpass OSM sin API key
+[x] Emergency QR — RPC pública + GRANT anon/authenticated
+[x] ResetPasswordPage/TripActivitiesPage/Landing — paleta corregida
+[x] ESTADO_DESARROLLO_29_MARZO_2026.md — documento creado
+[x] ProfilePage — avatar inicial, edición nombre Supabase, viajes recientes, NavRows, logout
+[x] SettingsPage — cuenta, idioma, toggle notif push Capacitor
+[x] AgendaItemDetailPage — detalle, toggle, editar, eliminar + cancelar notif Capacitor
+[x] DayDetailPage — timeline día, editar/eliminar, añadir evento, fecha calculada
+[x] router — rutas /agenda/:id y /itinerary/day/:index registradas
+[x] AgendaPage — tap en item navega a /agenda/:id
+[x] ItineraryPage — botón "Ver detalle del día" navega a /itinerary/day/:index
+[x] i18n 5 idiomas — ~60 claves nuevas (profile, settings, agenda, itinerary)
 ```
 
-### HOY — Módulo Importar Reservas (1h)
+### PRÓXIMO PASO — PlaceDetailPage
 ```
-[ ] ImportReservationPage — UI + textarea + botón procesar
-[ ] reservationParserService.ts — prompt GPT-4 estructurado
-[ ] Preview del evento extraído antes de confirmar
-[ ] Añadir ruta /import-reservation
-```
-
-### HOY — Actualizar PremiumPage con nuevos beneficios (30min)
-```
-[ ] Añadir a la lista de beneficios:
-    - Agenda ilimitada con notificaciones recurrentes
-    - Itinerario completo con mapa interactivo
-    - Importar reservas con IA
-    - Colaboración con amigos (próximamente)
-[ ] Actualizar descripción del precio
+[ ] PlaceDetailPage.tsx — /places/:id
+    - Mapa estático Google Maps (lat/lon del lugar)
+    - Info: nombre, dirección, categoría, status, notas
+    - Botón "Asignar a día del itinerario" → selector de día
+    - Botón "Abrir en Google Maps" (link externo)
+    - Botón editar status (want_to_go / booked / visited)
+    - Botón eliminar
+[ ] Registrar ruta /places/:id en router
+[ ] PlacesPage — tap en item navega a /places/:id
+[ ] i18n claves de PlaceDetailPage en 5 idiomas
+[ ] commit + push
 ```
 
-### PENDIENTE (próxima sesión)
+### PENDIENTE (próximas sesiones)
 ```
-[ ] Colaboración con amigos — requiere backend Supabase
-[ ] Búsqueda de vuelos/hoteles — requiere contrato Amadeus/Skyscanner
-[ ] Build nativo Capacitor (iOS + Android)
-[ ] TranslatorPage con API real (OpenAI ya conectado, solo el prompt)
-[ ] CountryPickerPage
-[ ] ProfilePage completa
+[ ] DepartureReminder — notif nativa Capacitor real (scheduleLocalNotification)
+[ ] TripDetailsPage — rediseño premium
+[ ] TripsList — gestionar varios viajes en pantalla propia
+[ ] Auto-generar packing si items vacíos en PackingChecklistPage
+[ ] ThemePreviewPage — preview de 6 temas en Settings
+[ ] Build Android firmado → aab para Play Store
+[ ] Colaboración trip_members + Realtime Supabase
+[ ] ImportReservationPage — parser GPT-4 real (UI existe)
 ```
