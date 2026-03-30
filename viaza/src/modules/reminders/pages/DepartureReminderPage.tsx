@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { calculateRecommendedDeparture } from '../utils/departureCalculator';
 import { requestNotificationPermissions, scheduleNotification as scheduleLocalNotification } from '../../../services/notificationsService';
 import { notificationSuccess } from '../../../services/hapticsService';
+import { supabase } from '../../../services/supabaseClient';
+import { useAppStore } from '../../../app/store/useAppStore';
 
 function toLocalInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -19,6 +21,7 @@ type NotifStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function DepartureReminderPage() {
   const { t } = useTranslation();
+  const currentTripId = useAppStore((s) => s.currentTripId);
   const [flightTime, setFlightTime] = useState(() => toLocalInputValue(new Date(Date.now() + 24 * 60 * 60_000)));
   const [airport, setAirport] = useState('');
   const [status, setStatus] = useState<NotifStatus>('idle');
@@ -50,12 +53,27 @@ export function DepartureReminderPage() {
         return;
       }
       const notifTime = new Date(calc.recommended.getTime() - 30 * 60 * 1000);
+      const notifId = Math.floor(Math.random() * 100000);
       await scheduleLocalNotification({
-        id: Math.floor(Math.random() * 100000),
+        id: notifId,
         title: t('departure.notifTitle'),
         body: `${t('departure.notifBody')} ${formatTime(calc.recommended)}${airport ? ` · ${airport}` : ''}`,
         at: notifTime.toISOString(),
       });
+      // Persistir en Supabase para sincronización multi-dispositivo y auditoría
+      if (currentTripId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('departure_reminders').insert({
+            trip_id: currentTripId,
+            user_id: user.id,
+            remind_at: notifTime.toISOString(),
+            message: `${t('departure.notifBody')} ${formatTime(calc.recommended)}${airport ? ` · ${airport}` : ''}`,
+            is_active: true,
+            capacitor_id: notifId,
+          });
+        }
+      }
       await notificationSuccess();
       setStatus('success');
     } catch (err) {

@@ -445,6 +445,78 @@ Checkpoint fin Día 2:
 
 ---
 
+## ACTUALIZACIÓN — 31 DE MARZO DE 2026
+
+> Commits del día: d9931a8 → 2976804 → ff9b2a5 (último)
+
+### BLOQUES CERRADOS HOY ✅
+
+**Bloque C — Wallet viewer + expiración (CODE DONE — commit 2976804)**
+- `WalletPage.tsx`: bug crítico corregido — `deleteWalletDoc` no llamaba a `deleteWalletDocRemote` → filas huérfanas en `wallet_docs`. Fix: `void deleteWalletDocRemote(d.id)` añadido antes de borrar en store local
+- `DocViewer.tsx`: `useTranslation` importado, todos los strings hardcoded → i18n
+- `WalletPage.tsx`: banner urgente, label expiración, "Reportar perdido" → i18n
+- 17 claves `wallet.*` nuevas en 5 idiomas: urgentTitle, expiredAgo, expiresToday/Tomorrow/InDays, reportLost, reportedLost, expirationDate, openExternal, pdfFallbackHint, docLoad*, docClose, openDownload
+
+**Bloque D — Smart Trip Brain operativo básico (CODE DONE — commit 2976804)**
+- Todas las `actionPath` del `tripBrainEngine.ts` verificadas contra router: `/wallet` ✅ `/packing` ✅ `/health` ✅ `/profile/emergency` ✅ `/safety` ✅ `/budget` ✅ `/itinerary` ✅ `/safety/safewalk` ✅ `/split-bill` ✅
+- `HomePage.tsx`: "Que sigue" hardcoded → `t('home.whatsNext')` en 5 idiomas
+- `useTripBrain.ts`: 4 queries Supabase reales verificadas contra schema real
+
+**Bugs críticos del Brain corregidos (commit ff9b2a5)**
+- Bug 1: `useTripBrain` consultaba `.from('trip_budgets')` — tabla NO EXISTE. Tabla real: `trip_budget` (singular). Fix: una línea. Impacto: `budgetTotal` siempre era 0, Brain nunca generaba alertas de presupuesto
+- Bug 2: `useTripBrain` consultaba `.from('trip_risk_zones')` — tabla NUNCA EXISTIÓ. Edge function `risk-zones` ya hace eso. Fix: `supabase.functions.invoke('risk-zones', { body: { trip_id: trip.id } })` mapeado a `{ isRiskDestination, riskLevel }`. Impacto: Brain nunca generaba alertas de zona de riesgo
+- 22 errores Deno en VS Code suprimidos: `tsconfig.json exclude: [supabase, android, scripts]` + `viaza/.vscode/settings.json` con `deno.enable: false`
+
+**Firebase Service Account actualizado**
+- `FIREBASE_SERVICE_ACCOUNT_JSON` actualizado con `private_key_id: f99aff379268b51a9e055cbce671d29b3a5fa9fb`
+- `send-push` redesplegada: `npx supabase functions deploy send-push`
+- Push Notifications: CODE DONE. DEVICE VALIDATED: PENDIENTE. PRODUCTION READY: PENDIENTE (validar token en device Android real → fila en push_tokens → push recibida)
+
+### VALIDACIÓN 0 MOCKS EN PRODUCCIÓN ✅
+Búsqueda exhaustiva realizada. Resultado: 0 mocks en producción.
+- `translateService.ts`: MyMemory API real + fallback Supabase Edge
+- `pushNotificationService.ts`: espera FCM real (3s timeout), no simula datos
+- Todos los `return []` son guards de error legítimos
+
+### ESTADO REAL DE MÓDULOS — VERIFICADO 31 MARZO
+| Módulo | Archivo | Líneas | Servicio backend | Estado |
+|--------|---------|--------|-----------------|--------|
+| Wallet | `WalletPage.tsx` | 417L | `walletDocsService` → Supabase + `ai-orchestrator` | CODE DONE |
+| Brain | `useTripBrain.ts` / `tripBrainEngine.ts` | — / 372L | 4 queries + `risk-zones` invoke | CODE DONE |
+| Safety Hub | `SafetyHubPage.tsx` | — | `safety-tracking` + `sos-handler` edge functions | CODE DONE |
+| Split Bill | `SplitBillPage.tsx` | — | `split_bill_sessions` + `split_bill_expenses` Supabase | CODE DONE |
+| Health | `HealthPage.tsx` | 814L | `healthService` → `health_conditions` + `health_medications` | CODE DONE |
+| Budget | `BudgetPage.tsx` | 424L | `budgetService` → `trip_budget` + `trip_expenses` | CODE DONE |
+| Journal | `TravelMemoryPage.tsx` | 524L | `journalService` + `ai-orchestrator` | CODE DONE |
+| LiveTracking | `LiveTrackingPage.tsx` | 41L | `CompanionMapView` → `supabase.functions.invoke` real | CODE DONE |
+| ImportReservation | `ImportReservationPage.tsx` | 259L | `reservationParserService` → `ai-orchestrator` | CODE DONE |
+| Agenda | `AgendaPage.tsx` + 2 subpáginas | — | `agendaService` → `agenda_items` Supabase | CODE DONE |
+| Itinerary | `ItineraryPage.tsx` + 5 subpáginas | — | `itineraryService` + `placesService` | CODE DONE |
+| DepartureReminder | `DepartureReminderPage.tsx` | 209L | `@capacitor/local-notifications` real | CODE DONE (ver nota) |
+| TripDetails | `TripDetailsPage.tsx` | 238L | 10 MODULE_LINKS reales, hero gradient | CODE DONE — PENDIENTE PREMIUM VISUAL |
+| Push Notifications | `pushNotificationService.ts` | — | `push_tokens` Supabase + `send-push` edge | CODE DONE — DEVICE PENDIENTE |
+
+> **Nota DepartureReminder**: `scheduleLocalNotification` real via Capacitor ✅. GAP: NO persiste en tabla `departure_reminders` de Supabase (tabla existe con columnas: id, trip_id, user_id, remind_at, message, is_active, fired_at, capacitor_id, created_at). Fix cerrado en commit de esta sesión.
+
+### 34 TABLAS SUPABASE — VERIFICADAS CONTRA SCHEMA REAL (31 marzo)
+agenda_items, departure_reminders, emergency_profiles, emergency_qr_access_logs, flight_watches, health_conditions, health_medications, itinerary_events, luggage_photos, offline_queue, packing_evidence, packing_items, packing_scan_detections, packing_scan_sessions, payments, places_cache, profiles, push_tokens, safety_checkins, safety_sessions, sos_events, split_bill_expenses, split_bill_sessions, suitcase_layout_plans, suitcase_profiles, travelers, trip_activities, trip_budget, trip_expenses, trip_journal_entries, trip_places, trip_recommendations, trips, wallet_docs
+
+> Tablas que NO existen (documentado para no repetir bugs): `trip_budgets` (plural), `trip_risk_zones`
+
+### PENDIENTES REALES — ORDEN DE PRIORIDAD (31 marzo)
+| # | Item | Tipo | Estado |
+|---|------|------|--------|
+| 1 | DepartureReminder → persistir en `departure_reminders` tabla | CODE | ✅ CERRADO esta sesión |
+| 2 | TripDetailsPage rediseño premium | CODE | PENDIENTE |
+| 3 | Validación manual Android: Safety/SplitBill/Wallet/Brain/Departure | DEVICE | PENDIENTE |
+| 4 | Push Notifications validar en device (token → push_tokens → push recibida) | DEVICE | PENDIENTE |
+| 5 | Build Android AAB firmado → Play Store (keystore lista en `android/keystore/`) | BUILD | PENDIENTE |
+| 6 | `TRAVEL_RISK_API_KEY` en Supabase secrets (para risk-zones con datos reales) | CONFIG | PENDIENTE |
+| 7 | PDF nativo Android: `@capacitor-community/file-opener` | CODE | Fase 2 |
+| 8 | Colaboración: trip_members + Realtime Supabase | CODE | Fase 2 |
+
+---
+
 ## PLAN DE TRABAJO — 30 DE MARZO DE 2026
 
 > Commits del día: b0719cb → cb3f008 → 2db7236 → 480c382 → 832c6db → 3f857f1 → 4ade600
