@@ -281,7 +281,7 @@ export function computeTripBrain(input: TripBrainInput): TripBrainResult {
       suggestions.push({ id: 'route', title: 'Ver ruta del dia', description: 'Transporte hasta tus proximas paradas', actionPath: '/itinerary', icon: 'route' });
     }
     if (isRiskDestination) {
-      suggestions.push({ id: 'emergency', title: 'Contactos de emergencia', description: 'Numeros locales de policia y ambulancia', actionPath: '/emergency', icon: 'safety' });
+      suggestions.push({ id: 'emergency', title: 'Contactos de emergencia', description: 'Numeros locales de policia y ambulancia', actionPath: '/safety', icon: 'safety' });
     }
   }
 

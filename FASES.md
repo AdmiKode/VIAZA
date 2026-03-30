@@ -313,6 +313,9 @@ Checkpoint fin Día 2:
 20. **SplitBill persistente** — sessions + expenses en Supabase (confirmado 30 mar) ✅
 21. **Wallet expiración** — banner urgente de docs vencidos/críticos al tope de WalletPage ✅ (30 mar)
 22. **Smart Trip Brain suggestions** — sección "Que sigue" en HomePage conectada al engine ✅ (30 mar)
+23. **PlaceDetailPage** `/places/:id` — mapa estático, status, día, notas, eliminar, i18n 5 idiomas, navegación desde PlacesPage ✅ (30 mar, commit 9c6107c)
+24. **Brain fix** — ruta `/emergency` rota en suggestion corregida a `/safety` ✅ (30 mar)
+25. **Auto-generar packing** — ya implementado desde sprint anterior (useEffect en PackingChecklistPage, `existing.length === 0` → `generatePackingItemsForTrip`) ✅ confirmado
 
 ### Decisiones de alcance cerradas (30 marzo):
 | Item | Decisión | Razón |
@@ -330,7 +333,6 @@ Checkpoint fin Día 2:
 | EmptyState reutilizable | Se hace inline en cada pantalla |
 
 ### Lo que NO existe todavía:
-- `PlaceDetailPage` (`/places/:id`) — detalle + asignar a día + link Google Maps
 - `TripsList` — gestionar múltiples viajes en pantalla propia
 - `ThemePreviewPage` — preview de temas por travelType en Settings
 - Build nativo Capacitor Android firmado para Play Store (keystore lista, falta pipeline CI)
@@ -343,12 +345,12 @@ Checkpoint fin Día 2:
 
 | # | Tarea | Impacto | Estado |
 |---|-------|---------|--------|
-| 1 | **PlaceDetailPage** `/places/:id` | Alto — módulo incompleto | 🔄 Próximo |
+| 1 | **PlaceDetailPage** `/places/:id` | Alto — módulo incompleto | ✅ DONE commit 9c6107c |
 | 2 | DepartureReminder — notif nativa Capacitor real | Medio | ❌ |
 | 3 | TripDetailsPage rediseño premium | Medio | ❌ |
-| 4 | TripsList — gestionar varios viajes | Medio | ❌ |
-| 5 | Auto-generar packing si items vacíos | Alto — core feature | ❌ |
-| 6 | ThemePreviewPage en Settings | Bajo | ❌ |
+| 4 | TripsList — gestionar varios viajes | Medio | ✅ TripHistoryPage ya cubre esto + setCurrentTrip |
+| 5 | Auto-generar packing si items vacíos | Alto — core feature | ✅ Ya implementado — useEffect en PackingChecklistPage |
+| 6 | ThemePreviewPage en Settings | Bajo | ⚠️ DESCARTADA — todos los temas usan paleta idéntica, impacto visual cero |
 | 7 | Build nativo Android firmado → Play Store | Alto para lanzamiento | ❌ |
 
 ---
@@ -387,7 +389,7 @@ Checkpoint fin Día 2:
 | `AddEventPage` | `/itinerary/add-event` | ✅ Crear evento: tipo, título, hora, confirmación, descripción |
 | `PlacesPage` | `/places` | ✅ Lista de lugares guardados del viaje activo |
 | `AddPlacePage` | `/places/add` | ✅ Buscador Google Places → guardar al viaje |
-| `PlaceDetailPage` | `/places/:id` | 🔄 Pendiente — próximo paso |
+| `PlaceDetailPage` | `/places/:id` | ✅ Detalle + mapa estático + selector status + asignar día + notas + eliminar |
 
 ### Servicios entregados
 - `itineraryService.ts` — upsert + delete remoto ✅
@@ -478,17 +480,12 @@ Checkpoint fin Día 2:
 
 ### PRÓXIMOS PASOS — por orden de prioridad
 ```
-[ ] PlaceDetailPage.tsx — /places/:id
-    - Info: nombre, dirección, categoría, status, notas
-    - Botón "Asignar a día del itinerario" → selector de día
-    - Botón "Abrir en Google Maps" (link externo lat/lon)
-    - Editar status (want_to_go / booked / visited)
-    - Eliminar lugar
-[ ] Registrar ruta /places/:id en router
-[ ] PlacesPage — tap en item navega a /places/:id
-[ ] i18n claves de PlaceDetailPage en 5 idiomas
-[ ] ThemePreviewPage — preview de 6 temas en Settings
-[ ] TripsList — gestionar varios viajes en pantalla propia
+[x] PlaceDetailPage.tsx — /places/:id ✅ DONE commit 9c6107c
+[x] Auto-generar packing si items vacíos ✅ ya implementado (PackingChecklistPage useEffect)
+[x] TripsList ✅ cubierto por TripHistoryPage + setCurrentTrip (ya accesible desde Profile)
+[DESCARTADA] ThemePreviewPage — todos los temas comparten paleta INMUTABLE, impacto visual cero
+[ ] DepartureReminder — scheduleLocalNotification real en device Android
+[ ] TripDetailsPage rediseño premium
 [ ] Build Android firmado → aab para Play Store
 [ ] Colaboración trip_members + Realtime Supabase
 [ ] ImportReservationPage — parser GPT-4 real (UI existe)
