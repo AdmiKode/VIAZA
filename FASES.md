@@ -310,7 +310,11 @@ Checkpoint fin Día 2:
 17. **places-nearby** edge function — geocoding + Overpass OSM fallback ✅ (30 mar)
 18. **Flight Alerts** — paleta correcta, sin emojis ✅ (30 mar)
 19. **SafetyHubPage** — hub `/safety` con SOS, SafeWalk, EmergencyCard, números locales ✅ (30 mar)
-20. **SplitBill persistente** — sessions + expenses en Supabase (confirmado 30 mar) ✅
+    * Safety MVP Sprint 1: **DONE**
+    * Safety Layer completa del manifiesto: **PARCIAL** — background location (Android Foreground Service) y cola local sin señal quedan fuera de este bloque
+20. **SplitBill persistente** — sessions + expenses en Supabase ✅ (28 mar, confirmado 30 mar)
+    * Split Bill MVP Sprint 1: **DONE** — create/read/add expense/delete expense/delete session, RLS activo, trigger `on_auth_user_created` garantiza FK de perfil, manejo de errores y loading states presentes
+    * Fuera de este bloque: cola offline, edición de gasto existente, exportar resumen
 21. **Wallet expiración** — banner urgente de docs vencidos/críticos al tope de WalletPage ✅ (30 mar)
 22. **Smart Trip Brain suggestions** — sección "Que sigue" en HomePage conectada al engine ✅ (30 mar)
 23. **PlaceDetailPage** `/places/:id` — mapa estático, status, día, notas, eliminar, i18n 5 idiomas, navegación desde PlacesPage ✅ (30 mar, commit 9c6107c)
@@ -328,6 +332,7 @@ Checkpoint fin Día 2:
 ### Lo que está a medias:
 | Feature | Problema |
 |---------|---------|
+| Safety Layer completa | MVP Sprint 1 DONE. Fuera: background location (Android Foreground Service) + cola local sin señal — documentado como Fase 2/3 |
 | DepartureReminderPage | Cálculo OK. scheduleLocalNotification de Capacitor implementado — verificar en device |
 | TripDetailsPage | Funcional pero sin diseño premium (movido a bloque de polish) |
 | EmptyState reutilizable | Se hace inline en cada pantalla |
