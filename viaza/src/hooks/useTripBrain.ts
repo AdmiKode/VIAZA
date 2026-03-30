@@ -52,30 +52,29 @@ export function useTripBrain(): TripBrainResult {
     return () => { cancelled = true; };
   }, [currentTripId]);
 
-  // Verificar zonas de riesgo para el destino actual
+  // Verificar zonas de riesgo para el destino actual — usa edge function risk-zones
   useEffect(() => {
-    if (!trip?.destination) { setIsRiskDestination(false); setRiskLevel(undefined); return; }
+    if (!trip?.id || !trip?.destination) { setIsRiskDestination(false); setRiskLevel(undefined); return; }
 
     let cancelled = false;
     void (async () => {
       try {
-        const { data } = await supabase
-          .from('trip_risk_zones')
-          .select('level')
-          .ilike('destination', `%${trip.destination.split(',')[0].trim()}%`)
-          .limit(1)
-          .maybeSingle();
-        if (!cancelled) {
-          setIsRiskDestination(Boolean(data));
-          setRiskLevel(data?.level as 'low' | 'medium' | 'high' | 'extreme' | undefined);
-        }
+        const { data, error } = await supabase.functions.invoke('risk-zones', {
+          body: { trip_id: trip.id },
+        });
+        if (cancelled) return;
+        if (error || !data?.ok) { setIsRiskDestination(false); setRiskLevel(undefined); return; }
+        const level = data.risk?.level as 'low' | 'medium' | 'high' | 'extreme' | undefined;
+        const isRisk = level === 'high' || level === 'extreme' || level === 'critical' as unknown;
+        setIsRiskDestination(Boolean(isRisk));
+        setRiskLevel(level);
       } catch {
         if (!cancelled) { setIsRiskDestination(false); setRiskLevel(undefined); }
       }
     })();
 
     return () => { cancelled = true; };
-  }, [trip?.destination]);
+  }, [trip?.id, trip?.destination]);
 
   // Calcular días desde última actualización de wallet
   const daysSinceLastWalletUpdate = useMemo(() => {
@@ -99,7 +98,7 @@ export function useTripBrain(): TripBrainResult {
           .select('amount')
           .eq('trip_id', currentTripId);
         const { data: budgets } = await supabase
-          .from('trip_budgets')
+          .from('trip_budget')
           .select('amount')
           .eq('trip_id', currentTripId);
         if (!cancelled) {
