@@ -102,7 +102,8 @@ export function PlacesPage() {
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ delay: i * 0.03 }}
                 className="flex items-start gap-3 rounded-3xl p-4"
-                style={{ background: 'white', boxShadow: '0 3px 16px rgba(18,33,46,0.08)' }}
+                style={{ background: 'white', boxShadow: '0 3px 16px rgba(18,33,46,0.08)', cursor: 'pointer' }}
+                onClick={() => navigate(`/places/${place.id}`)}
               >
                 {/* Icono categoría */}
                 <div className="flex-shrink-0 flex items-center justify-center rounded-2xl" style={{ width: 48, height: 48, background: 'rgba(48,112,130,0.08)' }}>
@@ -123,7 +124,7 @@ export function PlacesPage() {
                 </div>
 
                 {/* Acciones */}
-                <div className="flex flex-col gap-2 flex-shrink-0">
+                <div className="flex flex-col gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   {/* Ciclar estado */}
                   <button
                     type="button"

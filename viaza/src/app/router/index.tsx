@@ -52,6 +52,7 @@ import { AddEventPage } from '../../modules/itinerary/pages/AddEventPage';
 import { DayDetailPage } from '../../modules/itinerary/pages/DayDetailPage';
 import { PlacesPage } from '../../modules/places/pages/PlacesPage';
 import { AddPlacePage } from '../../modules/places/pages/AddPlacePage';
+import { PlaceDetailPage } from '../../modules/places/pages/PlaceDetailPage';
 import { ImportReservationPage } from '../../modules/import-reservation/pages/ImportReservationPage';
 import { RecommendationsPage } from '../../modules/recommendations/pages/RecommendationsPage';
 import { WalletPage } from '../../modules/wallet/pages/WalletPage';
@@ -198,6 +199,7 @@ export function AppRouter() {
           <Route path="/itinerary/day/:index" element={<DayDetailPage />} />
           <Route path="/places" element={<PlacesPage />} />
           <Route path="/places/add" element={<AddPlacePage />} />
+          <Route path="/places/:id" element={<PlaceDetailPage />} />
           <Route path="/recommendations" element={<RecommendationsPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/wallet/lost" element={<WalletLostModePage />} />
