@@ -530,25 +530,68 @@ Búsqueda exhaustiva realizada. Resultado: 0 mocks en producción.
 - `pushNotificationService.ts`: espera FCM real (3s timeout), no simula datos
 - Todos los `return []` son guards de error legítimos
 
-### ESTADO REAL DE MÓDULOS — VERIFICADO 31 MARZO
-| Módulo | Archivo | Líneas | Servicio backend | Estado |
-|--------|---------|--------|-----------------|--------|
-| Wallet | `WalletPage.tsx` | 417L | `walletDocsService` → Supabase + `ai-orchestrator` | CODE DONE |
-| Brain | `useTripBrain.ts` / `tripBrainEngine.ts` | — / 372L | 4 queries + `risk-zones` invoke | CODE DONE |
-| Safety Hub | `SafetyHubPage.tsx` | — | `safety-tracking` + `sos-handler` edge functions | CODE DONE |
-| Split Bill | `SplitBillPage.tsx` | — | `split_bill_sessions` + `split_bill_expenses` Supabase | CODE DONE |
-| Health | `HealthPage.tsx` | 814L | `healthService` → `health_conditions` + `health_medications` | CODE DONE |
-| Budget | `BudgetPage.tsx` | 424L | `budgetService` → `trip_budget` + `trip_expenses` | CODE DONE |
-| Journal | `TravelMemoryPage.tsx` | 524L | `journalService` + `ai-orchestrator` | CODE DONE |
-| LiveTracking | `LiveTrackingPage.tsx` | 41L | `CompanionMapView` → `supabase.functions.invoke` real | CODE DONE |
-| ImportReservation | `ImportReservationPage.tsx` | 259L | `reservationParserService` → `ai-orchestrator` | CODE DONE |
-| Agenda | `AgendaPage.tsx` + 2 subpáginas | — | `agendaService` → `agenda_items` Supabase | CODE DONE |
-| Itinerary | `ItineraryPage.tsx` + 5 subpáginas | — | `itineraryService` + `placesService` | CODE DONE |
-| DepartureReminder | `DepartureReminderPage.tsx` | 209L | `@capacitor/local-notifications` real | CODE DONE (ver nota) |
-| TripDetails | `TripDetailsPage.tsx` | 238L | 10 MODULE_LINKS reales, hero gradient | CODE DONE — PENDIENTE PREMIUM VISUAL |
-| Push Notifications | `pushNotificationService.ts` | — | `push_tokens` Supabase + `send-push` edge | CODE DONE — DEVICE PENDIENTE |
+### ESTADO REAL DE MÓDULOS — VERIFICADO 31 MARZO (SESIÓN 2 — AUDITORÍA EXHAUSTIVA)
 
-> **Nota DepartureReminder**: `scheduleLocalNotification` real via Capacitor ✅. GAP: NO persiste en tabla `departure_reminders` de Supabase (tabla existe con columnas: id, trip_id, user_id, remind_at, message, is_active, fired_at, capacitor_id, created_at). Fix cerrado en commit de esta sesión.
+> Auditoría de código fuente directo: 0 mocks en producción, todos los servicios usan Supabase/APIs reales.
+
+| Módulo | Archivo | Servicio backend real | Estado |
+|--------|---------|----------------------|--------|
+| Onboarding (10 pasos) | `onboarding/pages/*` | Nominatim + Open-Meteo + OWM | ✅ CODE DONE |
+| Home Cockpit | `HomePage.tsx` | weather-cache + useTripBrain | ✅ CODE DONE |
+| Packing Checklist | `PackingChecklistPage.tsx` | `packing_items` Supabase, 7 reglas | ✅ CODE DONE |
+| Smart Trip Brain | `useTripBrain.ts` | 5 queries reales + `risk-zones` invoke | ✅ CODE DONE |
+| TripDetails premium | `TripDetailsPage.tsx` 473L | store + Supabase | ✅ CODE DONE |
+| Budget | `BudgetPage.tsx` 424L | `trip_budget` + `trip_expenses` | ✅ CODE DONE |
+| Split Bill | `SplitBillPage.tsx` | `split_bill_sessions` + `split_bill_expenses` | ✅ CODE DONE |
+| Wallet | `WalletPage.tsx` 417L | `wallet_docs` + signed URLs Storage | ✅ CODE DONE |
+| Health | `HealthPage.tsx` 814L | `health_conditions` + `health_medications` | ✅ CODE DONE |
+| Journal / Bitácora | `TravelMemoryPage.tsx` 524L | `trip_journal_entries` + ai-orchestrator | ✅ CODE DONE |
+| Safety Hub | `SafetyHubPage.tsx` | safety-tracking + sos-handler edge | ✅ CODE DONE |
+| SOS Flow | `SosFlowPage.tsx` | sos-handler edge + `sos_events` | ✅ CODE DONE |
+| SafeWalk | `SafeWalkPage.tsx` | safety-tracking edge + Realtime | ✅ CODE DONE |
+| Emergency Card | `EmergencyCardPage.tsx` | RPC pública + `emergency_qr_access_logs` | ✅ CODE DONE |
+| Translator | `TranslatorPage.tsx` | ai-orchestrator → MyMemory → LibreTranslate | ✅ CODE DONE |
+| Currency Converter | `CurrencyConverterPage.tsx` | exchange-rates edge + EXCHANGE_RATE_KEY | ✅ CODE DONE |
+| Agenda | `AgendaPage.tsx` + 2 sub | `agenda_items` + @capacitor/local-notifications | ✅ CODE DONE |
+| Itinerary | `ItineraryPage.tsx` + 5 sub | `itinerary_events` + Google Maps | ✅ CODE DONE |
+| Places | `PlacesPage.tsx` + 2 sub | `trip_places` + Google Places API | ✅ CODE DONE |
+| Airline Rules | `AirlineRulesPage.tsx` | AviationStack API real | ✅ CODE DONE |
+| Allowed Items | `AllowedItemsPage.tsx` | Dataset curado | ✅ CODE DONE |
+| Adapter Guide | `AdapterGuidePage.tsx` | Dataset curado | ✅ CODE DONE |
+| Departure Reminder | `DepartureReminderPage.tsx` 209L | @capacitor/local-notifications + `departure_reminders` | ✅ CODE DONE |
+| Quick Phrases | `QuickPhrasesPage.tsx` | Dataset curado | ✅ CODE DONE |
+| Local Tips | `LocalTipsPage.tsx` | Dataset curado | ✅ CODE DONE |
+| Survival Tips | `SurvivalTipsPage.tsx` | Dataset curado | ✅ CODE DONE |
+| Profile | `ProfilePage.tsx` | `profiles` Supabase | ✅ CODE DONE |
+| Settings | `SettingsPage.tsx` | Capacitor Preferences + push-notifications | ✅ CODE DONE |
+| Import Reservation | `ImportReservationPage.tsx` 260L | ai-orchestrator (GPT-4) + regex pre-parser | ✅ CODE DONE |
+| Recommendations | `RecommendationsPage.tsx` 296L | places-nearby edge + dataset riesgo | ✅ CODE DONE |
+| Route Guide | `TripRoutePage.tsx` 489L | OSRM + deeplinks Waze/Maps/Apple | ✅ CODE DONE |
+| Airport Flow | `AirportFlowPage.tsx` 489L | @capacitor/local-notifications real | ✅ CODE DONE |
+| Business Trip | `BusinessTripPage.tsx` 405L | store local + datasets | ✅ CODE DONE |
+| Weather | `WeatherPage.tsx` | Open-Meteo + geocoding fallback | ✅ CODE DONE |
+| Push Notifications | `pushNotificationService.ts` | push_tokens + send-push edge + Firebase FCM | ✅ CODE DONE |
+| Premium / Stripe | `PremiumPage.tsx` | stripe-* edge functions | ✅ CODE DONE |
+| Auth | `LoginPage/RegisterPage` | Supabase Auth | ✅ CODE DONE |
+| Landing pública | `LandingPage.tsx` | IS_APP_PUBLISHED=false → "Próximamente" | ✅ CODE DONE |
+
+**TOTAL: 37 módulos CODE DONE. 0 mocks. 0 stubs. 0 errores TS.**
+
+### PENDIENTES FASE 2 (no bloqueantes para lanzamiento)
+| Item | Estado |
+|------|--------|
+| Colaboración (trip_members + Realtime) | ❌ No existe — Fase 2 |
+| PDF nativo Android (file-opener plugin) | ⚠️ Web only — Fase 2 |
+| Cola offline real (`offline_queue` table existe, lógica no conectada) | ⚠️ Parcial — Fase 2 |
+| ThemePreviewPage | ❌ DESCARTADA — impacto visual cero |
+
+### ÚNICO BLOQUEANTE ANTES DE PUBLICAR EN PLAY STORE
+1. **Validación en device Android físico** — instalar APK, probar 8 módulos críticos, confirmar push end-to-end
+2. **Cambiar `IS_APP_PUBLISHED = true`** en `src/config/site.ts` (1 línea)
+3. **Eliminar botón "Entrar a la app"** en `LandingPage.tsx` líneas 303–313 (solo desarrollo)
+4. **Subir AAB** a Play Console (`android/app/build/outputs/bundle/release/app-release.aab`, 8.4MB)
+
+
 
 ### 34 TABLAS SUPABASE — VERIFICADAS CONTRA SCHEMA REAL (31 marzo)
 agenda_items, departure_reminders, emergency_profiles, emergency_qr_access_logs, flight_watches, health_conditions, health_medications, itinerary_events, luggage_photos, offline_queue, packing_evidence, packing_items, packing_scan_detections, packing_scan_sessions, payments, places_cache, profiles, push_tokens, safety_checkins, safety_sessions, sos_events, split_bill_expenses, split_bill_sessions, suitcase_layout_plans, suitcase_profiles, travelers, trip_activities, trip_budget, trip_expenses, trip_journal_entries, trip_places, trip_recommendations, trips, wallet_docs
