@@ -1,32 +1,28 @@
 // src/services/pushNotificationService.ts
 //
-// Servicio de notificaciones push — Sprint 1 Bloque 5
+// Servicio de notificaciones push
 //
 // ============================================================
-// ESTADO DE CONFIRMACIÓN — LEER ANTES DE USAR
+// ESTADO — 30 marzo 2026
 // ============================================================
 //
-// [NO CONFIRMADO] @capacitor/push-notifications NO está en package.json.
-//   Las funciones registerPushToken() y setupPushListeners() usarán un
-//   import dinámico con try/catch. Si el plugin no está instalado,
-//   fallarán silenciosamente sin romper la app.
-//   Para activar en producción:
-//     npm install @capacitor/push-notifications
-//     npx cap sync android
-//     Agregar google-services.json al módulo app de Android (ya existe).
+// [CONFIRMADO] @capacitor/push-notifications v6.0.5 instalado en package.json.
+//   registerPushToken() y setupPushListeners() funcionan en device Android.
+//   google-services.json está en android/app/src/main/.
 //
-// [NO CONFIRMADO] FIREBASE_SERVICE_ACCOUNT_JSON en Supabase secrets.
-//   La edge function send-push requiere:
-//     supabase secrets set FIREBASE_SERVICE_ACCOUNT_JSON='...'
-//   Sin ese secret, el envío remoto falla. El servicio lo maneja
-//   con catch silencioso — la app no crashea.
+// [CONFIRMADO] FIREBASE_SERVICE_ACCOUNT_JSON en Supabase secrets.
+//   private_key_id: f99aff379268b51a9e055cbce671d29b3a5fa9fb
+//   edge function send-push redespllegada con nuevo service account.
 //
-// [CONFIRMADO] @capacitor/local-notifications v6 está instalado.
+// [CONFIRMADO] @capacitor/local-notifications v6 instalado.
 //   scheduleLocalNotification() funciona sin Firebase ni internet.
-//   Es el mecanismo confirmado para recordatorios locales (agenda).
+//   Mecanismo para recordatorios locales (agenda, departure reminder).
 //
-// ============================================================
-// PALETA: este archivo no tiene UI — sin colores relevantes.
+// PENDIENTE DEVICE VALIDATED:
+//   - Instalar APK en device Android real
+//   - Login → token debe aparecer en push_tokens tabla Supabase
+//   - Enviar push desde dashboard → device debe recibirla
+//
 // ============================================================
 
 import { supabase } from './supabaseClient';
