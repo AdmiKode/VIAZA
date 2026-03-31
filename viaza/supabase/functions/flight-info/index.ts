@@ -23,7 +23,7 @@ serve(async (req) => {
     const { flightNumber } = (await req.json()) as Body;
     if (!flightNumber) return jsonResponse({ ok: false, error: 'flightNumber is required' }, { status: 400 });
 
-    const key = requireEnv('AVIATIONSTACK_API_KEY');
+    const key = requireEnv('AVIATIONSTACK_KEY');
     const cacheKey = flightNumber.toUpperCase().replace(/\s+/g, '');
 
     const url = new URL('https://api.aviationstack.com/v1/flights');
