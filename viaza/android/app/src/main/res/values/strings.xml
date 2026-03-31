@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VIAZA</string>
+    <string name="title_activity_main">VIAZA</string>
+    <string name="package_name">com.ikviaza.app</string>
+    <string name="custom_url_scheme">com.ikviaza.app</string>
+    <!-- Supabase — usado por MyFirebaseMessagingService para registrar tokens rotados -->
+    <string name="supabase_url">https://jfholekdcszacihdyhju.supabase.co</string>
+    <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmaG9sZWtkY3N6YWNpaGR5aGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNzQwMzYsImV4cCI6MjA4ODY1MDAzNn0.KpiDh1N7-qXQpbyfqjApqAfARGe7e7CteSyGpAHHg1U</string>
+</resources>
