@@ -445,7 +445,59 @@ Checkpoint fin Día 2:
 
 ---
 
-## ACTUALIZACIÓN — 31 DE MARZO DE 2026
+## ACTUALIZACIÓN — 31 DE MARZO DE 2026 (SESIÓN 2 — MAÑANA)
+
+> Commits acumulados: d9931a8 → 2976804 → ff9b2a5 → 5e00289 → 9535307 → d7a3c6b (último)
+
+### BLOQUES CERRADOS ESTA SESIÓN ✅
+
+**AndroidManifest — 6 permisos críticos (CODE DONE — commit 5e00289)**
+- `ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION` — sin estos SafeWalk fallaba silenciosamente
+- `SCHEDULE_EXACT_ALARM` + `USE_EXACT_ALARM` — requeridos Android 12+ para DepartureReminder
+- `RECEIVE_BOOT_COMPLETED` — notificaciones sobreviven reinicio
+- `VIBRATE` + `WAKE_LOCK` — calidad de experiencia de notificación
+
+**FCM onNewToken persistence (CODE DONE — commit 9535307)**
+- `MyFirebaseMessagingService.kt`: `onNewToken` antes solo hacía `Log.d` — token rotado nunca se persistía
+- Fix: coroutine Kotlin + HTTP POST a `push_tokens` tabla Supabase
+- Lee JWT de `CapacitorStorage` SharedPreferences → autenticado correctamente
+- Usa `SimpleDateFormat` (no `java.time`) para compatibilidad minSdk 22
+- `kotlinx-coroutines-android:1.7.3` añadido a `android/app/build.gradle`
+- `supabase_url` + `supabase_anon_key` añadidos a `android/app/src/main/res/values/strings.xml`
+
+**TripDetailsPage premium redesign (CODE DONE — commit 9535307)**
+- Hero full-bleed 300px con gradiente profundo por travelType (8 temas)
+- Stats row glassmorphism: countdown días, % packing, viajeros
+- Countdown dinámico: future/ongoing/today/past
+- Badge "viaje activo" + botón "Activar este viaje"
+- Grid 4 columnas, 12 módulos, íconos SVG, paleta estricta `C`
+- Share (Web Share API) + Delete con `AnimatePresence` bottom sheet confirm
+- 17 claves `trip.*` nuevas en 5 idiomas
+- 0 emojis, 0 colores fuera de paleta
+
+**risk-zones desplegada a producción (DEPLOYED — hoy)**
+- `useTripBrain` invocaba `risk-zones` pero la función no existía en prod → Brain nunca generaba alertas de riesgo
+- `npx supabase functions deploy risk-zones` → ACTIVE v1
+- `TRAVEL_RISK_API_KEY` + `TRAVEL_RISK_BASE_URL` confirmados en secrets
+
+**exchange-rates desplegada a producción (DEPLOYED — hoy)**
+- Existía localmente, no en prod
+- `npx supabase functions deploy exchange-rates` → ACTIVE v1
+- `EXCHANGE_RATE_KEY` confirmado en secrets
+
+**flight-info desplegada + fix (DEPLOYED — commit d7a3c6b)**
+- Bug: código pedía `AVIATIONSTACK_API_KEY` pero secret se llama `AVIATIONSTACK_KEY`
+- Fix aplicado antes del deploy
+- `npx supabase functions deploy flight-info` → ACTIVE v1
+- `AVIATIONSTACK_KEY` confirmado en secrets
+
+### ESTADO EDGE FUNCTIONS — 31 MARZO (POST DEPLOY)
+**23 funciones ACTIVE** en producción:
+places-autocomplete, places-details, destination-resolve, weather-cache, stripe-create-checkout-session, stripe-customer-portal, stripe-webhook, airlines-autocomplete, places-nearby, routes-transit, ai-orchestrator, stripe-sync-premium, send-push, safety-tracking, sos-handler, flight-alerts, share-itinerary, **risk-zones** ✅, **exchange-rates** ✅, **flight-info** ✅ (+3 nuevas hoy = 23 total)
+
+---
+
+## ACTUALIZACIÓN — 31 DE MARZO DE 2026 (SESIÓN 1 — MADRUGADA)
 
 > Commits del día: d9931a8 → 2976804 → ff9b2a5 (último)
 
@@ -503,17 +555,21 @@ agenda_items, departure_reminders, emergency_profiles, emergency_qr_access_logs,
 
 > Tablas que NO existen (documentado para no repetir bugs): `trip_budgets` (plural), `trip_risk_zones`
 
-### PENDIENTES REALES — ORDEN DE PRIORIDAD (31 marzo)
+### PENDIENTES REALES — ORDEN DE PRIORIDAD (31 marzo — actualizado sesión 2)
 | # | Item | Tipo | Estado |
 |---|------|------|--------|
-| 1 | DepartureReminder → persistir en `departure_reminders` tabla | CODE | ✅ CERRADO esta sesión |
-| 2 | TripDetailsPage rediseño premium | CODE | PENDIENTE |
-| 3 | Validación manual Android: Safety/SplitBill/Wallet/Brain/Departure | DEVICE | PENDIENTE |
-| 4 | Push Notifications validar en device (token → push_tokens → push recibida) | DEVICE | PENDIENTE |
-| 5 | Build Android AAB firmado → Play Store (keystore lista en `android/keystore/`) | BUILD | PENDIENTE |
-| 6 | `TRAVEL_RISK_API_KEY` en Supabase secrets (para risk-zones con datos reales) | CONFIG | PENDIENTE |
-| 7 | PDF nativo Android: `@capacitor-community/file-opener` | CODE | Fase 2 |
-| 8 | Colaboración: trip_members + Realtime Supabase | CODE | Fase 2 |
+| 1 | DepartureReminder → persistir en `departure_reminders` tabla | CODE | ✅ CERRADO sesión 1 |
+| 2 | TripDetailsPage rediseño premium | CODE | ✅ CERRADO commit 9535307 |
+| 3 | AndroidManifest 6 permisos críticos | CODE | ✅ CERRADO commit 5e00289 |
+| 4 | FCM onNewToken persistencia token rotado | CODE | ✅ CERRADO commit 9535307 |
+| 5 | risk-zones deploy a producción | DEPLOY | ✅ CERRADO sesión 2 mañana |
+| 6 | exchange-rates deploy a producción | DEPLOY | ✅ CERRADO sesión 2 mañana |
+| 7 | flight-info deploy + fix secret name | DEPLOY+CODE | ✅ CERRADO commit d7a3c6b |
+| 8 | Auditar rutas del router vs módulos existentes | CODE | PENDIENTE HOY |
+| 9 | Build Android AAB firmado → Play Store (keystore lista en `android/keystore/`) | BUILD | PENDIENTE HOY |
+| 10 | Validación manual Android: Safety/SplitBill/Wallet/Brain/Departure/Push | DEVICE | PENDIENTE (necesita build) |
+| 11 | PDF nativo Android: `@capacitor-community/file-opener` | CODE | Fase 2 |
+| 12 | Colaboración: trip_members + Realtime Supabase | CODE | Fase 2 |
 
 ---
 
