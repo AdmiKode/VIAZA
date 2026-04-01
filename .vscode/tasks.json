@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build",
+			"path": "viaza",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "npm: build - viaza",
+			"detail": "tsc -p tsconfig.json && vite build"
+		},
+		{
+			"type": "npm",
+			"script": "dev",
+			"path": "viaza",
+			"problemMatcher": [],
+			"label": "npm: dev - viaza",
+			"detail": "vite",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}

@@ -110,29 +110,39 @@ export async function fetchWeatherCache(params: {
   timezone?: string;
 }): Promise<WeatherForecastDailyEntry[]> {
   const { tripId, lat, lon, startDate, endDate, timezone } = params;
-  let edgeError: Error | null = null;
 
+  // Si las coordenadas no son válidas, fallar rápido con mensaje claro
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat === 0 || lon === 0) {
+    throw new Error('No hay coordenadas para este destino. Crea el viaje de nuevo seleccionando el destino del buscador.');
+  }
+
+  // Si el viaje ya terminó, ajustar al rango actual (Open-Meteo solo tiene 16 días futuros)
+  const today = new Date().toISOString().slice(0, 10);
+  const effectiveStart = startDate < today ? today : startDate;
+  const effectiveEnd = endDate < today ? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) : endDate;
+
+  // 1. Intentar con edge function (usuarios premium y no-premium — si falla por 403/premium, ir a fallback)
   try {
     const { data, error } = await supabase.functions.invoke('weather-cache', {
       body: {
         trip_id: tripId,
         lat,
         lon,
-        start_date: startDate,
-        end_date: endDate,
+        start_date: effectiveStart,
+        end_date: effectiveEnd,
         timezone,
       },
     });
-    if (error) throw error;
-    const forecast = (data as { forecast_daily?: WeatherForecastDailyEntry[] } | null)?.forecast_daily ?? [];
-    if (forecast.length > 0) return forecast;
-  } catch (e) {
-    edgeError = e as Error;
-  }
+    if (!error) {
+      const forecast = (data as { forecast_daily?: WeatherForecastDailyEntry[] } | null)?.forecast_daily ?? [];
+      if (forecast.length > 0) return forecast;
+    }
+    // Si error (incluye 403 premium) → caer al fallback directo sin lanzar
+  } catch { /* ignorar, fallback directo */ }
 
-  const fallback = await fetchWeatherDirect({ lat, lon, startDate, endDate, timezone });
+  // 2. Fallback directo a Open-Meteo (gratuito, sin key, sin auth)
+  const fallback = await fetchWeatherDirect({ lat, lon, startDate: effectiveStart, endDate: effectiveEnd, timezone });
   if (fallback.length > 0) return fallback;
 
-  if (edgeError) throw edgeError;
-  throw new Error('Weather forecast unavailable');
+  throw new Error('No se pudo obtener el pronóstico. Verifica que el destino del viaje tenga coordenadas válidas.');
 }

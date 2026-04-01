@@ -3,12 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-SRC_BG="${ROOT_DIR}/public/brand/icooviaza.png"
-SRC_FG="${ROOT_DIR}/public/brand/icooviaza.png"
+SRC_BG="${ROOT_DIR}/public/brand/icooviaza_padded.png"
+SRC_FG="${ROOT_DIR}/public/brand/icooviaza_padded.png"
 OUT_BASE="${ROOT_DIR}/public/brand/icons"
 
 if [[ ! -f "${SRC_BG}" ]]; then
   echo "Missing source icon: ${SRC_BG}" >&2
+  echo "Genera primero el ícono padded con: python3 scripts/pad-icon.py" >&2
   exit 1
 fi
 
