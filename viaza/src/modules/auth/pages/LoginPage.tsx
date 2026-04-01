@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -37,6 +37,13 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+
+  // Siempre resetear socialLoading al montar — si el usuario volvió del OAuth
+  // el componente se remonta y los botones deben estar desbloqueados
+  useEffect(() => {
+    setSocialLoading(null);
+    setError(null);
+  }, []);
 
   async function handleSocialLogin(provider: 'google' | 'apple') {
     setSocialLoading(provider);

@@ -59,6 +59,7 @@ import { WalletLostModePage } from '../../modules/wallet/pages/WalletLostModePag
 import { LandingPage } from '../../modules/landing/pages/LandingPage';
 import { PrivacyPage } from '../../modules/landing/pages/PrivacyPage';
 import { TermsPage } from '../../modules/landing/pages/TermsPage';
+import { AuthCallbackPage } from '../../modules/auth/pages/AuthCallbackPage';
 import EmergencyCardPage from '../../modules/emergency/pages/EmergencyCardPage';
 import EmergencyPublicPage from '../../modules/emergency/pages/EmergencyPublicPage';
 import { SosFlowPage } from '../../modules/emergency/pages/SosFlowPage';
@@ -96,6 +97,9 @@ export function AppRouter() {
         {/* ── Intro pre-auth (sin guards) ─────────────────────────── */}
         <Route path="/splash" element={<SplashPage />} />
         <Route path="/intro" element={<IntroPage />} />
+
+        {/* ── OAuth callback — Supabase redirige aquí tras Google/Apple ── */}
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
         {/* ── Landing pública ─────────────────────────────────────── */}
         <Route path="/landing" element={<LandingPage />} />

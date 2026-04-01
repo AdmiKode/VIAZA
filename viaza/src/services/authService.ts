@@ -11,12 +11,10 @@ import { Capacitor } from '@capacitor/core';
 const APP_URL = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
   ?? window.location.origin;
 
-// En Capacitor nativo el redirect debe apuntar al callback de Supabase
-// que luego redirige de vuelta a la app via deep link.
-// En web se usa la URL normal de la app.
-const OAUTH_REDIRECT = Capacitor.isNativePlatform()
-  ? 'https://jfholekdcszacihdyhju.supabase.co/auth/v1/callback'
-  : APP_URL;
+// En Capacitor nativo el redirect debe apuntar a la URL de callback de la app
+// que Supabase tiene en su lista de Redirect URLs permitidas.
+// Supabase redirige a esta URL con el token en el hash → AuthCallbackPage lo procesa.
+const OAUTH_REDIRECT = `${APP_URL}/auth/callback`;
 
 export interface AuthUser {
   id: string;
