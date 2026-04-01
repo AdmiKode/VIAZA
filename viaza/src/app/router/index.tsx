@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, BrowserRouter } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../store/useAppStore';
 import { AppFrame } from './layout/AppFrame';
 import { OnboardingFrame } from './layout/OnboardingFrame';
@@ -81,18 +82,15 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         {/*
-         * Flujo completo:
-         * / → landing pública → usuario pulsa "Entrar" → /splash → /intro → /auth/login → /onboarding → /home
-         *
-         * La landing es siempre la primera pantalla.
-         * El botón "Entrar a la app" en la landing lleva a /splash.
-         * Cuando terminemos el desarrollo, ese botón se elimina
-         * y los botones de tienda quedan como único CTA.
+         * Flujo nativo (Capacitor): / → /splash → /intro → /auth/login → /onboarding → /home
+         * Flujo web:                / → LandingPage → /splash → /intro → /auth/login → /onboarding → /home
          */}
         <Route path="/" element={
           isAuthenticated
             ? <Navigate to={onboardingCompleted ? '/home' : '/onboarding'} replace />
-            : <LandingPage />
+            : Capacitor.isNativePlatform()
+              ? <Navigate to="/splash" replace />
+              : <LandingPage />
         } />
 
         {/* ── Intro pre-auth (sin guards) ─────────────────────────── */}

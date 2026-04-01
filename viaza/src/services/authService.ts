@@ -5,10 +5,18 @@
  */
 
 import { supabase } from './supabaseClient';
+import { Capacitor } from '@capacitor/core';
 
 /** URL base de la app — usa VITE_APP_URL en producción, origin en dev */
 const APP_URL = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
   ?? window.location.origin;
+
+// En Capacitor nativo el redirect debe apuntar al callback de Supabase
+// que luego redirige de vuelta a la app via deep link.
+// En web se usa la URL normal de la app.
+const OAUTH_REDIRECT = Capacitor.isNativePlatform()
+  ? 'https://jfholekdcszacihdyhju.supabase.co/auth/v1/callback'
+  : APP_URL;
 
 export interface AuthUser {
   id: string;
@@ -90,7 +98,7 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: APP_URL,
+      redirectTo: OAUTH_REDIRECT,
       queryParams: { prompt: 'select_account' },
     },
   });
@@ -102,7 +110,7 @@ export async function signInWithApple(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: APP_URL,
+      redirectTo: OAUTH_REDIRECT,
     },
   });
   if (error) throw new Error(error.message);
