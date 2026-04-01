@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 export function SplashPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Ocultar el splash nativo de Capacitor cuando la página web ya cargó
+    SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {});
     const handle = window.setTimeout(() => navigate('/intro', { replace: true }), 2400);
     return () => window.clearTimeout(handle);
   }, [navigate]);

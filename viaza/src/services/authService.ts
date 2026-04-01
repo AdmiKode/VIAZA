@@ -11,10 +11,12 @@ import { Capacitor } from '@capacitor/core';
 const APP_URL = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
   ?? window.location.origin;
 
-// En Capacitor nativo el redirect debe apuntar a la URL de callback de la app
-// que Supabase tiene en su lista de Redirect URLs permitidas.
-// Supabase redirige a esta URL con el token en el hash → AuthCallbackPage lo procesa.
-const OAUTH_REDIRECT = `${APP_URL}/auth/callback`;
+// En Capacitor nativo usamos el custom scheme viaza:// que Android intercepta
+// directamente sin necesitar verificación de dominio (assetlinks.json).
+// En web usamos la URL normal de la app.
+const OAUTH_REDIRECT = Capacitor.isNativePlatform()
+  ? 'viaza://auth/callback'
+  : `${APP_URL}/auth/callback`;
 
 export interface AuthUser {
   id: string;
