@@ -68,6 +68,7 @@ import { TravelMemoryPage } from '../../modules/journal/pages/TravelMemoryPage';
 import { SafeWalkPage } from '../../modules/safety/pages/SafeWalkPage';
 import { LiveTrackingPage } from '../../modules/safety/pages/LiveTrackingPage';
 import { SafetyHubPage } from '../../modules/safety/pages/SafetyHubPage';
+import { RiskZonePage } from '../../modules/safety/pages/RiskZonePage';
 import { SharedItineraryPage } from '../../modules/itinerary/pages/SharedItineraryPage';
 import BudgetPage from '../../modules/finances/pages/BudgetPage';
 import { HealthPage } from '../../modules/health/pages/HealthPage';
@@ -214,6 +215,7 @@ export function AppRouter() {
           {/* ── Safety ───────────────────────────────────────────── */}
           <Route path="/safety" element={<SafetyHubPage />} />
           <Route path="/safety/safewalk" element={<SafeWalkPage />} />
+          <Route path="/risk-zones" element={<RiskZonePage />} />
 
           {/* ── Finances / Budget ────────────────────────────────── */}
           <Route path="/budget" element={<BudgetPage />} />

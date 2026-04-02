@@ -267,6 +267,53 @@ export function SafetyHubPage() {
           </button>
         </motion.div>
 
+        {/* ─── ZONAS DE RIESGO ───────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, delay: 0.09 }}
+        >
+          <button
+            type="button"
+            onClick={() => navigate('/risk-zones')}
+            className="w-full rounded-3xl transition active:scale-[0.97]"
+            style={{
+              background: 'white',
+              padding: '18px 20px',
+              boxShadow: '0 4px 20px rgba(18,33,46,0.08)',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <div
+                className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                style={{ width: 48, height: 48, background: 'rgba(234,153,64,0.12)' }}
+              >
+                <span style={{ color: P.accent }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold" style={{ color: P.primary }}>
+                  Zonas de riesgo
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: `rgba(${P.rgb},0.55)` }}>
+                  Barrios, colonias y alertas reales de tu destino
+                </div>
+              </div>
+              <span style={{ color: `rgba(${P.rgb},0.25)` }}>
+                <IconChevron />
+              </span>
+            </div>
+          </button>
+        </motion.div>
+
         {/* ─── TARJETA DE EMERGENCIA ──────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
