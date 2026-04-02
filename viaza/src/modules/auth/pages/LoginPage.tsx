@@ -65,6 +65,8 @@ export function LoginPage() {
     try {
       const user = await signIn({ email, password });
       setSupabaseUser(user);
+      // Pequeño delay para que el store se actualice antes de navegar
+      await new Promise((r) => setTimeout(r, 100));
       navigate(onboardingCompleted ? '/home' : '/onboarding', { replace: true });
     } catch {
       setError(t('auth.login.error'));
