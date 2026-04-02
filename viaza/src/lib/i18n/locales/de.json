@@ -1093,5 +1093,7 @@
   "places.detail.noNotes": "Keine Notizen",
   "places.detail.delete": "Ort entfernen",
   "places.detail.deleteConfirm": "Diesen Ort aus der Reise entfernen?",
-  "places.detail.deleteConfirmBtn": "Ja, entfernen"
+  "places.detail.deleteConfirmBtn": "Ja, entfernen",
+  "safety.title": "Sicherheit",
+  "budget.title": "Budget"
 }

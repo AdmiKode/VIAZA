@@ -1093,5 +1093,7 @@
   "places.detail.noNotes": "Sem notas",
   "places.detail.delete": "Remover local",
   "places.detail.deleteConfirm": "Remover este local da viagem?",
-  "places.detail.deleteConfirmBtn": "Sim, remover"
+  "places.detail.deleteConfirmBtn": "Sim, remover",
+  "safety.title": "Segurança",
+  "budget.title": "Orçamento"
 }

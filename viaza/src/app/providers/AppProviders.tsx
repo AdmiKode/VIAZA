@@ -8,6 +8,10 @@ import { getSession, onAuthStateChange } from '../../services/authService';
 import { checkPremiumStatus, consumePremiumCheckoutStarted, syncPremiumFromStripe } from '../../services/premiumService';
 import { initGlobalErrorObservers, reportError } from '../../services/observabilityService';
 import { registerPushToken, setupPushListeners, requestNotificationPermission } from '../../services/pushNotificationService';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
+import { Browser } from '@capacitor/browser';
+import { supabase } from '../../services/supabaseClient';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const currentLanguage = useAppStore((s) => s.currentLanguage);
@@ -61,11 +65,48 @@ export function AppProviders({ children }: PropsWithChildren) {
             // push no disponible en web o permiso denegado — fallo silencioso
           }
         })();
+        // Pedir permiso de geolocalización (crítico para tracking, SOS, risk-zones)
+        if (Capacitor.isNativePlatform()) {
+          void Geolocation.requestPermissions().catch(() => {});
+        }
       } else {
         setIsPremium(false);
       }
     });
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Capacitor Browser: OAuth nativo ────────────────────────────────────
+  // Cuando el usuario completa Google OAuth en el In-App Browser, el browser
+  // se cierra y disparamos un refreshSession. Supabase ya guardó la sesión
+  // en el storage del In-App Browser; refreshSession la recupera y dispara
+  // onAuthStateChange con SIGNED_IN, que maneja el bloque de arriba.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener: Awaited<ReturnType<typeof Browser.addListener>> | null = null;
+
+    void Browser.addListener('browserFinished', async () => {
+      try {
+        // Intentar obtener la sesión directamente (ya debería estar guardada)
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) return; // onAuthStateChange ya lo manejó
+
+        // Si no hay sesión todavía, hacer refresh
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (!refreshData.session?.user) {
+          // Último intento: esperar 1s y volver a intentar
+          await new Promise((r) => setTimeout(r, 1000));
+          await supabase.auth.refreshSession();
+        }
+      } catch {
+        // ignorar — si falla el usuario puede re-intentar el login
+      }
+    }).then((h) => { listener = h; });
+
+    return () => {
+      listener?.remove();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

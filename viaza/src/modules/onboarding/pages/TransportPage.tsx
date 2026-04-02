@@ -512,14 +512,18 @@ function OriginCityInput({
     setResults([]);
     setError(false);
     setErrorText('');
+    // Guardamos el nombre de ciudad inmediatamente — es correcto aunque fallen las coords
     setDraft({ originCity: result.structured_formatting.main_text });
 
     try {
       setLoading(true);
       const place = await resolvePlaceCoordsByPlaceId(result.place_id, lang);
       if (!place) throw new Error('Missing origin geometry');
+      // Éxito: tenemos nombre + coords exactas
       setDraft({ originLat: place.lat, originLon: place.lon });
-    } catch (e: unknown) {
+      setError(false);
+    } catch {
+      // Intento 2: geocoding por nombre de texto
       try {
         const fallback = await resolveOriginFromQuery(result.structured_formatting.main_text || result.description, lang);
         if (fallback) {
@@ -529,12 +533,13 @@ function OriginCityInput({
           return;
         }
       } catch {
-        // no-op: keep original error state below
+        // ignorar
       }
-
-      setError(true);
-      setErrorText((e as Error)?.message ?? '');
+      // La ciudad SÍ quedó guardada por nombre — solo faltan coords exactas.
+      // No mostramos error rojo: el usuario eligió correctamente.
+      // Guardamos null en coords pero NO ponemos error: se usará geocoding en el viaje.
       setDraft({ originLat: null, originLon: null });
+      setError(false); // nombre OK, coords se resolverán al crear el viaje
     } finally {
       setLoading(false);
     }
@@ -670,7 +675,7 @@ function OriginCityInput({
 
       {error && (
         <div style={{ marginTop: 6, color: '#EA9940', fontSize: 12, fontWeight: 600 }}>
-          {t('onboarding.destination.searchError')}
+          Sin conexión al buscador — escribe el nombre de la ciudad y continúa.
           {showDebug && errorText ? (
             <div style={{ marginTop: 4, color: 'rgba(18,33,46,0.55)', fontSize: 10, fontWeight: 600 }}>
               {errorText}

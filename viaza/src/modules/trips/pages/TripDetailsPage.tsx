@@ -41,7 +41,7 @@ const MODULES = [
     icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="40" height="32" rx="8" fill={C.amber} fillOpacity="0.9"/><path d="M24 8v32M10 20h28M10 28h28" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg> },
   { to: '/departure',          color: C.teal,    labelKey: 'departure.title',
     icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="18" fill={C.teal}/><path d="M24 14v10l6 6" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none"/></svg> },
-  { to: '/safety',             color: C.dark,    labelKey: 'nav.safety',
+  { to: '/safety',             color: C.dark,    labelKey: 'safety.title',
     icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M24 4L8 12v14c0 10 7.6 19.3 16 22 8.4-2.7 16-12 16-22V12L24 4z" fill={C.dark}/><path d="M17 24l5 5 9-9" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg> },
   { to: '/wallet',             color: C.tealMid, labelKey: 'wallet.title',
     icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect x="4" y="10" width="40" height="28" rx="7" fill={C.tealMid} fillOpacity="0.9"/><rect x="28" y="20" width="12" height="8" rx="4" fill="white" fillOpacity="0.6"/><path d="M4 20h40" stroke="white" strokeWidth="2" strokeOpacity="0.3"/></svg> },
@@ -189,7 +189,7 @@ export function TripDetailsPage() {
             {trip.transportType && (
               <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.12)', color: C.white, fontSize: 12, fontWeight: 600 }}>
                 <TransportIcon type={trip.transportType} size={14} />
-                {t(`transport.${trip.transportType}.label`, trip.transportType)}
+                {t(`transport.${trip.transportType}`, trip.transportType)}
               </span>
             )}
           </div>
@@ -326,7 +326,7 @@ export function TripDetailsPage() {
                 <TransportIcon type={trip.transportType} />
               </div>
               <div>
-                <div style={{ color: C.dark, fontSize: 15, fontWeight: 700 }}>{t(`transport.${trip.transportType}.label`, trip.transportType)}</div>
+                <div style={{ color: C.dark, fontSize: 15, fontWeight: 700 }}>{t(`transport.${trip.transportType}`, trip.transportType)}</div>
                 {trip.originCity && <div style={{ color: 'rgba(18,33,46,0.50)', fontSize: 13, marginTop: 2 }}>{trip.originCity} → {trip.destination}</div>}
                 {trip.flightNumber && (
                   <div style={{ color: C.teal, fontSize: 12, fontWeight: 700, marginTop: 2 }}>

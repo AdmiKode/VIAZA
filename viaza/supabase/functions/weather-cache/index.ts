@@ -1,15 +1,15 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
 import { createSupabaseClientForRequest } from '../_shared/supabase.ts';
-import { requireAuth, requirePremium } from '../_shared/premium.ts';
 
 type Body = {
-  trip_id: string;
-  lat: number;
-  lon: number;
-  start_date: string; // YYYY-MM-DD
-  end_date: string;   // YYYY-MM-DD
-  timezone?: string;  // IANA
+  trip_id?: string;
+  lat?: number;
+  lon?: number;
+  destination?: string;   // fallback geocodificación server-side si no hay lat/lon
+  start_date: string;     // YYYY-MM-DD
+  end_date: string;       // YYYY-MM-DD
+  timezone?: string;      // IANA
 };
 
 type Segment = { temp_avg: number | null; rain_prob_max: number | null };
@@ -44,20 +44,46 @@ function clampDateRange(params: { start: string; end: string }) {
   return { start: isoDate(clampedStart), end: isoDate(clampedEnd) };
 }
 
+// Geocodificación server-side — evita ERR_NAME_NOT_RESOLVED en dispositivos con DNS restrictivo
+async function geocode(name: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const res = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { results?: { latitude: number; longitude: number }[] };
+    const r = data.results?.[0];
+    if (!r) return null;
+    return { lat: r.latitude, lon: r.longitude };
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
 
   try {
-    const authed = await requireAuth(req);
-    if (authed instanceof Response) return authed;
-    const premium = await requirePremium(req);
-    const canPersist = !(premium instanceof Response);
-
     const body = (await req.json()) as Body;
-    const { trip_id, lat, lon, start_date, end_date, timezone } = body;
-    if (!trip_id || !Number.isFinite(lat) || !Number.isFinite(lon) || !start_date || !end_date) {
-      return jsonResponse({ ok: false, error: 'trip_id, lat, lon, start_date, end_date are required' }, { status: 400 });
+    let { lat, lon } = body;
+    const { trip_id, destination, start_date, end_date, timezone } = body;
+
+    if (!start_date || !end_date) {
+      return jsonResponse({ ok: false, error: 'start_date y end_date son requeridos' }, { status: 400 });
+    }
+
+    // Si no hay coords válidas → geocodificar desde el servidor (sin depender del DNS del cliente)
+    if (!lat || !lon || !Number.isFinite(lat) || !Number.isFinite(lon) || lat === 0 || lon === 0) {
+      if (!destination) {
+        return jsonResponse({ ok: false, error: 'Se requiere lat/lon o destination' }, { status: 400 });
+      }
+      const geo = await geocode(destination);
+      if (!geo) {
+        return jsonResponse({ ok: false, error: `No se encontraron coordenadas para: ${destination}` }, { status: 404 });
+      }
+      lat = geo.lat;
+      lon = geo.lon;
     }
 
     // Open‑Meteo forecast only supports ~16 days ahead; if the trip is beyond that window
@@ -129,16 +155,15 @@ serve(async (req) => {
         return { date, morning, afternoon, night };
       });
 
-    // Persistir en trips.weather_forecast_daily (best-effort). Si falla por RLS u otros,
-    // aún devolvemos el pronóstico para no romper la UI.
-    if (canPersist) {
-      const supabase = createSupabaseClientForRequest(req);
-      const { error: upErr } = await supabase
-        .from('trips')
-        .update({ weather_forecast_daily: forecast_daily, updated_at: new Date().toISOString() })
-        .eq('id', trip_id);
-
-      if (upErr) console.warn('[weather-cache] persist failed:', upErr.message);
+    // Persistir en trips.weather_forecast_daily (best-effort, solo si hay trip_id)
+    if (trip_id) {
+      try {
+        const supabase = createSupabaseClientForRequest(req);
+        await supabase
+          .from('trips')
+          .update({ weather_forecast_daily: forecast_daily, updated_at: new Date().toISOString() })
+          .eq('id', trip_id);
+      } catch { /* ignorar — el pronóstico se devuelve igual */ }
     }
 
     return jsonResponse({ ok: true, forecast_daily });

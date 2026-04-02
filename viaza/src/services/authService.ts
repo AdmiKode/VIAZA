@@ -6,17 +6,14 @@
 
 import { supabase } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 /** URL base de la app — usa VITE_APP_URL en producción, origin en dev */
 const APP_URL = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
   ?? window.location.origin;
 
-// En Capacitor nativo usamos el custom scheme viaza:// que Android intercepta
-// directamente sin necesitar verificación de dominio (assetlinks.json).
 // En web usamos la URL normal de la app.
-const OAUTH_REDIRECT = Capacitor.isNativePlatform()
-  ? 'viaza://auth/callback'
-  : `${APP_URL}/auth/callback`;
+const OAUTH_REDIRECT_WEB = `${APP_URL}/auth/callback`;
 
 export interface AuthUser {
   id: string;
@@ -95,10 +92,39 @@ export async function getSession(): Promise<AuthUser | null> {
 
 /** Iniciar sesión con Google (OAuth redirect) */
 export async function signInWithGoogle(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    // En nativo: obtenemos la URL de OAuth de Supabase y la abrimos
+    // con @capacitor/browser (In-App Browser controlado).
+    // Al cerrarse, AppProviders detecta el cambio de sesión vía onAuthStateChange.
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // redirectTo apunta al sitio web — Supabase hará redirect ahí,
+        // el Browser lo detectará como URL externa y cerrará la ventana,
+        // disparando 'browserFinished' en Capacitor.
+        redirectTo: `${APP_URL}/auth/callback`,
+        queryParams: { prompt: 'select_account' },
+        skipBrowserRedirect: true,  // nos da la URL sin redirigir el WebView
+      },
+    });
+    if (error) throw new Error(error.message);
+    if (!data.url) throw new Error('No se obtuvo URL de OAuth');
+
+    await Browser.open({
+      url: data.url,
+      windowName: '_self',
+      presentationStyle: 'popover',
+      toolbarColor: '#12212E',
+    });
+    // El resto lo maneja AppProviders via onAuthStateChange + browserFinished
+    return;
+  }
+
+  // En web: flujo normal
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: OAUTH_REDIRECT,
+      redirectTo: OAUTH_REDIRECT_WEB,
       queryParams: { prompt: 'select_account' },
     },
   });
@@ -110,7 +136,7 @@ export async function signInWithApple(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: OAUTH_REDIRECT,
+      redirectTo: OAUTH_REDIRECT_WEB,
     },
   });
   if (error) throw new Error(error.message);

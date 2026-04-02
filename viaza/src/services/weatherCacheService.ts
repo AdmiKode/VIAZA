@@ -103,46 +103,56 @@ async function fetchWeatherDirect(params: {
 
 export async function fetchWeatherCache(params: {
   tripId: string;
-  lat: number;
-  lon: number;
+  lat: number | null | undefined;
+  lon: number | null | undefined;
+  destination?: string;
   startDate: string;
   endDate: string;
   timezone?: string;
 }): Promise<WeatherForecastDailyEntry[]> {
-  const { tripId, lat, lon, startDate, endDate, timezone } = params;
+  const { tripId, lat, lon, destination, startDate, endDate, timezone } = params;
 
-  // Si las coordenadas no son válidas, fallar rápido con mensaje claro
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat === 0 || lon === 0) {
-    throw new Error('No hay coordenadas para este destino. Crea el viaje de nuevo seleccionando el destino del buscador.');
+  const hasCoords = lat != null && lon != null && Number.isFinite(lat) && Number.isFinite(lon) && lat !== 0 && lon !== 0;
+
+  if (!hasCoords && !destination) {
+    throw new Error('No hay coordenadas ni nombre de destino para este viaje.');
   }
 
-  // Si el viaje ya terminó, ajustar al rango actual (Open-Meteo solo tiene 16 días futuros)
   const today = new Date().toISOString().slice(0, 10);
   const effectiveStart = startDate < today ? today : startDate;
-  const effectiveEnd = endDate < today ? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) : endDate;
+  const effectiveEnd = endDate < today
+    ? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+    : endDate;
 
-  // 1. Intentar con edge function (usuarios premium y no-premium — si falla por 403/premium, ir a fallback)
-  try {
-    const { data, error } = await supabase.functions.invoke('weather-cache', {
-      body: {
-        trip_id: tripId,
-        lat,
-        lon,
-        start_date: effectiveStart,
-        end_date: effectiveEnd,
-        timezone,
-      },
+  // Siempre usar la edge function — hace geocodificación server-side y llama a open-meteo
+  // desde Supabase (evita ERR_NAME_NOT_RESOLVED en dispositivos con DNS restrictivo)
+  const body: Record<string, unknown> = {
+    start_date: effectiveStart,
+    end_date: effectiveEnd,
+    timezone,
+  };
+  if (tripId) body.trip_id = tripId;
+  if (hasCoords) { body.lat = lat; body.lon = lon; }
+  if (destination) body.destination = destination;
+
+  const { data, error } = await supabase.functions.invoke('weather-cache', { body });
+
+  if (!error) {
+    const forecast = (data as { forecast_daily?: WeatherForecastDailyEntry[] } | null)?.forecast_daily ?? [];
+    if (forecast.length > 0) return forecast;
+  }
+
+  // Fallback directo solo si la edge function falla completamente
+  if (hasCoords) {
+    const fallback = await fetchWeatherDirect({
+      lat: lat as number,
+      lon: lon as number,
+      startDate: effectiveStart,
+      endDate: effectiveEnd,
+      timezone,
     });
-    if (!error) {
-      const forecast = (data as { forecast_daily?: WeatherForecastDailyEntry[] } | null)?.forecast_daily ?? [];
-      if (forecast.length > 0) return forecast;
-    }
-    // Si error (incluye 403 premium) → caer al fallback directo sin lanzar
-  } catch { /* ignorar, fallback directo */ }
+    if (fallback.length > 0) return fallback;
+  }
 
-  // 2. Fallback directo a Open-Meteo (gratuito, sin key, sin auth)
-  const fallback = await fetchWeatherDirect({ lat, lon, startDate: effectiveStart, endDate: effectiveEnd, timezone });
-  if (fallback.length > 0) return fallback;
-
-  throw new Error('No se pudo obtener el pronóstico. Verifica que el destino del viaje tenga coordenadas válidas.');
+  throw new Error('No se pudo obtener el pronóstico. Verifica tu conexión a internet.');
 }

@@ -335,53 +335,64 @@ export function WeatherPage() {
 
   useEffect(() => {
     if (!trip) { setLoading(false); return; }
-
-    // Coordenadas del DESTINO (lat/lon), no del origen
-    const destLat = trip.lat;
-    const destLon = trip.lon;
+    const currentTrip = trip;
 
     async function load() {
-      let lat = destLat;
-      let lon = destLon;
+      setLoading(true);
+      setError(null);
 
-      // Si el viaje no tiene coordenadas guardadas, geocodificamos el nombre del destino
-      if (!lat || !lon) {
+      let lat: number | null | undefined = currentTrip.lat;
+      let lon: number | null | undefined = currentTrip.lon;
+
+      // Si el viaje no tiene coordenadas válidas, geocodificar con Open-Meteo
+      if (!lat || !lon || lat === 0 || lon === 0) {
         try {
           const geo = await fetch(
-            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip!.destination)}&count=1&language=es&format=json`
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(currentTrip.destination)}&count=1&language=en&format=json`
           );
-          const geoJson = await geo.json() as { results?: { latitude: number; longitude: number }[] };
-          const r = geoJson.results?.[0];
-          if (r) { lat = r.latitude; lon = r.longitude; }
-        } catch { /* ignorar — intentará con coords en 0 */ }
+          if (geo.ok) {
+            const geoJson = await geo.json() as { results?: { latitude: number; longitude: number }[] };
+            const r = geoJson.results?.[0];
+            if (r) { lat = r.latitude; lon = r.longitude; }
+          }
+        } catch { /* continuar con fallback */ }
       }
 
-      if (!lat || !lon) {
-        setError('No hay coordenadas para este destino.');
+      if (!lat || !lon || lat === 0 || lon === 0) {
+        setError('No se encontraron coordenadas para este destino. Verifica el nombre del destino.');
         setLoading(false);
         return;
       }
 
-      fetchWeatherCache({
-        tripId: trip!.id,
-        lat,
-        lon,
-        startDate: trip!.startDate ?? new Date().toISOString().slice(0, 10),
-        endDate: trip!.endDate ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-        timezone: 'auto',
-      })
-        .then(entries => {
-          setDays(processEntries(entries));
-          setLoading(false);
-        })
-        .catch(err => {
-          setError(err instanceof Error ? err.message : 'Error al cargar el clima');
-          setLoading(false);
+      const today = new Date().toISOString().slice(0, 10);
+      const rawStart = currentTrip.startDate ?? today;
+      const rawEnd   = currentTrip.endDate   ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      // Si el viaje ya pasó, mostrar los próximos 7 días en el destino igual
+      const effectiveStart = rawStart < today ? today : rawStart;
+      const effectiveEnd   = rawEnd   < today
+        ? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+        : rawEnd;
+
+      try {
+        const entries = await fetchWeatherCache({
+          tripId: currentTrip.id,
+          lat,
+          lon,
+          destination: currentTrip.destination,  // fallback si lat/lon no resuelven
+          startDate: effectiveStart,
+          endDate: effectiveEnd,
+          timezone: 'auto',
         });
+        setDays(processEntries(entries));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al cargar el clima');
+      } finally {
+        setLoading(false);
+      }
     }
 
     void load();
-  }, [trip]);
+  }, [trip?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const planBAlerts = useMemo(() => generatePlanBAlerts(days), [days]);
 

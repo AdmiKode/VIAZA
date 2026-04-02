@@ -1093,5 +1093,7 @@
   "places.detail.noNotes": "Aucune note",
   "places.detail.delete": "Supprimer le lieu",
   "places.detail.deleteConfirm": "Supprimer ce lieu du voyage ?",
-  "places.detail.deleteConfirmBtn": "Oui, supprimer"
+  "places.detail.deleteConfirmBtn": "Oui, supprimer",
+  "safety.title": "Sécurité",
+  "budget.title": "Budget"
 }
