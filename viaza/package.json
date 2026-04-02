@@ -19,6 +19,7 @@
     "cap:add:android": "cap add android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.0",
     "@capacitor/camera": "^8.0.2",
     "@capacitor/core": "^6.0.0",
     "@capacitor/device": "^6.0.0",

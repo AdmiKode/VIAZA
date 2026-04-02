@@ -1,22 +1,58 @@
 /**
  * AuthCallbackPage.tsx
- * Maneja el redirect de OAuth (Google/Apple) después de que Supabase
- * redirige a https://appviaza.com/auth/callback
- * Supabase incluye el token en el hash de la URL (#access_token=...&type=recovery|signup)
+ * Procesa el callback OAuth de Supabase en Capacitor nativo.
+ * El deep link viaza://auth/callback#access_token=... llega via App plugin.
  */
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../../../services/supabaseClient';
 import { useAppStore } from '../../../app/store/useAppStore';
+
+function extractTokensFromUrl(url: string): { access_token?: string; refresh_token?: string } {
+  try {
+    // El token puede venir en el hash o en query params
+    const hashPart = url.includes('#') ? url.split('#')[1] : url.split('?')[1] ?? '';
+    const params = new URLSearchParams(hashPart);
+    return {
+      access_token: params.get('access_token') ?? undefined,
+      refresh_token: params.get('refresh_token') ?? undefined,
+    };
+  } catch {
+    return {};
+  }
+}
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
   const setSupabaseUser = useAppStore((s) => s.setSupabaseUser);
   const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
 
-  useEffect(() => {
-    // Supabase lee el hash automáticamente y establece la sesión
-    supabase.auth.getSession().then(({ data }) => {
+  async function processSession(url?: string) {
+    try {
+      // Intentar extraer tokens del URL del deep link
+      if (url) {
+        const { access_token, refresh_token } = extractTokensFromUrl(url);
+        if (access_token) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token: refresh_token ?? access_token,
+          });
+          if (!error && data.session?.user) {
+            setSupabaseUser({
+              id: data.session.user.id,
+              email: data.session.user.email ?? '',
+              name: data.session.user.user_metadata?.full_name ?? '',
+            });
+            navigate(onboardingCompleted ? '/home' : '/onboarding', { replace: true });
+            return;
+          }
+        }
+      }
+
+      // Fallback: verificar si ya hay sesión activa
+      const { data } = await supabase.auth.getSession();
       if (data.session?.user) {
         setSupabaseUser({
           id: data.session.user.id,
@@ -24,29 +60,49 @@ export function AuthCallbackPage() {
           name: data.session.user.user_metadata?.full_name ?? '',
         });
         navigate(onboardingCompleted ? '/home' : '/onboarding', { replace: true });
-      } else {
-        // Si no hay sesión, esperar el evento onAuthStateChange
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (session?.user) {
-            setSupabaseUser({
-              id: session.user.id,
-              email: session.user.email ?? '',
-              name: session.user.user_metadata?.full_name ?? '',
-            });
-            listener.subscription.unsubscribe();
-            navigate(onboardingCompleted ? '/home' : '/onboarding', { replace: true });
-          } else if (event === 'SIGNED_OUT') {
-            listener.subscription.unsubscribe();
-            navigate('/auth/login', { replace: true });
-          }
-        });
-        // Timeout de seguridad — si en 8 seg no hay sesión, volver al login
-        setTimeout(() => {
-          listener.subscription.unsubscribe();
-          navigate('/auth/login', { replace: true });
-        }, 8000);
+        return;
       }
-    });
+
+      // Esperar evento de auth
+      const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session?.user) {
+          setSupabaseUser({
+            id: session.user.id,
+            email: session.user.email ?? '',
+            name: session.user.user_metadata?.full_name ?? '',
+          });
+          listener.subscription.unsubscribe();
+          navigate(onboardingCompleted ? '/home' : '/onboarding', { replace: true });
+        }
+      });
+
+      // Timeout 10s
+      setTimeout(() => {
+        listener.subscription.unsubscribe();
+        navigate('/auth/login', { replace: true });
+      }, 10000);
+
+    } catch {
+      navigate('/auth/login', { replace: true });
+    }
+  }
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      // En nativo, leer el URL del deep link que abrió la app
+      App.getLaunchUrl().then((result) => {
+        processSession(result?.url ?? undefined);
+      });
+
+      // También escuchar si la app ya estaba abierta y llega el deep link
+      const handle = App.addListener('appUrlOpen', ({ url }) => {
+        handle.then(h => h.remove());
+        processSession(url);
+      });
+    } else {
+      // En web, el hash está en window.location
+      processSession(window.location.href);
+    }
   }, []);
 
   return (
